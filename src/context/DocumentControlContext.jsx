@@ -741,68 +741,202 @@ export function DocumentControlProvider({ children }) {
     return true;
   };
 
-  // 4. Master Data CRUD Handlers
+  // 4. Master Data CRUD Handlers with Supabase Sync
   const addDepartment = (dept) => {
     const newDept = { ...dept, id: `dept-${Date.now()}` };
     setDepartments(prev => [...prev, newDept]);
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.from('departments').upsert([{
+        id: newDept.id,
+        code: newDept.code,
+        name: newDept.name,
+        head: newDept.head || null
+      }]).then(({ error }) => {
+        if (error) console.warn('Supabase addDepartment warning:', error);
+      });
+    }
+
     showToast(`Departemen ${newDept.code} berhasil ditambahkan!`, 'success');
   };
 
   const updateDepartment = (id, updatedData) => {
     setDepartments(prev => prev.map(d => d.id === id ? { ...d, ...updatedData } : d));
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.from('departments').update({
+        code: updatedData.code,
+        name: updatedData.name,
+        head: updatedData.head || null
+      }).eq('id', id).then(({ error }) => {
+        if (error) console.warn('Supabase updateDepartment warning:', error);
+      });
+    }
+
     showToast('Departemen berhasil diperbarui!', 'success');
   };
 
   const deleteDepartment = (id) => {
     setDepartments(prev => prev.filter(d => d.id !== id));
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.from('departments').delete().eq('id', id).then(({ error }) => {
+        if (error) console.warn('Supabase deleteDepartment warning:', error);
+      });
+    }
+
     showToast('Departemen berhasil dihapus.', 'info');
   };
 
   const addDocumentType = (type) => {
     const newType = { ...type, id: `type-${Date.now()}` };
     setDocumentTypes(prev => [...prev, newType]);
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.from('document_types').upsert([{
+        id: newType.id,
+        code: newType.code,
+        name: newType.name,
+        level: newType.level || 2,
+        prefix: newType.prefix || newType.code,
+        description: newType.description || null
+      }]).then(({ error }) => {
+        if (error) console.warn('Supabase addDocumentType warning:', error);
+      });
+    }
+
     showToast(`Jenis Dokumen ${newType.code} berhasil ditambahkan!`, 'success');
   };
 
   const updateDocumentType = (id, updatedData) => {
     setDocumentTypes(prev => prev.map(t => t.id === id ? { ...t, ...updatedData } : t));
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.from('document_types').update({
+        code: updatedData.code,
+        name: updatedData.name,
+        level: updatedData.level || 2,
+        prefix: updatedData.prefix || updatedData.code,
+        description: updatedData.description || null
+      }).eq('id', id).then(({ error }) => {
+        if (error) console.warn('Supabase updateDocumentType warning:', error);
+      });
+    }
+
     showToast('Jenis Dokumen berhasil diperbarui!', 'success');
   };
 
   const deleteDocumentType = (id) => {
     setDocumentTypes(prev => prev.filter(t => t.id !== id));
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.from('document_types').delete().eq('id', id).then(({ error }) => {
+        if (error) console.warn('Supabase deleteDocumentType warning:', error);
+      });
+    }
+
     showToast('Jenis Dokumen berhasil dihapus.', 'info');
   };
 
   const addEmployee = (emp) => {
     const newEmp = { ...emp, id: `emp-${Date.now()}` };
     setEmployees(prev => [...prev, newEmp]);
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.from('employees').upsert([{
+        id: newEmp.id,
+        nik: newEmp.nik,
+        name: newEmp.name,
+        department: newEmp.department,
+        position: newEmp.position,
+        email: newEmp.email || null,
+        role: newEmp.role || 'staff',
+        status: newEmp.status || 'Aktif'
+      }]).then(({ error }) => {
+        if (error) console.warn('Supabase addEmployee warning:', error);
+      });
+    }
+
     showToast(`Karyawan ${newEmp.name} berhasil ditambahkan!`, 'success');
   };
 
   const updateEmployee = (id, updatedData) => {
     setEmployees(prev => prev.map(e => e.id === id ? { ...e, ...updatedData } : e));
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.from('employees').update({
+        nik: updatedData.nik,
+        name: updatedData.name,
+        department: updatedData.department,
+        position: updatedData.position,
+        email: updatedData.email || null,
+        role: updatedData.role || 'staff',
+        status: updatedData.status || 'Aktif'
+      }).eq('id', id).then(({ error }) => {
+        if (error) console.warn('Supabase updateEmployee warning:', error);
+      });
+    }
+
     showToast('Data Karyawan berhasil diperbarui!', 'success');
   };
 
   const deleteEmployee = (id) => {
     setEmployees(prev => prev.filter(e => e.id !== id));
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.from('employees').delete().eq('id', id).then(({ error }) => {
+        if (error) console.warn('Supabase deleteEmployee warning:', error);
+      });
+    }
+
     showToast('Data Karyawan berhasil dihapus.', 'info');
   };
 
   const addVerifierTeam = (team) => {
     const newTeam = { ...team, id: `team-${Date.now()}` };
     setVerifierTeams(prev => [...prev, newTeam]);
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.from('verifier_teams').upsert([{
+        id: newTeam.id,
+        name: newTeam.name,
+        leader: newTeam.leader,
+        members: Array.isArray(newTeam.members) ? newTeam.members : [],
+        description: newTeam.description || null
+      }]).then(({ error }) => {
+        if (error) console.warn('Supabase addVerifierTeam warning:', error);
+      });
+    }
+
     showToast(`Tim Verifikator ${newTeam.name} berhasil ditambahkan!`, 'success');
   };
 
   const updateVerifierTeam = (id, updatedData) => {
     setVerifierTeams(prev => prev.map(t => t.id === id ? { ...t, ...updatedData } : t));
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.from('verifier_teams').update({
+        name: updatedData.name,
+        leader: updatedData.leader,
+        members: Array.isArray(updatedData.members) ? updatedData.members : [],
+        description: updatedData.description || null
+      }).eq('id', id).then(({ error }) => {
+        if (error) console.warn('Supabase updateVerifierTeam warning:', error);
+      });
+    }
+
     showToast('Tim Verifikator berhasil diperbarui!', 'success');
   };
 
   const deleteVerifierTeam = (id) => {
     setVerifierTeams(prev => prev.filter(t => t.id !== id));
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.from('verifier_teams').delete().eq('id', id).then(({ error }) => {
+        if (error) console.warn('Supabase deleteVerifierTeam warning:', error);
+      });
+    }
+
     showToast('Tim Verifikator berhasil dihapus.', 'info');
   };
 
