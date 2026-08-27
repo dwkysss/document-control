@@ -17,6 +17,7 @@ import {
 import Badge from '../common/Badge';
 import { useDocumentControl } from '../../context/DocumentControlContext';
 import { getNextSequenceNumber, formatDocumentNumber } from '../../utils/numberingEngine';
+import { uploadDocumentFile } from '../../lib/supabaseClient';
 
 export default function NewRegistrationView() {
   const {
@@ -45,6 +46,7 @@ export default function NewRegistrationView() {
   const [fileAttachment, setFileAttachment] = useState(null);
   const [showEmployeeModal, setShowEmployeeModal] = useState(false);
   const [employeeSearch, setEmployeeSearch] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Live Auto-calculated Sequence Number
   const nextSeq = getNextSequenceNumber(documents, selectedType, selectedDept);
@@ -64,7 +66,7 @@ export default function NewRegistrationView() {
     year: 'numeric'
   }) + ' ' + new Date().toLocaleTimeString('id-ID');
 
-  const handleSaveDraft = (e) => {
+  const handleSaveDraft = async (e) => {
     e.preventDefault();
     if (!title.trim()) {
       showToast('Harap masukkan judul dokumen!', 'danger');
@@ -75,48 +77,40 @@ export default function NewRegistrationView() {
       return;
     }
 
+    setIsSubmitting(true);
+    let fileInfo = {
+      fileName: `${previewDocNumber}.pdf`,
+      fileSize: null,
+      fileType: null,
+      fileUrl: null
+    };
+
     if (fileAttachment) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        saveDraft({
-          title: title.toUpperCase().trim(),
-          type: selectedType,
-          department: selectedDept,
-          creator: selectedCreator.name,
-          creatorNik: selectedCreator.nik,
-          creatorPosition: selectedCreator.position,
-          seqNumber: nextSeq,
-          revision: nextRev,
-          verifierTeam: selectedVerifierTeam,
-          notes: notes,
-          createdDate,
-          fileName: fileAttachment.name,
-          fileSize: fileAttachment.size,
-          fileType: fileAttachment.type,
-          fileUrl: event.target.result
-        });
-      };
-      reader.readAsDataURL(fileAttachment);
-    } else {
-      saveDraft({
-        title: title.toUpperCase().trim(),
-        type: selectedType,
-        department: selectedDept,
-        creator: selectedCreator.name,
-        creatorNik: selectedCreator.nik,
-        creatorPosition: selectedCreator.position,
-        seqNumber: nextSeq,
-        revision: nextRev,
-        verifierTeam: selectedVerifierTeam,
-        notes: notes,
-        createdDate,
-        fileName: `${previewDocNumber}.pdf`,
-        fileUrl: null
-      });
+      showToast('Mengunggah file ke cloud storage...', 'info');
+      fileInfo = await uploadDocumentFile(fileAttachment, previewDocNumber);
     }
+
+    saveDraft({
+      title: title.toUpperCase().trim(),
+      type: selectedType,
+      department: selectedDept,
+      creator: selectedCreator.name,
+      creatorNik: selectedCreator.nik,
+      creatorPosition: selectedCreator.position,
+      seqNumber: nextSeq,
+      revision: nextRev,
+      verifierTeam: selectedVerifierTeam,
+      notes: notes,
+      createdDate,
+      fileName: fileInfo.fileName,
+      fileSize: fileInfo.fileSize,
+      fileType: fileInfo.fileType,
+      fileUrl: fileInfo.fileUrl
+    });
+    setIsSubmitting(false);
   };
 
-  const handleSubmitVerification = (e) => {
+  const handleSubmitVerification = async (e) => {
     e.preventDefault();
     if (!title.trim()) {
       showToast('Harap masukkan judul dokumen!', 'danger');
@@ -127,45 +121,37 @@ export default function NewRegistrationView() {
       return;
     }
 
+    setIsSubmitting(true);
+    let fileInfo = {
+      fileName: `${previewDocNumber}.pdf`,
+      fileSize: null,
+      fileType: null,
+      fileUrl: null
+    };
+
     if (fileAttachment) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        submitForVerification({
-          title: title.toUpperCase().trim(),
-          type: selectedType,
-          department: selectedDept,
-          creator: selectedCreator.name,
-          creatorNik: selectedCreator.nik,
-          creatorPosition: selectedCreator.position,
-          seqNumber: nextSeq,
-          revision: nextRev,
-          verifierTeam: selectedVerifierTeam,
-          notes: notes,
-          createdDate,
-          fileName: fileAttachment.name,
-          fileSize: fileAttachment.size,
-          fileType: fileAttachment.type,
-          fileUrl: event.target.result
-        });
-      };
-      reader.readAsDataURL(fileAttachment);
-    } else {
-      submitForVerification({
-        title: title.toUpperCase().trim(),
-        type: selectedType,
-        department: selectedDept,
-        creator: selectedCreator.name,
-        creatorNik: selectedCreator.nik,
-        creatorPosition: selectedCreator.position,
-        seqNumber: nextSeq,
-        revision: nextRev,
-        verifierTeam: selectedVerifierTeam,
-        notes: notes,
-        createdDate,
-        fileName: `${previewDocNumber}.pdf`,
-        fileUrl: null
-      });
+      showToast('Mengunggah file ke cloud storage...', 'info');
+      fileInfo = await uploadDocumentFile(fileAttachment, previewDocNumber);
     }
+
+    submitForVerification({
+      title: title.toUpperCase().trim(),
+      type: selectedType,
+      department: selectedDept,
+      creator: selectedCreator.name,
+      creatorNik: selectedCreator.nik,
+      creatorPosition: selectedCreator.position,
+      seqNumber: nextSeq,
+      revision: nextRev,
+      verifierTeam: selectedVerifierTeam,
+      notes: notes,
+      createdDate,
+      fileName: fileInfo.fileName,
+      fileSize: fileInfo.fileSize,
+      fileType: fileInfo.fileType,
+      fileUrl: fileInfo.fileUrl
+    });
+    setIsSubmitting(false);
   };
 
   // Recent 5 documents

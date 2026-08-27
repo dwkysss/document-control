@@ -10,7 +10,7 @@ import {
   initialSystemSettings
 } from '../data/initialData';
 import { getNextSequenceNumber, getNextRevisionCode, formatDocumentNumber } from '../utils/numberingEngine';
-import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
+import { supabase, isSupabaseConfigured, uploadDocumentFile } from '../lib/supabaseClient';
 
 const DocumentControlContext = createContext(null);
 
@@ -429,6 +429,13 @@ export function DocumentControlProvider({ children }) {
     });
 
     addAuditLog('SAVE_DRAFT', newDoc.docNumber, newDoc.title, 'Menyimpan dokumen sebagai DRAFT');
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.from('documents').upsert([toSnakeCaseDoc(newDoc)]).then(({ error }) => {
+        if (error) console.warn('Supabase saveDraft warning:', error);
+      });
+    }
+
     showToast(`Dokumen draft ${newDoc.docNumber} berhasil disimpan!`, 'info');
     return newDoc;
   };
@@ -495,6 +502,13 @@ export function DocumentControlProvider({ children }) {
 
     addAuditLog('SUBMIT_VERIFICATION', newDoc.docNumber, newDoc.title, `Diajukan ke ${newDoc.verifierTeam}`);
     addNotification('Pengajuan Verifikasi Baru', `${newDoc.docNumber} - ${newDoc.title} diajukan untuk verifikasi.`, 'warning', newDoc.id);
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.from('documents').upsert([toSnakeCaseDoc(newDoc)]).then(({ error }) => {
+        if (error) console.warn('Supabase submitForVerification warning:', error);
+      });
+    }
+
     showToast(`Dokumen ${newDoc.docNumber} berhasil diajukan untuk verifikasi!`, 'success');
     return newDoc;
   };
@@ -557,6 +571,14 @@ export function DocumentControlProvider({ children }) {
         return doc;
       });
 
+      if (isSupabaseConfigured && supabase) {
+        updatedDocs.forEach(d => {
+          supabase.from('documents').upsert([toSnakeCaseDoc(d)]).then(({ error }) => {
+            if (error) console.warn('Supabase document update error:', error);
+          });
+        });
+      }
+
       return updatedDocs;
     });
 
@@ -611,6 +633,19 @@ export function DocumentControlProvider({ children }) {
     if (targetDoc) {
       addAuditLog('REJECT_DOCUMENT', targetDoc.docNumber, targetDoc.title, `Ditolak oleh ${currentUser.name}: ${rejectionReason}`);
       addNotification('Dokumen Ditolak', `${targetDoc.docNumber} ditolak oleh verifikator: "${rejectionReason}"`, 'danger', targetDoc.id);
+
+      if (isSupabaseConfigured && supabase) {
+        supabase.from('documents').update({
+          status: 'DITOLAK',
+          rejection_reason: targetDoc.rejectionReason || rejectionReason,
+          rejected_by: currentUser.name,
+          rejected_date: timestamp,
+          updated_at: new Date().toISOString()
+        }).eq('id', docId).then(({ error }) => {
+          if (error) console.warn('Supabase reject warning:', error);
+        });
+      }
+
       showToast(`Dokumen ${targetDoc.docNumber} DITOLAK.`, 'danger');
     }
   };
@@ -672,6 +707,13 @@ export function DocumentControlProvider({ children }) {
     setDocuments(prev => [newRevisedDoc, ...prev]);
     addAuditLog('CREATE_REVISION', newDocNumber, newRevisedDoc.title, `Pengajuan Revisi ${nextRev} (Menggantikan ${originalDoc.docNumber})`);
     addNotification('Pengajuan Revisi Dokumen', `Revisi baru ${newDocNumber} diajukan untuk verifikasi.`, 'warning', newRevisedDoc.id);
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.from('documents').upsert([toSnakeCaseDoc(newRevisedDoc)]).then(({ error }) => {
+        if (error) console.warn('Supabase revision upsert warning:', error);
+      });
+    }
+
     showToast(`Pengajuan revisi ${newDocNumber} berhasil dibuat!`, 'success');
     return newRevisedDoc;
   };
@@ -690,6 +732,13 @@ export function DocumentControlProvider({ children }) {
 
     setDocuments(prev => prev.filter(d => d.id !== docId));
     addAuditLog('DELETE_DRAFT', docToDelete.docNumber, docToDelete.title, 'Menghapus dokumen draft');
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.from('documents').delete().eq('id', docId).then(({ error }) => {
+        if (error) console.warn('Supabase document delete warning:', error);
+      });
+    }
+
     showToast(`Draft ${docToDelete.docNumber} berhasil dihapus.`, 'info');
     return true;
   };
@@ -823,33 +872,47 @@ export function DocumentControlProvider({ children }) {
     }
   };
 
-  const attachFileToDocument = (docId, file) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const fileUrl = e.target.result;
-      const fileSize = `${(file.size / 1024).toFixed(0)} KB`;
-      setDocuments(prev => prev.map(d => {
-        if (d.id === docId) {
-          return {
-            ...d,
-            fileName: file.name,
-            fileSize,
-            fileType: file.type,
-            fileUrl
-          };
-        }
-        return d;
-      }));
-      setViewingDocument(prev => prev && prev.id === docId ? {
-        ...prev,
-        fileName: file.name,
-        fileSize,
-        fileType: file.type,
-        fileUrl
-      } : prev);
-      showToast(`Berkas ${file.name} berhasil dilampirkan dan ditampilkan!`, 'success');
-    };
-    reader.readAsDataURL(file);
+  const attachFileToDocument = async (docId, file) => {
+    showToast(`Mengunggah berkas ${file.name} ke cloud storage...`, 'info');
+    const targetDoc = documents.find(d => d.id === docId);
+    const docNumber = targetDoc ? targetDoc.docNumber : 'DOC';
+    
+    const fileInfo = await uploadDocumentFile(file, docNumber);
+
+    setDocuments(prev => prev.map(d => {
+      if (d.id === docId) {
+        return {
+          ...d,
+          fileName: fileInfo.fileName,
+          fileSize: fileInfo.fileSize,
+          fileType: fileInfo.fileType,
+          fileUrl: fileInfo.fileUrl
+        };
+      }
+      return d;
+    }));
+
+    setViewingDocument(prev => prev && prev.id === docId ? {
+      ...prev,
+      fileName: fileInfo.fileName,
+      fileSize: fileInfo.fileSize,
+      fileType: fileInfo.fileType,
+      fileUrl: fileInfo.fileUrl
+    } : prev);
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.from('documents').update({
+        file_name: fileInfo.fileName,
+        file_size: fileInfo.fileSize,
+        file_type: fileInfo.fileType,
+        file_url: fileInfo.fileUrl,
+        updated_at: new Date().toISOString()
+      }).eq('id', docId).then(({ error }) => {
+        if (error) console.warn('Supabase document file update warning:', error);
+      });
+    }
+
+    showToast(`Berkas ${file.name} berhasil disimpan ke cloud storage dan dapat diakses publik!`, 'success');
   };
 
   const markNotificationAsRead = (notifId) => {
