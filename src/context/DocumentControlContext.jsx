@@ -207,18 +207,16 @@ export function DocumentControlProvider({ children }) {
       return;
     }
 
+    let isMounted = true;
+
     async function loadCloudData() {
       setIsLoadingCloud(true);
       try {
-        const [
-          { data: cloudDocs },
-          { data: cloudDepts },
-          { data: cloudTypes },
-          { data: cloudEmps },
-          { data: cloudTeams },
-          { data: cloudLogs },
-          { data: cloudSettings }
-        ] = await Promise.all([
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Supabase cloud fetch timeout (4s)')), 4000)
+        );
+
+        const fetchPromise = Promise.all([
           supabase.from('documents').select('*').order('created_at', { ascending: false }),
           supabase.from('departments').select('*'),
           supabase.from('document_types').select('*'),
@@ -228,31 +226,32 @@ export function DocumentControlProvider({ children }) {
           supabase.from('system_settings').select('*').limit(1)
         ]);
 
+        const [
+          { data: cloudDocs, error: docsErr },
+          { data: cloudDepts },
+          { data: cloudTypes },
+          { data: cloudEmps },
+          { data: cloudTeams },
+          { data: cloudLogs },
+          { data: cloudSettings }
+        ] = await Promise.race([fetchPromise, timeoutPromise]);
+
+        if (!isMounted) return;
+
         if (cloudDocs && cloudDocs.length > 0) {
           setDocuments(cloudDocs.map(fromSnakeCaseDoc));
-        } else if (isSupabaseConfigured && supabase) {
-          // If Supabase table is empty, auto-seed initial documents to cloud
+        } else if (!docsErr && isSupabaseConfigured && supabase) {
+          // Auto-seed if Supabase documents table is empty
           const initialPayload = initialDocuments.map(toSnakeCaseDoc);
           supabase.from('documents').upsert(initialPayload).then(({ error }) => {
-            if (!error) {
-              setDocuments(initialDocuments);
-            } else {
-              console.warn('Supabase auto-seed warning:', error);
-            }
+            if (!error && isMounted) setDocuments(initialDocuments);
           });
         }
-        if (cloudDepts && cloudDepts.length > 0) {
-          setDepartments(cloudDepts);
-        }
-        if (cloudTypes && cloudTypes.length > 0) {
-          setDocumentTypes(cloudTypes);
-        }
-        if (cloudEmps && cloudEmps.length > 0) {
-          setEmployees(cloudEmps);
-        }
-        if (cloudTeams && cloudTeams.length > 0) {
-          setVerifierTeams(cloudTeams);
-        }
+
+        if (cloudDepts && cloudDepts.length > 0) setDepartments(cloudDepts);
+        if (cloudTypes && cloudTypes.length > 0) setDocumentTypes(cloudTypes);
+        if (cloudEmps && cloudEmps.length > 0) setEmployees(cloudEmps);
+        if (cloudTeams && cloudTeams.length > 0) setVerifierTeams(cloudTeams);
         if (cloudLogs && cloudLogs.length > 0) {
           setAuditLogs(cloudLogs.map(l => ({
             id: l.id,
@@ -283,13 +282,17 @@ export function DocumentControlProvider({ children }) {
           });
         }
       } catch (err) {
-        console.warn('Error connecting to Supabase cloud, continuing with local persistence:', err);
+        console.warn('Supabase cloud fetch warning, falling back to local cache:', err);
       } finally {
-        setIsLoadingCloud(false);
+        if (isMounted) setIsLoadingCloud(false);
       }
     }
 
     loadCloudData();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Toast Notification State
