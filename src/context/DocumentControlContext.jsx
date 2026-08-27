@@ -66,9 +66,27 @@ export function DocumentControlProvider({ children }) {
     return initialEmployees[0]; // Baban Rachmat (HRGA Staff)
   });
 
-  // Active Menu / Navigation State
-  const [activeMenu, setActiveMenu] = useState('reg-new'); // Default matches mockup screen
-  const [breadcrumbs, setBreadcrumbs] = useState(['Dashboard', 'Registrasi Dokumen', 'Dokumen Baru']);
+  // Active Menu / Navigation State with LocalStorage Persistence
+  const [activeMenu, setActiveMenu] = useState(() => {
+    return localStorage.getItem('dji_dms_active_menu') || 'reg-new';
+  });
+
+  const [breadcrumbs, setBreadcrumbs] = useState(() => {
+    const saved = localStorage.getItem('dji_dms_breadcrumbs');
+    return saved ? JSON.parse(saved) : ['Dashboard', 'Registrasi Dokumen', 'Dokumen Baru'];
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('dji_dms_active_menu', activeMenu);
+    } catch (e) {}
+  }, [activeMenu]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('dji_dms_breadcrumbs', JSON.stringify(breadcrumbs));
+    } catch (e) {}
+  }, [breadcrumbs]);
 
   // Global Search Query
   const [searchQuery, setSearchQuery] = useState('');
@@ -213,31 +231,25 @@ export function DocumentControlProvider({ children }) {
 
         const [
           { data: cloudDocs, error: docsErr },
-          { data: cloudDepts },
-          { data: cloudTypes },
-          { data: cloudEmps },
-          { data: cloudTeams },
-          { data: cloudLogs },
-          { data: cloudSettings }
+          { data: cloudDepts, error: deptsErr },
+          { data: cloudTypes, error: typesErr },
+          { data: cloudEmps, error: empsErr },
+          { data: cloudTeams, error: teamsErr },
+          { data: cloudLogs, error: logsErr },
+          { data: cloudSettings, error: settingsErr }
         ] = await Promise.race([fetchPromise, timeoutPromise]);
 
         if (!isMounted) return;
 
-        if (cloudDocs && cloudDocs.length > 0) {
+        if (cloudDocs && !docsErr) {
           setDocuments(cloudDocs.map(fromSnakeCaseDoc));
-        } else if (!docsErr && isSupabaseConfigured && supabase) {
-          // Auto-seed if Supabase documents table is empty
-          const initialPayload = initialDocuments.map(toSnakeCaseDoc);
-          supabase.from('documents').upsert(initialPayload).then(({ error }) => {
-            if (!error && isMounted) setDocuments(initialDocuments);
-          });
         }
 
-        if (cloudDepts && cloudDepts.length > 0) setDepartments(cloudDepts);
-        if (cloudTypes && cloudTypes.length > 0) setDocumentTypes(cloudTypes);
-        if (cloudEmps && cloudEmps.length > 0) setEmployees(cloudEmps);
-        if (cloudTeams && cloudTeams.length > 0) setVerifierTeams(cloudTeams);
-        if (cloudLogs && cloudLogs.length > 0) {
+        if (cloudDepts && !deptsErr) setDepartments(cloudDepts);
+        if (cloudTypes && !typesErr) setDocumentTypes(cloudTypes);
+        if (cloudEmps && !empsErr) setEmployees(cloudEmps);
+        if (cloudTeams && !teamsErr) setVerifierTeams(cloudTeams);
+        if (cloudLogs && !logsErr) {
           setAuditLogs(cloudLogs.map(l => ({
             id: l.id,
             timestamp: l.timestamp,
