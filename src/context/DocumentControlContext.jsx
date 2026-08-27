@@ -66,27 +66,81 @@ export function DocumentControlProvider({ children }) {
     return initialEmployees[0]; // Baban Rachmat (HRGA Staff)
   });
 
-  // Active Menu / Navigation State with LocalStorage Persistence
-  const [activeMenu, setActiveMenu] = useState(() => {
-    return localStorage.getItem('dji_dms_active_menu') || 'reg-new';
-  });
+  // Navigation Helpers & Persistence
+  const getMenuBreadcrumbs = (key) => {
+    switch (key) {
+      case 'dashboard': return ['Dashboard', 'Overview'];
+      case 'reg-new': return ['Dashboard', 'Registrasi Dokumen', 'Dokumen Baru'];
+      case 'reg-draft': return ['Dashboard', 'Registrasi Dokumen', 'Draft Dokumen'];
+      case 'reg-pending': return ['Dashboard', 'Registrasi Dokumen', 'Menunggu Verifikasi'];
+      case 'reg-approved': return ['Dashboard', 'Registrasi Dokumen', 'Disetujui'];
+      case 'reg-rejected': return ['Dashboard', 'Registrasi Dokumen', 'Ditolak'];
+      case 'ctrl-all': return ['Dashboard', 'Document Control', 'Semua Dokumen'];
+      case 'ctrl-active': return ['Dashboard', 'Document Control', 'Dokumen Aktif'];
+      case 'ctrl-obsolete': return ['Dashboard', 'Document Control', 'Dokumen Obsolete'];
+      case 'ctrl-history': return ['Dashboard', 'Document Control', 'Riwayat Revisi'];
+      case 'rev-new': return ['Dashboard', 'Document Revision', 'Pengajuan Revisi'];
+      case 'master-emp': return ['Dashboard', 'Master Data', 'Karyawan'];
+      case 'master-dept': return ['Dashboard', 'Master Data', 'Departemen'];
+      case 'master-type': return ['Dashboard', 'Master Data', 'Jenis Dokumen'];
+      case 'master-team': return ['Dashboard', 'Master Data', 'Tim Verifikator'];
+      case 'rep-register': return ['Dashboard', 'Laporan & Audit', 'Master Register'];
+      case 'rep-dept': return ['Dashboard', 'Laporan & Audit', 'Per Departemen'];
+      case 'rep-type': return ['Dashboard', 'Laporan & Audit', 'Per Jenis Dokumen'];
+      case 'rep-history': return ['Dashboard', 'Laporan & Audit', 'Audit Log'];
+      case 'settings': return ['Dashboard', 'Pengaturan', 'Sistem & Konfigurasi'];
+      default: return ['Dashboard', 'Registrasi Dokumen', 'Dokumen Baru'];
+    }
+  };
 
-  const [breadcrumbs, setBreadcrumbs] = useState(() => {
-    const saved = localStorage.getItem('dji_dms_breadcrumbs');
-    return saved ? JSON.parse(saved) : ['Dashboard', 'Registrasi Dokumen', 'Dokumen Baru'];
-  });
+  const getInitialMenu = () => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.replace('#', '').trim();
+      if (hash) return hash;
+      const saved = localStorage.getItem('dji_dms_active_menu');
+      if (saved) return saved;
+    }
+    return 'reg-new';
+  };
 
-  useEffect(() => {
+  // Active Menu / Navigation State with URL Hash & LocalStorage Persistence
+  const [activeMenu, setActiveMenuState] = useState(getInitialMenu);
+  const [breadcrumbs, setBreadcrumbs] = useState(() => getMenuBreadcrumbs(getInitialMenu()));
+
+  const setActiveMenu = (menuKey) => {
+    setActiveMenuState(menuKey);
+    setBreadcrumbs(getMenuBreadcrumbs(menuKey));
     try {
-      localStorage.setItem('dji_dms_active_menu', activeMenu);
+      localStorage.setItem('dji_dms_active_menu', menuKey);
+      window.location.hash = menuKey;
     } catch (e) {}
-  }, [activeMenu]);
+  };
 
+  // Listen to browser hash changes & sync on mount
   useEffect(() => {
-    try {
-      localStorage.setItem('dji_dms_breadcrumbs', JSON.stringify(breadcrumbs));
-    } catch (e) {}
-  }, [breadcrumbs]);
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '').trim();
+      if (hash && hash !== activeMenu) {
+        setActiveMenuState(hash);
+        setBreadcrumbs(getMenuBreadcrumbs(hash));
+        try {
+          localStorage.setItem('dji_dms_active_menu', hash);
+        } catch (e) {}
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    if (activeMenu) {
+      window.location.hash = activeMenu;
+      try {
+        localStorage.setItem('dji_dms_active_menu', activeMenu);
+      } catch (e) {}
+    }
+
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, []);
 
   // Global Search Query
   const [searchQuery, setSearchQuery] = useState('');

@@ -50,6 +50,21 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
     }));
   };
 
+  // Auto-expand accordion section when activeMenu changes
+  React.useEffect(() => {
+    if (activeMenu.startsWith('reg-')) {
+      setOpenSections(prev => ({ ...prev, registration: true }));
+    } else if (activeMenu.startsWith('ctrl-')) {
+      setOpenSections(prev => ({ ...prev, control: true }));
+    } else if (activeMenu.startsWith('rev-')) {
+      setOpenSections(prev => ({ ...prev, revision: true }));
+    } else if (activeMenu.startsWith('master-')) {
+      setOpenSections(prev => ({ ...prev, master: true }));
+    } else if (activeMenu.startsWith('rep-')) {
+      setOpenSections(prev => ({ ...prev, report: true }));
+    }
+  }, [activeMenu]);
+
   // Badge counts
   const draftCount = documents.filter(d => d.status === 'DRAFT').length;
   const pendingCount = documents.filter(d => d.status === 'VERIFIKASI').length;
