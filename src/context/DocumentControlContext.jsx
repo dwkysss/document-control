@@ -83,48 +83,11 @@ export function DocumentControlProvider({ children }) {
   const [notifications, setNotifications] = useState([
     {
       id: 'notif-1',
-      title: 'Verifikasi Menunggu Tindakan',
-      message: 'Dokumen DJI-SOP-FAT-02-01 menunggu review dari tim verifikator.',
-      time: '10 menit yang lalu',
+      title: 'Selamat Datang di Sistem Document Control',
+      message: 'Sistem siap digunakan. Silakan mulai mendaftarkan dokumen baru di menu Registrasi Dokumen.',
+      time: 'Baru saja',
       read: false,
-      type: 'warning',
-      docId: 'doc-002'
-    },
-    {
-      id: 'notif-2',
-      title: 'Dokumen Disetujui',
-      message: 'Dokumen DJI-IK-PRODUKSI-03-02 telah disetujui dan berstatus AKTIF.',
-      time: '1 jam yang lalu',
-      read: false,
-      type: 'success',
-      docId: 'doc-003'
-    },
-    {
-      id: 'notif-3',
-      title: 'Revisi Baru Diterbitkan',
-      message: 'DJI-SOP-HRGA-04-03 aktif. Revisi 02 otomatis menjadi OBSOLETE.',
-      time: '1 hari yang lalu',
-      read: false,
-      type: 'info',
-      docId: 'doc-005'
-    },
-    {
-      id: 'notif-4',
-      title: 'Dokumen Ditolak',
-      message: 'DJI-POL-IT-01-00 ditolak oleh Verifikator. Silakan cek catatan revisi.',
-      time: '2 hari yang lalu',
-      read: false,
-      type: 'danger',
-      docId: 'doc-009'
-    },
-    {
-      id: 'notif-5',
-      title: 'Reminder Review Tahunan ISO',
-      message: '3 Dokumen standar QA mendekati jadwal peninjauan berkala.',
-      time: '3 hari yang lalu',
-      read: false,
-      type: 'info',
-      docId: 'doc-007'
+      type: 'info'
     }
   ]);
 
