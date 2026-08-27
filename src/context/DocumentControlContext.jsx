@@ -230,6 +230,16 @@ export function DocumentControlProvider({ children }) {
 
         if (cloudDocs && cloudDocs.length > 0) {
           setDocuments(cloudDocs.map(fromSnakeCaseDoc));
+        } else if (isSupabaseConfigured && supabase) {
+          // If Supabase table is empty, auto-seed initial documents to cloud
+          const initialPayload = initialDocuments.map(toSnakeCaseDoc);
+          supabase.from('documents').upsert(initialPayload).then(({ error }) => {
+            if (!error) {
+              setDocuments(initialDocuments);
+            } else {
+              console.warn('Supabase auto-seed warning:', error);
+            }
+          });
         }
         if (cloudDepts && cloudDepts.length > 0) {
           setDepartments(cloudDepts);
