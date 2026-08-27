@@ -128,40 +128,62 @@ export function DocumentControlProvider({ children }) {
     }
   ]);
 
+  // Helper sanitize for PostgreSQL date and time types
+  const sanitizeDate = (val) => {
+    if (!val || typeof val !== 'string' || val.trim() === '' || val.trim() === '-') return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(val.trim())) return val.trim();
+    try {
+      const d = new Date(val);
+      if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+    } catch (e) {}
+    return null;
+  };
+
+  const sanitizeTime = (val) => {
+    if (!val || typeof val !== 'string' || val.trim() === '') {
+      return new Date().toTimeString().slice(0, 8);
+    }
+    const cleaned = val.trim().replace(/\./g, ':');
+    if (/^\d{2}:\d{2}(:\d{2})?$/.test(cleaned)) {
+      return cleaned.length === 5 ? `${cleaned}:00` : cleaned;
+    }
+    return new Date().toTimeString().slice(0, 8);
+  };
+
   // Helper conversion for Supabase snake_case schema
   const toSnakeCaseDoc = (d) => ({
     id: d.id,
     doc_number: d.docNumber,
-    title: d.title,
-    type: d.type,
-    type_name: d.typeName,
-    department: d.department,
-    creator: d.creator,
-    creator_nik: d.creatorNik,
-    creator_position: d.creatorPosition,
-    seq_number: d.seqNumber,
-    revision: d.revision,
-    status: d.status,
-    created_date: d.createdDate,
-    created_time: d.createdTime,
-    effective_date: d.effectiveDate,
-    verifier_team: d.verifierTeam,
-    notes: d.notes,
-    content: d.content,
-    file_name: d.fileName,
-    file_size: d.fileSize,
-    file_url: d.fileUrl,
-    file_type: d.fileType,
-    superseded_by: d.supersededBy,
-    obsolete_date: d.obsoleteDate,
-    change_reason: d.changeReason,
-    change_description: d.changeDescription,
-    rejection_reason: d.rejectionReason,
-    rejected_by: d.rejectedBy,
-    rejected_date: d.rejectedDate,
-    approved_by: d.approvedBy,
-    approved_date: d.approvedDate,
-    revision_history: d.revisionHistory,
+    title: d.title || 'DOKUMEN TANPA JUDUL',
+    type: d.type || 'SOP',
+    type_name: d.typeName || d.type || 'SOP',
+    department: d.department || 'HRGA',
+    creator: d.creator || 'Staff',
+    creator_nik: d.creatorNik || null,
+    creator_position: d.creatorPosition || null,
+    seq_number: d.seqNumber || '01',
+    revision: d.revision || '00',
+    status: d.status || 'DRAFT',
+    created_date: sanitizeDate(d.createdDate) || new Date().toISOString().slice(0, 10),
+    created_time: sanitizeTime(d.createdTime),
+    effective_date: sanitizeDate(d.effectiveDate),
+    verifier_team: d.verifierTeam || 'Document Control Team',
+    notes: d.notes || null,
+    content: d.content || null,
+    file_name: d.fileName || null,
+    file_size: d.fileSize || null,
+    file_url: d.fileUrl || null,
+    file_type: d.fileType || null,
+    superseded_by: d.supersededBy || null,
+    obsolete_date: sanitizeDate(d.obsoleteDate),
+    change_reason: d.changeReason || null,
+    change_description: d.changeDescription || null,
+    rejection_reason: d.rejectionReason || null,
+    rejected_by: d.rejectedBy || null,
+    rejected_date: d.rejectedDate || null,
+    approved_by: d.approvedBy || null,
+    approved_date: sanitizeDate(d.approvedDate),
+    revision_history: Array.isArray(d.revisionHistory) ? d.revisionHistory : [],
     updated_at: new Date().toISOString()
   });
 
