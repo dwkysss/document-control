@@ -61,10 +61,82 @@ export function DocumentControlProvider({ children }) {
     return initialSystemSettings;
   });
 
-  // Current Logged-in User Simulation (Default: Baban Rachmat)
+  // Current Logged-in User Session (Stored in localStorage 'dji_auth_user')
   const [currentUser, setCurrentUser] = useState(() => {
-    return initialEmployees[0]; // Baban Rachmat (HRGA Staff)
+    try {
+      const saved = localStorage.getItem('dji_auth_user');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn('Error reading saved session:', e);
+    }
+    return null; // Start logged out so user logs in with NIP
   });
+
+  // Login handler by Email or NIP
+  const login = (identifier, password = '') => {
+    const cleanId = String(identifier || '').trim().toLowerCase();
+    if (!cleanId) {
+      showToast('Harap masukkan Email atau NIP karyawan!', 'danger');
+      return { success: false, message: 'Identitas akun wajib diisi.' };
+    }
+
+    const foundEmp = employees.find(
+      e => String(e.nik || '').trim().toLowerCase() === cleanId ||
+           String(e.id || '').trim().toLowerCase() === cleanId ||
+           String(e.email || '').trim().toLowerCase() === cleanId ||
+           String(e.name || '').trim().toLowerCase() === cleanId
+    );
+
+    if (!foundEmp) {
+      showToast(`Akun dengan Email/NIP "${identifier}" tidak terdaftar dalam sistem!`, 'danger');
+      return { success: false, message: 'Akun tidak terdaftar.' };
+    }
+
+    if (foundEmp.status === 'Nonaktif') {
+      showToast(`Akun ${cleanId} (${foundEmp.name}) berstatus Nonaktif! Hubungi Administrator.`, 'danger');
+      return { success: false, message: 'Akun berstatus nonaktif.' };
+    }
+
+    setCurrentUser(foundEmp);
+    try {
+      localStorage.setItem('dji_auth_user', JSON.stringify(foundEmp));
+    } catch (e) {
+      console.warn('Error saving session:', e);
+    }
+
+    addAuditLog('USER_LOGIN', '-', '-', `Pengguna ${foundEmp.name} (${foundEmp.position} - ${foundEmp.role}) berhasil masuk ke sistem.`);
+    showToast(`Selamat datang, ${foundEmp.name}! Berhasil masuk sebagai ${foundEmp.position}.`, 'success');
+    return { success: true, user: foundEmp };
+  };
+
+  // Logout handler
+  const logout = () => {
+    if (currentUser) {
+      addAuditLog('USER_LOGOUT', '-', '-', `Pengguna ${currentUser.name} keluar dari sistem.`);
+    }
+    setCurrentUser(null);
+    try {
+      localStorage.removeItem('dji_auth_user');
+    } catch (e) {
+      console.warn('Error clearing session:', e);
+    }
+    showToast('Anda telah keluar dari sistem.', 'info');
+  };
+
+  // RBAC Permission Flags
+  const role = currentUser?.role || 'staff';
+  const isAdmin = role === 'admin';
+  const isApprover = role === 'approver' || role === 'admin';
+  const isDocControl = role === 'doc_control';
+  const isStaff = role === 'staff';
+
+  const canSubmitDocument = isStaff || isDocControl || isAdmin;
+  const canFinalizeDocument = role === 'approver' || role === 'admin';
+  const canDeleteDocument = isAdmin;
+  const canCancelDocument = isAdmin;
+  const canManageMasterData = isAdmin;
+  const canManageSettings = isAdmin;
+  const canAccessReports = isDocControl || isApprover || isAdmin;
 
   // Navigation Helpers & Persistence
   const getMenuBreadcrumbs = (key) => {
@@ -583,6 +655,11 @@ export function DocumentControlProvider({ children }) {
    * dan secara otomatis mengubah revisi sebelumnya menjadi OBSOLETE!
    */
   const approveDocument = (docId, approverNotes = '') => {
+    if (!canFinalizeDocument) {
+      showToast('Akses ditolak! Hanya Approver / Verifikator atau Administrator yang dapat menyetujui dokumen.', 'danger');
+      return false;
+    }
+
     const today = new Date().toISOString().slice(0, 10);
     let targetDoc = null;
 
@@ -665,6 +742,11 @@ export function DocumentControlProvider({ children }) {
    * Tolak Dokumen (Reject Workflow)
    */
   const rejectDocument = (docId, rejectionReason) => {
+    if (!canFinalizeDocument) {
+      showToast('Akses ditolak! Hanya Approver / Verifikator atau Administrator yang dapat menolak dokumen.', 'danger');
+      return false;
+    }
+
     let targetDoc = null;
     const now = new Date();
     const timestamp = `${now.toISOString().slice(0, 10)} ${now.toLocaleTimeString('id-ID')}`;
@@ -783,19 +865,92 @@ export function DocumentControlProvider({ children }) {
   };
 
   /**
-   * Hapus Dokumen (Hanya diperbolehkan untuk status DRAFT sesuai ISO Rules)
+   * Batalkan Dokumen (Mark Obsolete / Void)
+   * Wewenang eksklusif System Administrator untuk menarik/membatalkan dokumen aktif atau pengajuan.
+   */
+  const cancelDocument = (docId, cancelReason = '') => {
+    if (!isAdmin) {
+      showToast('Akses ditolak! Hanya System Administrator yang berhak membatalkan dokumen.', 'danger');
+      return false;
+    }
+
+    const targetDoc = documents.find(d => d.id === docId);
+    if (!targetDoc) return false;
+
+    const today = new Date().toISOString().slice(0, 10);
+    const cancellationDetail = `Dibatalkan oleh Administrator (${currentUser ? currentUser.name : 'Admin'}): ${cancelReason || 'Penarikan/Pembatalan dokumen resmi'}`;
+
+    const updatedDocs = documents.map(d => {
+      if (d.id === docId) {
+        const revHistory = Array.isArray(d.revisionHistory) ? [...d.revisionHistory] : [];
+        revHistory.push({
+          revision: d.revision || '00',
+          date: today,
+          author: currentUser ? currentUser.name : 'System Administrator',
+          note: `[PEMBATALAN DOKUMEN] ${cancelReason || 'Dibatalkan oleh Administrator'}`
+        });
+
+        return {
+          ...d,
+          status: 'OBSOLETE',
+          obsoleteDate: today,
+          notes: d.notes ? `${d.notes}\n[${cancellationDetail}]` : `[${cancellationDetail}]`,
+          revisionHistory: revHistory
+        };
+      }
+      return d;
+    });
+
+    setDocuments(updatedDocs);
+    addAuditLog('CANCEL_DOCUMENT', targetDoc.docNumber, targetDoc.title, cancellationDetail);
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.from('documents').update({
+        status: 'OBSOLETE',
+        obsolete_date: today,
+        notes: targetDoc.notes ? `${targetDoc.notes}\n[${cancellationDetail}]` : `[${cancellationDetail}]`
+      }).eq('id', docId).then(({ error }) => {
+        if (error) console.warn('Supabase cancelDocument warning:', error);
+      });
+    }
+
+    showToast(`Dokumen ${targetDoc.docNumber} berhasil dibatalkan dan berstatus OBSOLETE!`, 'warning');
+    return true;
+  };
+
+  /**
+   * Hapus Dokumen:
+   * - System Administrator dapat menghapus draft, dokumen ditolak, obsolete, atau kesalahan entri.
+   * - Pembuat dokumen (Creator) dapat menghapus draf miliknya atau pengajuan miliknya yang DITOLAK.
    */
   const deleteDocument = (docId) => {
     const docToDelete = documents.find(d => d.id === docId);
     if (!docToDelete) return false;
 
-    if (docToDelete.status !== 'DRAFT') {
-      showToast('Dokumen yang sudah diverifikasi / disetujui TIDAK DAPAT dihapus (ISO Rule #7)!', 'danger');
+    const isCreator = currentUser && (
+      currentUser.name === docToDelete.creator ||
+      currentUser.nik === docToDelete.creatorNik
+    );
+
+    // Permission check
+    if (!isAdmin && !isCreator) {
+      showToast('Akses ditolak! Anda tidak memiliki wewenang untuk menghapus dokumen ini.', 'danger');
+      return false;
+    }
+
+    // Non-admin can only delete DRAFT or DITOLAK
+    if (!isAdmin && docToDelete.status !== 'DRAFT' && docToDelete.status !== 'DITOLAK') {
+      showToast('Dokumen yang sudah diverifikasi / disetujui tidak dapat langsung dihapus (ISO Rule #7). Gunakan opsi Batalkan Dokumen untuk menjadikannya Obsolete!', 'danger');
       return false;
     }
 
     setDocuments(prev => prev.filter(d => d.id !== docId));
-    addAuditLog('DELETE_DRAFT', docToDelete.docNumber, docToDelete.title, 'Menghapus dokumen draft');
+    addAuditLog(
+      'DELETE_DOCUMENT',
+      docToDelete.docNumber,
+      docToDelete.title,
+      `Dihapus oleh ${currentUser ? currentUser.name : 'User'} (${docToDelete.status})`
+    );
 
     if (isSupabaseConfigured && supabase) {
       supabase.from('documents').delete().eq('id', docId).then(({ error }) => {
@@ -803,7 +958,7 @@ export function DocumentControlProvider({ children }) {
       });
     }
 
-    showToast(`Draft ${docToDelete.docNumber} berhasil dihapus.`, 'info');
+    showToast(`Dokumen ${docToDelete.docNumber} (${docToDelete.status}) berhasil dihapus.`, 'info');
     return true;
   };
 
@@ -1134,6 +1289,22 @@ export function DocumentControlProvider({ children }) {
         setSystemSettings,
         currentUser,
         setCurrentUser,
+        isAuthenticated: Boolean(currentUser),
+        login,
+        logout,
+        role,
+        isAdmin,
+        isApprover,
+        isDocControl,
+        isStaff,
+        canSubmitDocument,
+        canFinalizeDocument,
+        canDeleteDocument,
+        canCancelDocument,
+        canManageMasterData,
+        canManageSettings,
+        canAccessReports,
+        cancelDocument,
         activeMenu,
         setActiveMenu,
         breadcrumbs,

@@ -9,6 +9,7 @@ export default function SystemSettingsView() {
     resetDemoData,
     exportDatabaseJSON,
     importDatabaseJSON,
+    isAdmin,
     showToast
   } = useDocumentControl();
 
@@ -21,6 +22,10 @@ export default function SystemSettingsView() {
 
   const handleSaveSettings = (e) => {
     e.preventDefault();
+    if (!isAdmin) {
+      showToast('Akses ditolak! Hanya System Administrator yang dapat mengubah konfigurasi sistem.', 'danger');
+      return;
+    }
     setSystemSettings(formData);
     showToast('Pengaturan sistem berhasil disimpan!', 'success');
   };
@@ -51,6 +56,16 @@ export default function SystemSettingsView() {
           </p>
         </div>
       </div>
+
+      {/* Non-Admin Read-Only Notice */}
+      {!isAdmin && (
+        <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-xl flex items-center gap-2.5 text-xs text-amber-800 dark:text-amber-300">
+          <Shield className="w-4 h-4 text-amber-600 flex-shrink-0" />
+          <span>
+            <strong>Mode Baca (Read-Only):</strong> Anda saat ini tidak masuk sebagai System Administrator. Seluruh form pengaturan hanya dapat disimpan dan diubah oleh Administrator sistem.
+          </span>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left 8-Cols: Settings Form */}

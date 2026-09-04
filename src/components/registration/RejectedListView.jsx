@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { XCircle, Eye, RefreshCw, AlertCircle, Search } from 'lucide-react';
+import { XCircle, Eye, RefreshCw, AlertCircle, Search, Trash2, AlertTriangle } from 'lucide-react';
 import Badge from '../common/Badge';
+import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
 
 export default function RejectedListView() {
-  const { documents, setViewingDocument, setActiveMenu, setBreadcrumbs, saveDraft } = useDocumentControl();
+  const { documents, setViewingDocument, setActiveMenu, setBreadcrumbs, saveDraft, deleteDocument, currentUser, isAdmin } = useDocumentControl();
   const [searchTerm, setSearchTerm] = useState('');
+  const [docToDelete, setDocToDelete] = useState(null);
 
   const rejectedDocs = documents.filter(d => d.status === 'DITOLAK');
 
@@ -24,6 +26,13 @@ export default function RejectedListView() {
     });
     setActiveMenu('reg-draft');
     setBreadcrumbs(['Dashboard', 'Registrasi Dokumen', 'Draft']);
+  };
+
+  const handleConfirmDelete = () => {
+    if (docToDelete) {
+      deleteDocument(docToDelete.id);
+      setDocToDelete(null);
+    }
   };
 
   return (
@@ -109,6 +118,17 @@ export default function RejectedListView() {
                           <RefreshCw className="w-3.5 h-3.5" />
                           Perbaiki
                         </button>
+
+                        {/* Opsi Hapus untuk Creator atau Admin */}
+                        {(isAdmin || (currentUser && (currentUser.name === doc.creator || currentUser.nik === doc.creatorNik))) && (
+                          <button
+                            onClick={() => setDocToDelete(doc)}
+                            className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded transition"
+                            title="Hapus Pengajuan Ditolak"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -118,6 +138,45 @@ export default function RejectedListView() {
           </table>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {docToDelete && (
+        <Modal
+          isOpen={Boolean(docToDelete)}
+          onClose={() => setDocToDelete(null)}
+          title="Konfirmasi Hapus Pengajuan Ditolak"
+          subtitle={`No. Dokumen: ${docToDelete.docNumber}`}
+          maxWidth="max-w-md"
+        >
+          <div className="space-y-4">
+            <div className="p-3.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-xl flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" />
+              <div className="text-xs text-rose-800 dark:text-rose-300">
+                <p className="font-bold">Hapus Dokumen Ditolak Secara Permanen</p>
+                <p className="mt-1">
+                  Pengajuan dokumen <strong>{docToDelete.docNumber}</strong> ({docToDelete.title}) akan dihapus dari daftar pengajuan ditolak. Tindakan ini tidak dapat dibatalkan.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                onClick={() => setDocToDelete(null)}
+                className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="px-4 py-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-sm transition flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Ya, Hapus Dokumen
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

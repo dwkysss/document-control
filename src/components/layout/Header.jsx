@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Menu, Bell, Search, UserCheck, ChevronDown, Check, Shield, FileText, CheckCircle2, AlertCircle, RefreshCw, X, Eye } from 'lucide-react';
+import { Menu, Bell, Search, UserCheck, ChevronDown, Check, Shield, FileText, CheckCircle2, AlertCircle, RefreshCw, X, Eye, LogOut } from 'lucide-react';
 import { useDocumentControl } from '../../context/DocumentControlContext';
 import Badge from '../common/Badge';
 
@@ -7,6 +7,11 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
   const {
     currentUser,
     setCurrentUser,
+    logout,
+    role,
+    isAdmin,
+    isApprover,
+    isDocControl,
     employees,
     notifications,
     markNotificationAsRead,
@@ -321,48 +326,82 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
             )}
           </div>
 
-          {/* User Profile & Role Switcher */}
+          {/* User Profile & Role Menu */}
           <div className="relative" ref={userMenuRef}>
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
               className="flex items-center gap-2.5 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition text-left"
             >
               <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-700 to-indigo-500 text-white flex items-center justify-center font-bold text-xs shadow-sm ring-2 ring-blue-500/20">
-                {currentUser.name.split(' ').map(n => n[0]).slice(0, 2).join('')}
+                {currentUser ? currentUser.name.split(' ').map(n => n[0]).slice(0, 2).join('') : 'U'}
               </div>
               <div className="hidden sm:block">
-                <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1">
-                  {currentUser.name}
+                <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <span>{currentUser ? currentUser.name : 'Tamu'}</span>
+                  {currentUser && (
+                    <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded border ${
+                      currentUser.role === 'admin'
+                        ? 'bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-950 dark:text-purple-300'
+                        : currentUser.role === 'approver'
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300'
+                        : currentUser.role === 'doc_control'
+                        ? 'bg-sky-50 text-sky-700 border-sky-300 dark:bg-sky-950 dark:text-sky-300'
+                        : 'bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950 dark:text-blue-300'
+                    }`}>
+                      {currentUser.role === 'admin' ? 'Admin' : currentUser.role === 'approver' ? 'Approver' : currentUser.role === 'doc_control' ? 'DCO' : 'Staff'}
+                    </span>
+                  )}
                   <ChevronDown className="w-3 h-3 text-slate-400" />
                 </div>
                 <div className="text-[10px] text-slate-500 font-medium">
-                  {currentUser.position}
+                  {currentUser ? currentUser.position : ''}
                 </div>
               </div>
             </button>
 
-            {/* Role Switcher Menu */}
-            {showUserMenu && (
-              <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-slate-900 rounded-xl shadow-elevated border border-slate-200 dark:border-slate-800 py-2 z-50 animate-fade-in">
+            {/* Profile & Auth Menu */}
+            {showUserMenu && currentUser && (
+              <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-900 rounded-xl shadow-elevated border border-slate-200 dark:border-slate-800 py-2 z-50 animate-fade-in">
                 <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
-                  <p className="text-xs text-slate-500">Masuk sebagai:</p>
+                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Profil Karyawan Aktif:</p>
                   <p className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">{currentUser.name}</p>
-                  <div className="flex items-center gap-1.5 mt-1 text-[11px] text-blue-600 dark:text-blue-400 font-medium">
-                    <Shield className="w-3.5 h-3.5" />
-                    <span>NIK: {currentUser.nik} | Dept: {currentUser.department}</span>
+                  <div className="flex items-center gap-1.5 mt-1 text-[11px] text-slate-600 dark:text-slate-400 font-medium">
+                    <Shield className="w-3.5 h-3.5 text-blue-600" />
+                    <span>NIP: {currentUser.nik} • Dept: {currentUser.department}</span>
+                  </div>
+                  <div className="mt-2 p-2 rounded-lg bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-900/50 text-[11px]">
+                    <div className="font-bold text-blue-900 dark:text-blue-200 flex items-center justify-between">
+                      <span>Wewenang Role:</span>
+                      <span className="uppercase text-[9px] px-1.5 py-0.5 rounded font-black bg-blue-200 text-blue-900 dark:bg-blue-800 dark:text-blue-100">
+                        {currentUser.role}
+                      </span>
+                    </div>
+                    <div className="text-blue-800 dark:text-blue-300 text-[10px] mt-0.5">
+                      {currentUser.role === 'admin' && 'Akses penuh seluruh fitur, master data, serta wewenang hapus & batalkan dokumen.'}
+                      {currentUser.role === 'approver' && 'Finalisasi dokumen (Persetujuan & Penolakan berkas Menunggu Verifikasi).'}
+                      {currentUser.role === 'doc_control' && 'Pengajuan dokumen lintas divisi, distribusi salinan resmi, & akses seluruh laporan ISO.'}
+                      {currentUser.role === 'staff' && 'Pengajuan berkas baru, simpan draft, serta perbaikan berkas ditolak departemennya.'}
+                    </div>
                   </div>
                 </div>
 
+                {/* Quick Account Switcher for Testing/Demo */}
                 <div className="px-3 py-2">
-                  <div className="text-[10px] uppercase font-bold text-slate-400 px-2 py-1 tracking-wider">
-                    Ganti Role / User Simulasi:
+                  <div className="text-[10px] uppercase font-bold text-slate-400 px-2 py-1 tracking-wider flex items-center justify-between">
+                    <span>Ganti Akun Demo (Uji Role):</span>
+                    <span className="text-[9px] text-blue-600 font-semibold">1-Klik</span>
                   </div>
-                  <div className="space-y-1 mt-1">
+                  <div className="space-y-1 mt-1 max-h-44 overflow-y-auto pr-1 scrollbar-thin">
                     {employees.map(emp => (
                       <button
                         key={emp.id}
                         onClick={() => {
                           setCurrentUser(emp);
+                          try {
+                            localStorage.setItem('dji_auth_user', JSON.stringify(emp));
+                          } catch (e) {
+                            // ignore
+                          }
                           setShowUserMenu(false);
                           showToast(`Berhasil beralih profil ke ${emp.name} (${emp.position})`, 'info');
                         }}
@@ -372,26 +411,40 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
                             : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
                         }`}
                       >
-                        <div className="text-left">
-                          <div>{emp.name}</div>
-                          <div className="text-[10px] text-slate-400 font-normal">{emp.position} ({emp.department})</div>
+                        <div className="text-left truncate">
+                          <div className="truncate">{emp.name}</div>
+                          <div className="text-[10px] text-slate-400 font-normal">NIP: {emp.nik} • {emp.position}</div>
                         </div>
-                        {currentUser.id === emp.id && <Check className="w-4 h-4 text-blue-600" />}
+                        {currentUser.id === emp.id && <Check className="w-4 h-4 text-blue-600 flex-shrink-0" />}
                       </button>
                     ))}
                   </div>
                 </div>
 
-                <div className="border-t border-slate-100 dark:border-slate-800 px-3 pt-2 mt-1">
+                <div className="border-t border-slate-100 dark:border-slate-800 px-3 pt-2 mt-1 space-y-1">
+                  {isAdmin && (
+                    <button
+                      onClick={() => {
+                        setActiveMenu('settings');
+                        setShowUserMenu(false);
+                      }}
+                      className="w-full text-left px-2.5 py-1.5 text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg flex items-center gap-2 transition"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
+                      Pengaturan Sistem & Database
+                    </button>
+                  )}
+                  
+                  {/* Logout Button */}
                   <button
                     onClick={() => {
-                      setActiveMenu('settings');
                       setShowUserMenu(false);
+                      logout();
                     }}
-                    className="w-full text-left px-2.5 py-1.5 text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg flex items-center gap-2"
+                    className="w-full text-left px-2.5 py-2 text-xs font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg flex items-center gap-2 transition"
                   >
-                    <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
-                    Pengaturan Sistem & Database
+                    <LogOut className="w-3.5 h-3.5 text-rose-500" />
+                    Keluar (Logout)
                   </button>
                 </div>
               </div>

@@ -31,7 +31,8 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
     setActiveMenu,
     setBreadcrumbs,
     documents,
-    systemSettings
+    systemSettings,
+    isAdmin
   } = useDocumentControl();
 
   // Accordion open/close state
@@ -94,13 +95,13 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
         } ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
         {/* Brand Header */}
-        <div className="p-5 border-b border-[#172740] flex items-center gap-3.5 bg-[#07101e]">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-blue-600 to-sky-400 flex items-center justify-center text-white shadow-md shadow-blue-500/20 flex-shrink-0">
-            <Building2 className="w-6 h-6" />
+        <div className="p-4 border-b border-[#172740] flex items-center gap-3 bg-[#07101e]">
+          <div className="w-11 h-11 rounded-xl bg-white p-1 flex items-center justify-center shadow-md shadow-blue-500/20 flex-shrink-0 overflow-hidden ring-1 ring-white/20">
+            <img src="/dji-logo.png" alt="PT DJI Logo" className="w-full h-full object-contain" />
           </div>
           {!isCollapsed && (
             <div className="overflow-hidden">
-              <h2 className="font-extrabold text-base tracking-wider text-white truncate font-sans">
+              <h2 className="font-extrabold text-sm tracking-wider text-white truncate font-sans">
                 {systemSettings.companyName || 'PT DJI'}
               </h2>
               <p className="text-[10px] text-sky-400 font-semibold tracking-widest uppercase truncate mt-0.5">
@@ -320,7 +321,14 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
             >
               <div className="flex items-center gap-3">
                 <Database className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                {!isCollapsed && <span>Master Data</span>}
+                {!isCollapsed && (
+                  <span className="flex items-center gap-1.5">
+                    <span>Master Data</span>
+                    <span className="text-[8px] font-extrabold uppercase px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                      Admin
+                    </span>
+                  </span>
+                )}
               </div>
               {!isCollapsed && (
                 openSections.master ? <ChevronUp className="w-3.5 h-3.5 text-slate-400" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
@@ -444,7 +452,14 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
             }`}
           >
             <Settings className="w-4 h-4 flex-shrink-0" />
-            {!isCollapsed && <span>Setting</span>}
+            {!isCollapsed && (
+              <div className="flex items-center justify-between w-full">
+                <span>Setting</span>
+                <span className="text-[8px] font-extrabold uppercase px-1 py-0.2 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40">
+                  Admin
+                </span>
+              </div>
+            )}
           </button>
         </div>
 

@@ -4,7 +4,7 @@ import Badge from '../common/Badge';
 import { useDocumentControl } from '../../context/DocumentControlContext';
 
 export default function DraftListView() {
-  const { documents, deleteDocument, submitForVerification, setViewingDocument, setActiveMenu, setBreadcrumbs } = useDocumentControl();
+  const { documents, deleteDocument, submitForVerification, setViewingDocument, setActiveMenu, setBreadcrumbs, currentUser, isAdmin } = useDocumentControl();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDept, setSelectedDept] = useState('ALL');
 
@@ -127,13 +127,19 @@ export default function DraftListView() {
                         >
                           <Send className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => deleteDocument(doc.id)}
-                          className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded"
-                          title="Hapus Draft"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {(isAdmin || (currentUser && (currentUser.name === doc.creator || currentUser.nik === doc.creatorNik))) && (
+                          <button
+                            onClick={() => {
+                              if (window.confirm(`Hapus draf ${doc.docNumber} (${doc.title})?`)) {
+                                deleteDocument(doc.id);
+                              }
+                            }}
+                            className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded"
+                            title="Hapus Draft"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

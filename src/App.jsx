@@ -25,13 +25,23 @@ import DepartmentReportView from './components/report/DepartmentReportView';
 import DocumentTypeReportView from './components/report/DocumentTypeReportView';
 import RevisionAuditReportView from './components/report/RevisionAuditReportView';
 import SystemSettingsView from './components/settings/SystemSettingsView';
+import LoginView from './components/auth/LoginView';
 
 import { DocumentControlProvider, useDocumentControl } from './context/DocumentControlContext';
 
 function MainAppContent() {
-  const { activeMenu, viewingDocument, setViewingDocument, systemSettings } = useDocumentControl();
+  const { currentUser, isAuthenticated, activeMenu, viewingDocument, setViewingDocument, systemSettings } = useDocumentControl();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  if (!currentUser) {
+    return (
+      <>
+        <LoginView />
+        <Toast />
+      </>
+    );
+  }
 
   const renderActiveView = () => {
     switch (activeMenu) {

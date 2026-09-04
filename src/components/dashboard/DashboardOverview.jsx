@@ -66,14 +66,18 @@ export default function DashboardOverview() {
       {/* Welcome Banner */}
       <div className="bg-gradient-to-r from-[#0a1628] via-[#102a4e] to-[#1e3a8a] rounded-2xl shadow-elevated p-6 sm:p-8 text-white relative overflow-hidden">
         {/* Background decorative watermark graphic */}
-        <div className="absolute right-0 top-0 bottom-0 opacity-10 flex items-center pr-8 pointer-events-none">
-          <Building2 className="w-64 h-64 text-white" />
+        <div className="absolute right-0 top-0 bottom-0 opacity-15 hidden md:flex items-center pr-8 pointer-events-none">
+          <div className="bg-white/10 p-4 rounded-3xl backdrop-blur-xs">
+            <img src="/dji-logo.png" alt="DJI Logo" className="w-64 h-auto object-contain filter drop-shadow-xl" />
+          </div>
         </div>
 
         <div className="relative z-10 max-w-2xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-sky-300 text-xs font-semibold mb-3">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            Standar Mutu Terkendali ISO 9001:2015
+            <div className="w-5 h-5 rounded-md bg-white p-0.5 flex items-center justify-center">
+              <img src="/dji-logo.png" alt="DJI" className="w-full h-full object-contain" />
+            </div>
+            <span>Standar Mutu Terkendali ISO 9001:2015</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight">
             Selamat Datang di {systemSettings.companyName} Document Control System

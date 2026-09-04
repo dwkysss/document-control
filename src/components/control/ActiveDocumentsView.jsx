@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Eye, RefreshCw, Calendar, Search, Download, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, Eye, RefreshCw, Calendar, Search, Download, CheckCircle2, Ban, AlertTriangle } from 'lucide-react';
 import Badge from '../common/Badge';
+import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
 
 export default function ActiveDocumentsView() {
-  const { documents, setViewingDocument, setSelectedDocForRevision, setActiveMenu, setBreadcrumbs } = useDocumentControl();
+  const { documents, setViewingDocument, setSelectedDocForRevision, setActiveMenu, setBreadcrumbs, cancelDocument, isAdmin, showToast } = useDocumentControl();
   const [searchTerm, setSearchTerm] = useState('');
+  const [docToCancel, setDocToCancel] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
 
   const activeDocs = documents.filter(d => d.status === 'AKTIF');
 
@@ -104,6 +107,21 @@ export default function ActiveDocumentsView() {
                         <RefreshCw className="w-3.5 h-3.5" />
                         Revisi
                       </button>
+
+                      {/* Batalkan Dokumen (Wewenang Khusus System Administrator) */}
+                      {isAdmin && (
+                        <button
+                          onClick={() => {
+                            setDocToCancel(doc);
+                            setCancelReason('');
+                          }}
+                          className="px-2.5 py-1 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-md transition flex items-center gap-1"
+                          title="Batalkan Dokumen (Ubah Menjadi Obsolete)"
+                        >
+                          <Ban className="w-3.5 h-3.5" />
+                          Batalkan
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -112,6 +130,68 @@ export default function ActiveDocumentsView() {
           </table>
         </div>
       </div>
+
+      {/* Cancellation Modal */}
+      {docToCancel && (
+        <Modal
+          isOpen={Boolean(docToCancel)}
+          onClose={() => setDocToCancel(null)}
+          title="Konfirmasi Pembatalan Dokumen (Penarikan / Obsolete)"
+          subtitle={`No. Dokumen: ${docToCancel.docNumber} • ${docToCancel.title}`}
+          maxWidth="max-w-md"
+        >
+          <div className="space-y-4">
+            <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-xl flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="text-xs text-amber-900 dark:text-amber-200">
+                <p className="font-bold">Perhatian Standar ISO 9001 Clause 7.5:</p>
+                <p className="mt-1 leading-relaxed">
+                  Dokumen yang dibatalkan akan langsung ditarik dari peredaran operasional dan statusnya berubah menjadi <strong>OBSOLETE</strong> serta dicap watermark penarikan. Rekam jejak audit pembatalan akan dicatat di log sistem.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                Alasan Pembatalan Dokumen <span className="text-rose-500">*</span>
+              </label>
+              <textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="Contoh: Kebijakan dicabut oleh Direksi / SOP tidak lagi relevan dengan alur proses baru..."
+                rows={3}
+                className="w-full p-2.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-rose-500"
+                required
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setDocToCancel(null)}
+                className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition"
+              >
+                Kembali
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!cancelReason.trim()) {
+                    showToast('Harap isi alasan pembatalan dokumen!', 'danger');
+                    return;
+                  }
+                  cancelDocument(docToCancel.id, cancelReason.trim());
+                  setDocToCancel(null);
+                }}
+                className="px-4 py-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-sm transition flex items-center gap-1.5"
+              >
+                <Ban className="w-3.5 h-3.5" />
+                Ya, Batalkan Dokumen
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

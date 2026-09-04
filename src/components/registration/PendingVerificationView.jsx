@@ -5,7 +5,7 @@ import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
 
 export default function PendingVerificationView() {
-  const { documents, approveDocument, rejectDocument, setViewingDocument, currentUser, showToast } = useDocumentControl();
+  const { documents, approveDocument, rejectDocument, setViewingDocument, currentUser, canFinalizeDocument, showToast } = useDocumentControl();
   const [selectedReviewDoc, setSelectedReviewDoc] = useState(null);
   const [approvalNotes, setApprovalNotes] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
@@ -14,11 +14,19 @@ export default function PendingVerificationView() {
   const pendingDocs = documents.filter(d => d.status === 'VERIFIKASI');
 
   const handleOpenApproveModal = (doc) => {
+    if (!canFinalizeDocument) {
+      showToast('Akses ditolak! Hanya Approver / Verifikator yang dapat menyetujui dokumen.', 'danger');
+      return;
+    }
     setSelectedReviewDoc(doc);
     setApprovalNotes('Dokumen telah diverifikasi dan memenuhi kaidah standardisasi ISO 9001.');
   };
 
   const handleOpenRejectModal = (doc) => {
+    if (!canFinalizeDocument) {
+      showToast('Akses ditolak! Hanya Approver / Verifikator yang dapat menolak dokumen.', 'danger');
+      return;
+    }
     setSelectedReviewDoc(doc);
     setRejectionReason('');
     setIsRejectModalOpen(true);
@@ -58,11 +66,26 @@ export default function PendingVerificationView() {
         </div>
         <div className="flex items-center gap-2 text-xs font-semibold px-3 py-1.5 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 rounded-lg border border-amber-200 dark:border-amber-800">
           <AlertCircle className="w-4 h-4 text-amber-600" />
-          <span>{pendingDocs.length} Dokumen Membutuhkan Tindakan</span>
+          <span>{pendingDocs.length} Berkas Menunggu Review</span>
         </div>
       </div>
 
-      {/* Pending Table */}
+      {/* Non-Approver Informational Banner */}
+      {!canFinalizeDocument && (
+        <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 rounded-xl p-3.5 flex items-start gap-3 animate-fade-in">
+          <ShieldAlert className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+          <div className="text-xs">
+            <p className="font-bold text-blue-900 dark:text-blue-200">
+              Mode Pemantauan ({currentUser?.position || 'Staff'})
+            </p>
+            <p className="text-blue-800 dark:text-blue-300 mt-0.5 leading-relaxed">
+              Sesuai aturan wewenang ISO 9001, Anda dapat memantau status berkas yang diajukan. Finalisasi dokumen (*Persetujuan / Penolakan*) merupakan wewenang khusus **Approver / Verifikator** dan **System Administrator**.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Table */}
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
@@ -77,7 +100,7 @@ export default function PendingVerificationView() {
                 <th className="py-3 px-4 text-center">Revisi</th>
                 <th className="py-3 px-4 text-center">Status</th>
                 <th className="py-3 px-4 text-center">Tgl. Pengajuan</th>
-                <th className="py-3 px-4 text-center">Aksi Verifikasi</th>
+                <th className="py-3 px-4 text-center">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -85,8 +108,8 @@ export default function PendingVerificationView() {
                 <tr>
                   <td colSpan={10} className="py-12 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <CheckCircle2 className="w-8 h-8 text-emerald-500" />
-                      <p className="font-semibold text-slate-700 dark:text-slate-300">Semua dokumen telah diverifikasi!</p>
+                      <FileText className="w-8 h-8 text-slate-300 dark:text-slate-600" />
+                      <p className="font-medium text-slate-600 dark:text-slate-400">Semua dokumen telah diverifikasi</p>
                       <p className="text-xs text-slate-400">Tidak ada berkas yang menunggu review saat ini.</p>
                     </div>
                   </td>
@@ -125,22 +148,31 @@ export default function PendingVerificationView() {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => handleOpenApproveModal(doc)}
-                          className="px-2.5 py-1 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-md shadow-sm transition flex items-center gap-1"
-                          title="Setujui & Terbitkan Dokumen"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          Setujui
-                        </button>
-                        <button
-                          onClick={() => handleOpenRejectModal(doc)}
-                          className="px-2.5 py-1 text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-md transition flex items-center gap-1"
-                          title="Tolak Pengajuan"
-                        >
-                          <XCircle className="w-3.5 h-3.5" />
-                          Tolak
-                        </button>
+                        {canFinalizeDocument ? (
+                          <>
+                            <button
+                              onClick={() => handleOpenApproveModal(doc)}
+                              className="px-2.5 py-1 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-md shadow-sm transition flex items-center gap-1"
+                              title="Setujui & Terbitkan Dokumen"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              Setujui
+                            </button>
+                            <button
+                              onClick={() => handleOpenRejectModal(doc)}
+                              className="px-2.5 py-1 text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-md transition flex items-center gap-1"
+                              title="Tolak Pengajuan"
+                            >
+                              <XCircle className="w-3.5 h-3.5" />
+                              Tolak
+                            </button>
+                          </>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-300 px-2 py-1 rounded border border-amber-200 dark:border-amber-800">
+                            <Clock className="w-3 h-3 text-amber-500" />
+                            Menunggu Approver
+                          </span>
+                        )}
                       </div>
                     </td>
                   </tr>
