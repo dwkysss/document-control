@@ -19,7 +19,6 @@ import DocumentRevisionFormView from './components/revision/DocumentRevisionForm
 import EmployeeMasterView from './components/master/EmployeeMasterView';
 import DepartmentMasterView from './components/master/DepartmentMasterView';
 import DocumentTypeMasterView from './components/master/DocumentTypeMasterView';
-import VerifierTeamMasterView from './components/master/VerifierTeamMasterView';
 import RoleMasterView from './components/master/RoleMasterView';
 import MasterRegisterReportView from './components/report/MasterRegisterReportView';
 import DepartmentReportView from './components/report/DepartmentReportView';
@@ -114,8 +113,6 @@ function MainAppContent() {
         return <DepartmentMasterView />;
       case 'master-type':
         return <DocumentTypeMasterView />;
-      case 'master-team':
-        return <VerifierTeamMasterView />;
       case 'master-role':
         return <RoleMasterView />;
       case 'rep-register':

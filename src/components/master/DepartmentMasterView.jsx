@@ -4,7 +4,7 @@ import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
 
 export default function DepartmentMasterView() {
-  const { departments, addDepartment, updateDepartment, deleteDepartment, showToast } = useDocumentControl();
+  const { departments, employees, addDepartment, updateDepartment, deleteDepartment, showToast } = useDocumentControl();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDept, setEditingDept] = useState(null);
@@ -181,14 +181,29 @@ export default function DepartmentMasterView() {
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Kepala Departemen / Manager</label>
-              <input
-                type="text"
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Kepala Departemen / Manager (Referensi Master Karyawan)
+              </label>
+              <select
                 value={head}
                 onChange={(e) => setHead(e.target.value)}
-                className="w-full p-2.5 border rounded-lg dark:bg-slate-800"
-                placeholder="Contoh: Siti Nurhaliza"
-              />
+                className="w-full p-2.5 border rounded-lg dark:bg-slate-800 font-medium text-xs text-slate-900 dark:text-white"
+              >
+                <option value="------------">-- Belum Ditentukan (------------) --</option>
+                {(employees || [])
+                  .filter(e => e.status !== 'Nonaktif')
+                  .map(emp => (
+                    <option key={emp.id || emp.nik} value={emp.name}>
+                      {emp.name} — {emp.position} ({emp.department})
+                    </option>
+                  ))}
+                {head && head !== '------------' && !(employees || []).some(e => e.name === head) && (
+                  <option value={head}>{head}</option>
+                )}
+              </select>
+              <p className="text-[10px] text-slate-400 mt-1">
+                Nama kepala departemen otomatis terhubung langsung dengan profil Master Data Karyawan.
+              </p>
             </div>
 
             <div className="flex justify-end gap-2 pt-4 border-t">

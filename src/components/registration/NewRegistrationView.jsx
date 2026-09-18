@@ -67,44 +67,50 @@ export default function NewRegistrationView() {
   const [createdDate, setCreatedDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [selectedVerifierTeam, setSelectedVerifierTeam] = useState('Document Control Team');
 
-  // 1. Ambil daftar Reviewer (Atasan) langsung dari kolom KEPALA DEPARTEMEN di Master Data Departemen
+  // 1. Ambil daftar Reviewer (Atasan) langsung mengacu ke Master Data Karyawan resmi
   const availableReviewers = React.useMemo(() => {
     const list = [];
-    const addedNames = new Set();
+    const addedKeys = new Set();
 
-    // Prioritaskan seluruh Kepala Departemen aktif yang terdaftar di Master Data Departemen
+    // Prioritaskan seluruh Kepala Departemen yang terdaftar di Master Data Departemen
     (departments || []).forEach(dept => {
       const headName = (dept.head || '').trim();
       // Lewati jika belum ada pejabatnya (tanda garis '------------')
       if (!headName || headName.includes('---') || headName === '-') return;
 
       const normalized = headName.toUpperCase();
-      if (!addedNames.has(normalized)) {
-        addedNames.add(normalized);
-        // Hubungkan dengan profil di Master Karyawan jika sudah terdaftar
-        const matchedEmp = (employees || []).find(e =>
-          e.name?.toUpperCase().trim() === normalized ||
-          normalized.includes(e.name?.toUpperCase().trim()) ||
-          (e.name && e.name.toUpperCase().includes(normalized))
-        );
+      // Hubungkan dengan profil resmi di Master Karyawan
+      const matchedEmp = (employees || []).find(e => {
+        const empName = (e.name || '').toUpperCase().trim();
+        return empName === normalized ||
+               empName.includes(normalized) ||
+               normalized.includes(empName);
+      });
+
+      // Selalu gunakan nama & jabatan resmi dari Master Karyawan sebagai Single Source of Truth
+      const canonicalName = matchedEmp ? matchedEmp.name : headName;
+      const canonicalKey = canonicalName.toUpperCase().trim();
+
+      if (!addedKeys.has(canonicalKey)) {
+        addedKeys.add(canonicalKey);
 
         list.push({
           nik: matchedEmp?.nik || `HEAD-${dept.code}`,
-          name: headName,
+          name: canonicalName,
           position: matchedEmp?.position || `Kepala Departemen ${dept.name}`,
-          department: dept.code,
+          department: matchedEmp?.department || dept.code,
           role: matchedEmp?.role || 'reviewer',
           status: 'Aktif'
         });
       }
     });
 
-    // Tambahkan juga akun Reviewer / Approver / Admin resmi dari Master Karyawan jika belum masuk
+    // Tambahkan juga akun Reviewer resmi dari Master Karyawan jika belum masuk
     (employees || []).forEach(emp => {
-      if (emp.status !== 'Nonaktif' && (emp.role === 'reviewer' || emp.role === 'approver' || emp.role === 'admin')) {
-        const normalized = (emp.name || '').toUpperCase().trim();
-        if (!addedNames.has(normalized)) {
-          addedNames.add(normalized);
+      if (emp.status !== 'Nonaktif' && (emp.role === 'reviewer' || emp.role === 'approver')) {
+        const canonicalKey = (emp.name || '').toUpperCase().trim();
+        if (!addedKeys.has(canonicalKey)) {
+          addedKeys.add(canonicalKey);
           list.push(emp);
         }
       }

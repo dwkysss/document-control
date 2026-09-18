@@ -233,7 +233,6 @@ export function DocumentControlProvider({ children }) {
       case 'master-emp': return ['Dashboard', 'Master Data', 'Karyawan'];
       case 'master-dept': return ['Dashboard', 'Master Data', 'Departemen'];
       case 'master-type': return ['Dashboard', 'Master Data', 'Jenis Dokumen'];
-      case 'master-team': return ['Dashboard', 'Master Data', 'Tim Verifikator'];
       case 'master-role': return ['Dashboard', 'Master Data', 'Role & Hak Akses'];
       case 'rep-register': return ['Dashboard', 'Laporan & Audit', 'Master Register'];
       case 'rep-dept': return ['Dashboard', 'Laporan & Audit', 'Per Departemen'];
@@ -582,6 +581,32 @@ export function DocumentControlProvider({ children }) {
       return prev;
     });
   }, []);
+
+  // Sinkronisasi otomatis Kepala Departemen dengan Single Source of Truth di Master Karyawan
+  useEffect(() => {
+    if (!employees || employees.length === 0) return;
+    setDepartments(prev => {
+      let changed = false;
+      const updated = (prev || []).map(d => {
+        if (!d.head || d.head === '------------' || d.head.includes('---')) return d;
+        const norm = d.head.toUpperCase().trim();
+        const matched = employees.find(e => {
+          const en = (e.name || '').toUpperCase().trim();
+          return en === norm || en.includes(norm) || norm.includes(en);
+        });
+        if (matched && matched.name !== d.head) {
+          changed = true;
+          return { ...d, head: matched.name };
+        }
+        return d;
+      });
+      if (changed) {
+        localStorage.setItem('dji_dms_departments', JSON.stringify(updated));
+        return updated;
+      }
+      return prev;
+    });
+  }, [employees]);
 
   useEffect(() => {
     localStorage.setItem('dji_dms_verifierteams', JSON.stringify(verifierTeams));

@@ -370,16 +370,6 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
                   <span>Jenis Dokumen</span>
                 </button>
                 <button
-                  onClick={() => handleNavClick('master-team', ['Dashboard', 'Master Data', 'Team Verifikator'])}
-                  className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
-                    activeMenu === 'master-team'
-                      ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
-                      : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
-                  }`}
-                >
-                  <span>Team Verifikator</span>
-                </button>
-                <button
                   onClick={() => handleNavClick('master-role', ['Dashboard', 'Master Data', 'Role & Hak Akses'])}
                   className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
                     activeMenu === 'master-role'
