@@ -213,6 +213,7 @@ export function DocumentControlProvider({ children }) {
   const canDeleteDocument = isAdmin;
   const canCancelDocument = isAdmin;
   const canManageMasterData = isAdmin;
+  const canManageSettings = isAdmin;
   const canAccessReports = isReviewer || isDocControl || isApprover || isAdmin;
 
   // Scope akses berkas Menunggu Verifikasi berdasarkan Departemen & Role (ISO 9001 Segregation)
