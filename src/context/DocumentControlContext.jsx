@@ -213,8 +213,54 @@ export function DocumentControlProvider({ children }) {
   const canDeleteDocument = isAdmin;
   const canCancelDocument = isAdmin;
   const canManageMasterData = isAdmin;
-  const canManageSettings = isAdmin;
   const canAccessReports = isReviewer || isDocControl || isApprover || isAdmin;
+
+  // Scope akses berkas Menunggu Verifikasi berdasarkan Departemen & Role (ISO 9001 Segregation)
+  const canUserViewPendingDoc = (doc) => {
+    if (!doc) return false;
+    if (!currentUser) return false;
+
+    const userRole = currentUser.role || 'staff';
+    const userDept = (currentUser.department || '').toUpperCase().trim();
+    const docDept = (doc.department || '').toUpperCase().trim();
+    const userName = (currentUser.name || '').toUpperCase().trim();
+    const userNik = (currentUser.nik || '').toUpperCase().trim();
+
+    // 1. Super Admin, Approver (MR), dan Document Control Officer (DCO) dapat melihat seluruh antrean verifikasi
+    if (userRole === 'admin' || userRole === 'approver' || userRole === 'doc_control') {
+      return true;
+    }
+
+    // 2. Atasan / Reviewer: HANYA dapat melihat dokumen dari departemennya sendiri
+    //    atau jika ditunjuk secara spesifik sebagai Reviewer dokumen tersebut.
+    if (userRole === 'reviewer') {
+      // Sama departemen
+      if (userDept && docDept && userDept === docDept) return true;
+
+      // Terdaftar sebagai Kepala Departemen dari departemen dokumen di Master Departemen
+      const isHeadOfDocDept = (departments || []).some(d => {
+        if ((d.code || '').toUpperCase().trim() !== docDept) return false;
+        const head = (d.head || '').toUpperCase().trim();
+        return head && !head.includes('---') && (head === userName || head.includes(userName) || userName.includes(head));
+      });
+      if (isHeadOfDocDept) return true;
+
+      // Ditunjuk secara spesifik sebagai target reviewer
+      const isDesignatedReviewer = (doc.reviewerNik && doc.reviewerNik.toUpperCase().trim() === userNik) ||
+                                   (doc.targetReviewer && doc.targetReviewer.toUpperCase().trim() === userName) ||
+                                   (doc.targetReviewer && doc.targetReviewer.toUpperCase().includes(userName)) ||
+                                   (userName && doc.targetReviewer && userName.includes(doc.targetReviewer.toUpperCase()));
+      if (isDesignatedReviewer) return true;
+
+      // Jika dari departemen lain, sembunyikan!
+      return false;
+    }
+
+    // 3. Staff: Hanya melihat dokumen yang diajukan sendiri
+    const isOwner = (doc.creatorNik && doc.creatorNik.toUpperCase().trim() === userNik) ||
+                    (doc.creator && doc.creator.toUpperCase().trim() === userName);
+    return Boolean(isOwner);
+  };
 
   // Navigation Helpers & Persistence
   const getMenuBreadcrumbs = (key) => {
@@ -909,6 +955,12 @@ export function DocumentControlProvider({ children }) {
   const reviewDocumentContent = (docId, reviewNotes = '') => {
     if (!canReviewContent) {
       showToast('Akses ditolak! Hanya Reviewer (Atasan / Kepala Departemen) atau Administrator yang berwenang menelaah dokumen.', 'danger');
+      return false;
+    }
+
+    const existingTarget = documents.find(d => d.id === docId);
+    if (existingTarget && !canUserViewPendingDoc(existingTarget)) {
+      showToast(`Akses ditolak! Dokumen ini hanya dapat direview oleh Atasan Departemen ${existingTarget.department}.`, 'danger');
       return false;
     }
 
@@ -1819,6 +1871,7 @@ export function DocumentControlProvider({ children }) {
         canManageMasterData,
         canManageSettings,
         canAccessReports,
+        canUserViewPendingDoc,
         cancelDocument,
         confirmDocumentPeriodicReview,
         reviewDocumentContent,

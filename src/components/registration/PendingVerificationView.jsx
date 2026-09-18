@@ -7,6 +7,8 @@ import { useDocumentControl } from '../../context/DocumentControlContext';
 export default function PendingVerificationView() {
   const {
     documents,
+    departments,
+    canUserViewPendingDoc,
     reviewDocumentContent,
     verifyDocumentFormat,
     approveDocument,
@@ -38,8 +40,10 @@ export default function PendingVerificationView() {
   const [rejectStage, setRejectStage] = useState('REVIEW'); // 'REVIEW' | 'FORMAT' | 'APPROVAL'
   const [rejectionReason, setRejectionReason] = useState('');
 
-  // Antrian berkas: mencakup Tahap 1 (REVIEW), Tahap 2 (VERIFIKASI), dan Tahap 3 (APPROVAL)
-  const pendingDocs = documents.filter(d => d.status === 'REVIEW' || d.status === 'VERIFIKASI' || d.status === 'APPROVAL');
+  // Antrian berkas: difilter strictly berdasarkan wewenang departemen user saat ini (ISO 9001 Segregation)
+  const pendingDocs = documents
+    .filter(d => d.status === 'REVIEW' || d.status === 'VERIFIKASI' || d.status === 'APPROVAL')
+    .filter(d => (canUserViewPendingDoc ? canUserViewPendingDoc(d) : true));
   const stage1Count = pendingDocs.filter(d => d.status === 'REVIEW').length;
   const stage2Count = pendingDocs.filter(d => d.status === 'VERIFIKASI').length;
   const stage3Count = pendingDocs.filter(d => d.status === 'APPROVAL').length;
@@ -53,6 +57,10 @@ export default function PendingVerificationView() {
   const handleOpenReviewModal = (doc) => {
     if (!canReviewContent) {
       showToast('Akses ditolak! Hanya Atasan / Kepala Departemen (Reviewer) atau Administrator yang berwenang mereview isi dokumen.', 'danger');
+      return;
+    }
+    if (currentUser?.role === 'reviewer' && canUserViewPendingDoc && !canUserViewPendingDoc(doc)) {
+      showToast(`Akses ditolak! Dokumen ini hanya dapat direview oleh Atasan Departemen ${doc.department}.`, 'danger');
       return;
     }
     setSelectedReviewDoc(doc);
@@ -126,10 +134,8 @@ export default function PendingVerificationView() {
   const isAssignedReviewer = (doc) => {
     if (!currentUser) return false;
     if (currentUser.role === 'admin') return true;
-    if (doc.targetReviewer && doc.targetReviewer.toUpperCase().includes(currentUser.name.toUpperCase())) return true;
-    if (currentUser.role === 'reviewer' && doc.department === currentUser.department) return true;
-    if (currentUser.role === 'reviewer') return true; // Reviewer lintas departemen jika ditugaskan
-    return false;
+    if (currentUser.role !== 'reviewer' && currentUser.role !== 'approver') return false;
+    return canUserViewPendingDoc ? canUserViewPendingDoc(doc) : false;
   };
 
   // Cek apakah user saat ini merupakan Approver yang ditugaskan (MR / GM / Admin)
@@ -231,6 +237,21 @@ export default function PendingVerificationView() {
           </span>
         </button>
       </div>
+
+      {/* Info Banner untuk Atasan Departemen (Reviewer) */}
+      {currentUser?.role === 'reviewer' && (
+        <div className="bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-900 rounded-xl p-3.5 flex items-start gap-3 animate-fade-in">
+          <UserCheck className="w-5 h-5 text-purple-600 dark:text-purple-400 flex-shrink-0 mt-0.5" />
+          <div className="text-xs">
+            <p className="font-bold text-purple-900 dark:text-purple-200">
+              Antrean Verifikasi Khusus Departemen {currentUser?.department || ''} ({currentUser?.name || ''})
+            </p>
+            <p className="text-purple-800 dark:text-purple-300 mt-0.5 leading-relaxed">
+              Sesuai aturan pemisahan wewenang ISO 9001, Anda hanya menampilkan antrean dokumen yang berasal dari departemen <strong>{currentUser?.department || 'Anda'}</strong> atau dokumen di mana Anda ditugaskan khusus sebagai Reviewer. Dokumen dari departemen lain tidak ditampilkan.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Info Banner untuk Staf Biasa */}
       {!canReviewContent && !canVerifyFormat && !canApproveDocument && (

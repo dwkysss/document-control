@@ -32,7 +32,8 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
     setBreadcrumbs,
     documents,
     systemSettings,
-    isAdmin
+    isAdmin,
+    canUserViewPendingDoc
   } = useDocumentControl();
 
   // Accordion open/close state
@@ -70,7 +71,10 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
   // Badge counts
   const safeDocs = Array.isArray(documents) ? documents : [];
   const draftCount = safeDocs.filter(d => d?.status === 'DRAFT').length;
-  const pendingCount = safeDocs.filter(d => d?.status === 'REVIEW' || d?.status === 'VERIFIKASI' || d?.status === 'APPROVAL').length;
+  const pendingCount = safeDocs
+    .filter(d => d?.status === 'REVIEW' || d?.status === 'VERIFIKASI' || d?.status === 'APPROVAL')
+    .filter(d => (canUserViewPendingDoc ? canUserViewPendingDoc(d) : true))
+    .length;
   const activeCount = safeDocs.filter(d => d?.status === 'AKTIF').length;
   const obsoleteCount = safeDocs.filter(d => d?.status === 'OBSOLETE').length;
   const rejectedCount = safeDocs.filter(d => d?.status === 'DITOLAK').length;
