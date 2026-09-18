@@ -1229,6 +1229,76 @@ export function DocumentControlProvider({ children }) {
   };
 
   /**
+   * Minta Revisi Dokumen (Return for Revision / Kembalikan ke Pembuat)
+   * Berkas tidak dibatalkan permanen melainkan berstatus 'PERLU REVISI'
+   * agar pembuat dapat memperbaiki draf/lampiran lalu mengajukan ulang.
+   */
+  const requestDocumentRevision = (docId, revisionNotes = '', stage = 'REVIEW') => {
+    if (!canReviewContent && !canVerifyFormat && !canApproveDocument) {
+      showToast('Akses ditolak! Anda tidak memiliki wewenang meminta revisi dokumen.', 'danger');
+      return false;
+    }
+
+    let targetDoc = null;
+    const now = new Date();
+    const today = now.toISOString().slice(0, 10);
+    const timestamp = `${today} ${now.toLocaleTimeString('id-ID')}`;
+
+    setDocuments(prevDocs => {
+      return prevDocs.map(doc => {
+        if (doc.id === docId) {
+          targetDoc = doc;
+          const noteText = revisionNotes || 'Perlu perbaikan isi materi / kelengkapan format sebelum diverifikasi ulang.';
+          return {
+            ...doc,
+            status: 'PERLU REVISI',
+            rejectionReason: noteText,
+            revisionNotes: noteText,
+            revisionRequestedBy: currentUser.name,
+            revisionRequestedDate: timestamp,
+            revisionRequestedStage: stage,
+            notes: doc.notes ? `${doc.notes} | [Minta Revisi: ${noteText}]` : `[Minta Revisi: ${noteText}]`,
+            revisionHistory: [
+              ...(doc.revisionHistory || []),
+              {
+                revision: doc.revision,
+                date: today,
+                author: currentUser.name,
+                note: `Diminta revisi (${stage}) oleh ${currentUser.name}: ${noteText}`
+              }
+            ]
+          };
+        }
+        return doc;
+      });
+    });
+
+    if (targetDoc) {
+      addAuditLog('REQUEST_REVISION', targetDoc.docNumber, targetDoc.title, `Permintaan revisi oleh ${currentUser.name}: ${revisionNotes}`);
+      addNotification(
+        'Permintaan Revisi Dokumen',
+        `Dokumen ${targetDoc.docNumber} (${targetDoc.title}) diminta untuk direvisi oleh ${currentUser.name}: "${revisionNotes}"`,
+        'warning',
+        targetDoc.id
+      );
+
+      if (isSupabaseConfigured && supabase) {
+        supabase.from('documents').update({
+          status: 'PERLU REVISI',
+          rejection_reason: revisionNotes,
+          updated_at: new Date().toISOString()
+        }).eq('id', docId).then(({ error }) => {
+          if (error) console.warn('Supabase request revision warning:', error);
+        });
+      }
+
+      showToast(`Dokumen ${targetDoc.docNumber} dikembalikan ke ${targetDoc.creator} untuk direvisi.`, 'warning');
+      return true;
+    }
+    return false;
+  };
+
+  /**
    * Buat Pengajuan Revisi Baru dari Dokumen Aktif
    */
   const createDocumentRevision = (originalDoc, revisionData) => {
@@ -1879,6 +1949,7 @@ export function DocumentControlProvider({ children }) {
         verifyDocumentFormat,
         approveDocument,
         rejectDocument,
+        requestDocumentRevision,
         activeMenu,
         setActiveMenu,
         breadcrumbs,

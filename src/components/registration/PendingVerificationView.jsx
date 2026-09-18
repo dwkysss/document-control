@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckCircle2, XCircle, Eye, ShieldAlert, FileText, UserCheck, AlertCircle, Clock, ArrowRight, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, XCircle, Eye, ShieldAlert, FileText, UserCheck, AlertCircle, Clock, ArrowRight, ShieldCheck, RotateCcw } from 'lucide-react';
 import Badge from '../common/Badge';
 import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
@@ -13,6 +13,7 @@ export default function PendingVerificationView() {
     verifyDocumentFormat,
     approveDocument,
     rejectDocument,
+    requestDocumentRevision,
     setViewingDocument,
     currentUser,
     canReviewContent,
@@ -39,6 +40,11 @@ export default function PendingVerificationView() {
   const [selectedRejectDoc, setSelectedRejectDoc] = useState(null);
   const [rejectStage, setRejectStage] = useState('REVIEW'); // 'REVIEW' | 'FORMAT' | 'APPROVAL'
   const [rejectionReason, setRejectionReason] = useState('');
+
+  // State Permintaan Revisi Berkas (Return for Revision)
+  const [selectedRevisionDoc, setSelectedRevisionDoc] = useState(null);
+  const [revisionStage, setRevisionStage] = useState('REVIEW'); // 'REVIEW' | 'FORMAT' | 'APPROVAL'
+  const [revisionNotes, setRevisionNotes] = useState('');
 
   // Antrian berkas: difilter strictly berdasarkan wewenang departemen user saat ini (ISO 9001 Segregation)
   const pendingDocs = documents
@@ -127,6 +133,32 @@ export default function PendingVerificationView() {
     if (selectedRejectDoc) {
       rejectDocument(selectedRejectDoc.id, rejectionReason.trim());
       setSelectedRejectDoc(null);
+    }
+  };
+
+  // Handler Permintaan Revisi ke Pembuat Berkas
+  const handleOpenRevisionModal = (doc, stage) => {
+    if (!canReviewContent && !canVerifyFormat && !canApproveDocument) {
+      showToast('Akses ditolak! Anda tidak memiliki wewenang meminta revisi dokumen.', 'danger');
+      return;
+    }
+    if (stage === 'REVIEW' && currentUser?.role === 'reviewer' && canUserViewPendingDoc && !canUserViewPendingDoc(doc)) {
+      showToast(`Akses ditolak! Dokumen ini hanya dapat direview oleh Atasan Departemen ${doc.department}.`, 'danger');
+      return;
+    }
+    setSelectedRevisionDoc(doc);
+    setRevisionStage(stage);
+    setRevisionNotes('');
+  };
+
+  const handleConfirmRevision = () => {
+    if (!revisionNotes.trim()) {
+      showToast('Harap masukkan poin-poin perbaikan yang harus direvisi oleh pembuat dokumen!', 'danger');
+      return;
+    }
+    if (selectedRevisionDoc) {
+      requestDocumentRevision(selectedRevisionDoc.id, revisionNotes.trim(), revisionStage);
+      setSelectedRevisionDoc(null);
     }
   };
 
@@ -392,9 +424,17 @@ export default function PendingVerificationView() {
                                   Review Isi
                                 </button>
                                 <button
+                                  onClick={() => handleOpenRevisionModal(doc, 'REVIEW')}
+                                  className="px-2.5 py-1 text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 dark:text-amber-300 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 rounded-md transition flex items-center gap-1 cursor-pointer shadow-xs"
+                                  title="Kembalikan ke Pembuat untuk Direvisi / Diperbaiki"
+                                >
+                                  <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
+                                  Minta Revisi
+                                </button>
+                                <button
                                   onClick={() => handleOpenRejectModal(doc, 'REVIEW')}
                                   className="px-2.5 py-1 text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-md transition flex items-center gap-1 cursor-pointer"
-                                  title="Tolak Isi & Kembalikan ke Pembuat"
+                                  title="Tolak Isi Dokumen"
                                 >
                                   <XCircle className="w-3.5 h-3.5" />
                                   Tolak
@@ -421,9 +461,17 @@ export default function PendingVerificationView() {
                                   Verifikasi Format
                                 </button>
                                 <button
+                                  onClick={() => handleOpenRevisionModal(doc, 'FORMAT')}
+                                  className="px-2.5 py-1 text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 dark:text-amber-300 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 rounded-md transition flex items-center gap-1 cursor-pointer shadow-xs"
+                                  title="Minta Perbaikan Format ke Pembuat"
+                                >
+                                  <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
+                                  Minta Revisi
+                                </button>
+                                <button
                                   onClick={() => handleOpenRejectModal(doc, 'FORMAT')}
                                   className="px-2.5 py-1 text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-md transition flex items-center gap-1 cursor-pointer"
-                                  title="Tolak Format & Kembalikan ke Pembuat"
+                                  title="Tolak Format Berkas"
                                 >
                                   <XCircle className="w-3.5 h-3.5" />
                                   Tolak
@@ -448,6 +496,14 @@ export default function PendingVerificationView() {
                                 >
                                   <CheckCircle2 className="w-3.5 h-3.5" />
                                   Setujui & Terbitkan
+                                </button>
+                                <button
+                                  onClick={() => handleOpenRevisionModal(doc, 'APPROVAL')}
+                                  className="px-2.5 py-1 text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 dark:text-amber-300 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 rounded-md transition flex items-center gap-1 cursor-pointer shadow-xs"
+                                  title="Kembalikan Dokumen untuk Direvisi sebelum Disahkan"
+                                >
+                                  <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
+                                  Minta Revisi
                                 </button>
                                 <button
                                   onClick={() => handleOpenRejectModal(doc, 'APPROVAL')}
@@ -763,6 +819,85 @@ export default function PendingVerificationView() {
               >
                 <XCircle className="w-3.5 h-3.5" />
                 Konfirmasi Tolak Dokumen
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ================= MODAL PERMINTAAN REVISI DOKUMEN ================= */}
+      {selectedRevisionDoc && (
+        <Modal
+          isOpen={Boolean(selectedRevisionDoc)}
+          onClose={() => setSelectedRevisionDoc(null)}
+          title={`Permintaan Revisi Dokumen (${
+            revisionStage === 'REVIEW'
+              ? 'Tahap 1: Review Atasan'
+              : revisionStage === 'FORMAT'
+              ? 'Tahap 2: Verifikasi Format DCO'
+              : 'Tahap 3: Pengesahan MR'
+          })`}
+          subtitle={`No. Dokumen: ${selectedRevisionDoc.docNumber}`}
+          maxWidth="max-w-lg"
+        >
+          <div className="space-y-4">
+            <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 rounded-lg border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-300">
+              <p className="font-bold flex items-center gap-1.5 text-amber-800 dark:text-amber-200">
+                <RotateCcw className="w-4 h-4 text-amber-600" />
+                Kembalikan Berkas ke Pembuat ({selectedRevisionDoc.creator})
+              </p>
+              <p className="mt-1 text-amber-700 dark:text-amber-300 leading-relaxed">
+                Dokumen akan berstatus <strong>PERLU REVISI</strong> dan dikembalikan ke antrean draft/perbaikan pembuat berkas. Pembuat akan menerima notifikasi beserta rincian catatan revisi agar dapat langsung diperbaiki dan diajukan ulang.
+              </p>
+            </div>
+
+            <div className="space-y-1.5 text-xs bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
+              <div className="flex justify-between py-0.5">
+                <span className="text-slate-500">Judul Dokumen:</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200">{selectedRevisionDoc.title}</span>
+              </div>
+              <div className="flex justify-between py-0.5">
+                <span className="text-slate-500">Departemen:</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedRevisionDoc.department}</span>
+              </div>
+              <div className="flex justify-between py-0.5">
+                <span className="text-slate-500">Pembuat:</span>
+                <span className="font-medium text-slate-800 dark:text-slate-200">{selectedRevisionDoc.creator}</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Catatan Revisi / Poin-Poin yang Harus Diperbaiki <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                rows={4}
+                required
+                value={revisionNotes}
+                onChange={(e) => setRevisionNotes(e.target.value)}
+                placeholder="Contoh: Tolong perbaiki klausul operasional 3.2 mengenai alur kerja mesin, serta lampirkan lembar flow chart proses terbaru..."
+                className="w-full text-xs p-2.5 border rounded-lg dark:bg-slate-800 focus:ring-2 focus:ring-amber-500 text-slate-800 dark:text-slate-200 font-medium"
+              />
+              <p className="text-[10px] text-slate-400 mt-1">
+                Catatan ini akan tersimpan ke riwayat audit dokumen dan tampil di daftar draft pembuat dokumen.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t">
+              <button
+                type="button"
+                onClick={() => setSelectedRevisionDoc(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmRevision}
+                className="px-5 py-2 text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-lg shadow cursor-pointer flex items-center gap-1.5"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                Kirim Permintaan Revisi
               </button>
             </div>
           </div>

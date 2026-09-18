@@ -70,7 +70,7 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
 
   // Badge counts
   const safeDocs = Array.isArray(documents) ? documents : [];
-  const draftCount = safeDocs.filter(d => d?.status === 'DRAFT').length;
+  const draftCount = safeDocs.filter(d => d?.status === 'DRAFT' || d?.status === 'PERLU REVISI' || d?.status === 'REVISI').length;
   const pendingCount = safeDocs
     .filter(d => d?.status === 'REVIEW' || d?.status === 'VERIFIKASI' || d?.status === 'APPROVAL')
     .filter(d => (canUserViewPendingDoc ? canUserViewPendingDoc(d) : true))

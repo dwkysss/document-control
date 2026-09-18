@@ -8,7 +8,7 @@ export default function DraftListView() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDept, setSelectedDept] = useState('ALL');
 
-  const drafts = documents.filter(d => d.status === 'DRAFT');
+  const drafts = documents.filter(d => d.status === 'DRAFT' || d.status === 'PERLU REVISI' || d.status === 'REVISI');
 
   const filteredDrafts = drafts.filter(doc => {
     const matchesSearch = doc.docNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -100,8 +100,13 @@ export default function DraftListView() {
                     <td className="py-3.5 px-4 font-bold font-mono text-slate-900 dark:text-white whitespace-nowrap">
                       {doc.docNumber}
                     </td>
-                    <td className="py-3.5 px-4 font-medium text-slate-800 dark:text-slate-200 max-w-[240px] truncate" title={doc.title}>
-                      {doc.title}
+                    <td className="py-3.5 px-4 font-medium text-slate-800 dark:text-slate-200 max-w-[260px]">
+                      <div className="font-bold truncate" title={doc.title}>{doc.title}</div>
+                      {doc.revisionNotes && (
+                        <div className="mt-1 text-[10px] text-amber-900 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 p-1.5 rounded border border-amber-200 dark:border-amber-800 leading-snug">
+                          <strong>Catatan Revisi:</strong> {doc.revisionNotes}
+                        </div>
+                      )}
                     </td>
                     <td className="py-3.5 px-4 font-semibold text-slate-600 dark:text-slate-400">{doc.type}</td>
                     <td className="py-3.5 px-4 font-semibold text-slate-600 dark:text-slate-400">{doc.department}</td>
