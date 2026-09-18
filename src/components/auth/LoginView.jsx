@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Eye, EyeOff, X, Shield, Info, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Mail, Eye, EyeOff, X, Info, CheckCircle2, ArrowRight } from 'lucide-react';
 import { useDocumentControl } from '../../context/DocumentControlContext';
 
 export default function LoginView() {
@@ -12,37 +12,48 @@ export default function LoginView() {
   const [showQuickRoles, setShowQuickRoles] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
-  // Demo accounts configured to match the application's actual role masters
-  const demoAccounts = [
-    {
-      role: 'System Admin',
-      name: 'Dwiky Sumarlin',
-      nik: '123463',
-      email: 'dwiky.sumarlin@dji-indonesia.com',
-      badge: 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950 dark:text-indigo-300'
-    },
-    {
-      role: 'Doc Control',
-      name: 'Siti Nurhaliza',
-      nik: '123460',
-      email: 'siti.nurhaliza@dji-indonesia.com',
-      badge: 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950 dark:text-sky-300'
-    },
-    {
-      role: 'Approver',
-      name: 'Agus Setiawan',
-      nik: '123458',
-      email: 'agus.setiawan@dji-indonesia.com',
-      badge: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300'
-    },
-    {
-      role: 'Staff (Creator)',
-      name: 'Baban Rachmat',
-      nik: '123456',
-      email: 'baban.rachmat@dji-indonesia.com',
-      badge: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300'
-    }
+  // Fallback list of PT DJI actual registered employees
+  const fallbackRealEmployees = [
+    { nik: 'DJI092115', name: 'DENI RAMDAN', department: 'MGMT', position: 'GENERAL MANAGER', email: 'deni.ramdan@dji-indonesia.com', role: 'approver' },
+    { nik: 'DJI022203', name: 'DEDE SUHENDA', department: 'PRODUKSI', position: 'KEPALA BAGIAN PRODUKSI', email: 'dede.suhenda@dji-indonesia.com', role: 'reviewer' },
+    { nik: 'DJI012548', name: 'BABAN RACHMAT SUBAGJA', department: 'HRGA', position: 'MANAGER HRGA & MR', email: 'baban.rachmat.subagja@dji-indonesia.com', role: 'approver' },
+    { nik: '123463', name: 'Dwiky Sumarlin', department: 'IT', position: 'Lead Systems Engineer', email: 'dwiky.sumarlin@dji-indonesia.com', role: 'admin' },
+    { nik: 'DJI022550', name: 'SYAHLA NOVIYANA', department: 'FAT', position: 'DOCUMENT CONTROL OFFICER', email: 'syahla.noviyana@dji-indonesia.com', role: 'doc_control' },
+    { nik: 'DJI102216', name: 'ZARRAH ALI MARIFAH', department: 'FAT', position: 'STAFF ACCOUNTING FINANCE', email: 'zarrah.ali.marifah@dji-indonesia.com', role: 'staff' },
+    { nik: 'DJI032207', name: 'SITI NURDIANTI', department: 'PRODUKSI', position: 'STAFF PPIC', email: 'siti.nurdianti@dji-indonesia.com', role: 'staff' },
+    { nik: 'DJI012202', name: 'ASIVA SITI FAUJIAH', department: 'PRODUKSI', position: 'STAFF ADM PRODUKSI', email: 'asiva.siti.faujiah@dji-indonesia.com', role: 'staff' },
   ];
+
+  // Exclude legacy dummy demo NIKs to ensure only 100% real accounts are shown
+  const dummyNiks = ['123456', '123457', '123458', '123459', '123460', '123461', '123462'];
+  const realEmployees = (employees && employees.length > 0)
+    ? employees.filter(e => e.status !== 'Nonaktif' && !dummyNiks.includes(String(e.nik || '').trim()))
+    : fallbackRealEmployees;
+
+  const quickLoginList = realEmployees.length > 0 ? realEmployees : fallbackRealEmployees;
+
+  const getRoleBadge = (role) => {
+    switch (role?.toLowerCase()) {
+      case 'admin':
+        return 'bg-purple-50 text-purple-700 border-purple-200';
+      case 'doc_control':
+        return 'bg-sky-50 text-sky-700 border-sky-200';
+      case 'approver':
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'staff':
+      default:
+        return 'bg-blue-50 text-blue-700 border-blue-200';
+    }
+  };
+
+  const getRoleLabel = (role) => {
+    switch (role?.toLowerCase()) {
+      case 'admin': return 'SYSTEM ADMIN';
+      case 'doc_control': return 'DOC CONTROL';
+      case 'approver': return 'APPROVER';
+      case 'staff': default: return 'STAFF';
+    }
+  };
 
   const handleSubmit = (e) => {
     if (e) e.preventDefault();
@@ -70,31 +81,16 @@ export default function LoginView() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-[#070e18] p-3 sm:p-5 font-sans antialiased text-slate-800 relative selection:bg-blue-600 selection:text-white overflow-hidden">
+    <div className="min-h-screen w-full flex items-center justify-center bg-slate-100/80 p-3 sm:p-5 font-sans antialiased text-slate-800 relative selection:bg-blue-600 selection:text-white overflow-hidden">
       
-      {/* Real Karl Mayer Factory Photo Background (Optimized WebP, 41 KB only - Ultra Lightweight) */}
+      {/* Subtle Soft Ambient Light Accents */}
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-        <picture>
-          <source srcSet="/login-bg.webp" type="image/webp" />
-          <img
-            src="/login-bg.jpg"
-            alt="Textile Factory Floor"
-            loading="eager"
-            fetchPriority="high"
-            className="w-full h-full object-cover animate-kenburns select-none brightness-85 contrast-105 scale-105"
-          />
-        </picture>
-
-        {/* Sophisticated Deep Corporate Overlay for 100% Card Contrast & Legibility */}
-        <div className="absolute inset-0 bg-gradient-to-tr from-[#060e1b]/92 via-[#0a1628]/85 to-[#0e213d]/80 backdrop-blur-[2px]" />
-        
-        {/* Subtle Ambient Glow */}
-        <div className="absolute top-1/4 left-1/3 -translate-x-1/2 -translate-y-1/2 w-[650px] h-[450px] bg-blue-500/15 rounded-full blur-[140px]" />
-        <div className="absolute bottom-1/4 right-1/3 translate-x-1/2 translate-y-1/2 w-[550px] h-[350px] bg-sky-400/10 rounded-full blur-[130px]" />
+        <div className="absolute top-0 right-1/4 w-[600px] h-[400px] bg-blue-100/60 rounded-full blur-[140px]" />
+        <div className="absolute bottom-0 left-1/4 w-[500px] h-[350px] bg-sky-100/50 rounded-full blur-[130px]" />
       </div>
 
       {/* Main Split Card Container - Elevated & Perfectly Centered */}
-      <div className="w-full max-w-4xl lg:max-w-[890px] bg-white rounded-[28px] sm:rounded-[32px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.6),0_0_50px_rgba(37,99,235,0.15)] border border-slate-200/60 overflow-hidden flex flex-col md:flex-row relative z-10 my-auto">
+      <div className="w-full max-w-4xl lg:max-w-[890px] bg-white rounded-[28px] sm:rounded-[32px] shadow-[0_20px_50px_-12px_rgba(15,23,42,0.12),0_4px_16px_rgba(15,23,42,0.06)] border border-slate-200/90 overflow-hidden flex flex-col md:flex-row relative z-10 my-auto">
 
         {/* ================= LEFT COLUMN: PT DJI Dark Navy Brand Panel ================= */}
         <div 
@@ -113,40 +109,23 @@ export default function LoginView() {
           <div className="absolute bottom-0 left-0 w-80 h-80 bg-sky-500/10 rounded-full blur-[90px] pointer-events-none" />
 
           {/* Top Brand Header (Matches the App's Sidebar Brand) */}
-          <div className="flex items-center justify-between z-10 mb-2">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-white p-1.5 shadow-md flex items-center justify-center">
+          <div className="flex items-center justify-between z-10 mb-1">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white p-1.5 shadow-md flex items-center justify-center">
                 <img src="/dji-logo.png" alt="PT DJI Logo" className="w-full h-full object-contain" />
               </div>
               <div>
-                <span className="text-sm font-extrabold text-white tracking-tight block leading-none">
+                <span className="font-brand font-black text-[20px] text-white tracking-wider block leading-tight">
                   {systemSettings.companyName || 'PT DJI'}
-                </span>
-                <span className="text-[9px] font-bold text-sky-400 tracking-wider block mt-0.5">
-                  DOCUMENT CONTROL SYSTEM
                 </span>
               </div>
             </div>
-
-            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-blue-950/80 text-sky-300 border border-sky-500/40 shadow-xs">
-              ISO 9001:2015
-            </span>
           </div>
 
           {/* Center 3D Interactive Floating Machine Element */}
           <div className="my-auto py-2 relative flex flex-col items-center justify-center z-10">
             
-            {/* Minimalist Graphic Accent Elements */}
-            <div className="absolute -top-4 -right-1 flex flex-col gap-1.5 opacity-60 pointer-events-none">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span>
-                <span className="w-6 h-2 rounded-full bg-sky-400"></span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                <span className="w-6 h-2 rounded-full bg-blue-500"></span>
-              </div>
-            </div>
+
 
             {/* 3D Floating Stage Container with Interactive Parallax */}
             <div 
@@ -167,15 +146,15 @@ export default function LoginView() {
                 }}
               />
 
-              {/* Pure Transparent 3D Machine Silhouette */}
+              {/* Pure Transparent 3D Document Archive Silhouette */}
               <div className="relative w-full flex items-center justify-center z-10">
                 <img
-                  src="/login-machine-blueprint.png"
-                  alt="Textile Machine 3D Element"
+                  src="/login-doc-blueprint.png"
+                  alt="Digital Document Archive 3D Element"
                   style={{
                     filter: 'drop-shadow(0 14px 28px rgba(56, 189, 248, 0.3)) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5))',
                   }}
-                  className="w-full h-auto max-h-[220px] sm:max-h-[250px] object-contain select-none pointer-events-none transform transition-transform duration-500 hover:scale-102"
+                  className="w-full h-auto max-h-[220px] sm:max-h-[245px] object-contain select-none pointer-events-none transform transition-transform duration-500 hover:scale-102"
                 />
               </div>
 
@@ -190,8 +169,14 @@ export default function LoginView() {
 
           </div>
 
-          {/* Bottom balancing space */}
-          <div className="h-2" />
+          {/* Bottom Brand Title: DOCUMENT CONTROL SYSTEM */}
+          <div className="z-10 mt-auto pt-2 pb-1 flex items-center justify-center gap-3">
+            <div className="h-[1px] w-6 sm:w-10 bg-gradient-to-r from-transparent to-sky-400/50" />
+            <span className="font-tech font-bold text-[10.5px] sm:text-[11.5px] text-sky-400 tracking-[0.25em] uppercase select-none text-center">
+              DOCUMENT CONTROL SYSTEM
+            </span>
+            <div className="h-[1px] w-6 sm:w-10 bg-gradient-to-l from-transparent to-sky-400/50" />
+          </div>
 
         </div>
 
@@ -306,73 +291,8 @@ export default function LoginView() {
               </button>
             </form>
 
-            {/* Divider "Or Continue With" */}
-            <div className="flex items-center my-3.5">
-              <div className="flex-1 border-t border-slate-200"></div>
-              <span className="px-3 text-[10px] text-slate-400 font-medium">
-                Or Continue With
-              </span>
-              <div className="flex-1 border-t border-slate-200"></div>
-            </div>
-
-            {/* Social / Quick Role Switcher Buttons */}
-            <div className="flex items-center justify-center gap-3.5">
-              
-              {/* Google Button -> Quick Login Admin (Dwiky) */}
-              <button
-                type="button"
-                onClick={() => handleQuickLogin(demoAccounts[0])}
-                title="Login Cepat: Admin (Dwiky Sumarlin)"
-                className="w-10 h-10 rounded-full border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 flex items-center justify-center shadow-xs transition group cursor-pointer"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
-                  <path
-                    fill="#4285F4"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                  />
-                </svg>
-              </button>
-
-              {/* Facebook Button -> Quick Login Approver (Agus Setiawan) */}
-              <button
-                type="button"
-                onClick={() => handleQuickLogin(demoAccounts[2])}
-                title="Login Cepat: Approver (Agus Setiawan)"
-                className="w-10 h-10 rounded-full border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 flex items-center justify-center shadow-xs transition group cursor-pointer"
-              >
-                <svg className="w-4 h-4 fill-[#1877F2]" viewBox="0 0 24 24">
-                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                </svg>
-              </button>
-
-              {/* Apple Button -> Quick Login Doc Control (Siti Nurhaliza) */}
-              <button
-                type="button"
-                onClick={() => handleQuickLogin(demoAccounts[1])}
-                title="Login Cepat: Doc Control (Siti Nurhaliza)"
-                className="w-10 h-10 rounded-full border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 flex items-center justify-center shadow-xs transition group cursor-pointer"
-              >
-                <svg className="w-4 h-4 fill-[#0a1628]" viewBox="0 0 24 24">
-                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.62-.75 1.04-1.8 1.01-2.87-1 .04-2.18.67-2.87 1.48-.56.64-1.06 1.7-1.01 2.74 1.13.09 2.25-.6 2.87-1.35z" />
-                </svg>
-              </button>
-
-            </div>
-
             {/* Quick Role Tester Bar */}
-            <div className="mt-3 pt-2 border-t border-slate-100 text-center">
+            <div className="mt-4 pt-3 border-t border-slate-100 text-center">
               <button
                 type="button"
                 onClick={() => setShowQuickRoles(!showQuickRoles)}
@@ -382,27 +302,38 @@ export default function LoginView() {
               </button>
 
               {showQuickRoles && (
-                <div className="grid grid-cols-2 gap-1.5 mt-2 animate-fade-in text-left">
-                  {demoAccounts.map((acc) => (
-                    <button
-                      key={acc.nik}
-                      type="button"
-                      onClick={() => handleQuickLogin(acc)}
-                      className="p-1.5 rounded-lg border border-slate-200 hover:border-blue-500 hover:bg-blue-50/40 text-left transition group cursor-pointer focus:outline-none"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className={`text-[9px] font-bold px-1 rounded border ${acc.badge}`}>
-                          {acc.role}
-                        </span>
-                        <span className="font-mono text-[9px] text-slate-400 group-hover:text-blue-600 transition">
-                          {acc.nik}
-                        </span>
-                      </div>
-                      <div className="text-[11px] font-semibold text-slate-700 truncate mt-0.5">
-                        {acc.name}
-                      </div>
-                    </button>
-                  ))}
+                <div className="mt-2 p-2 bg-slate-50/90 rounded-xl border border-slate-200">
+                  <div className="flex items-center justify-between px-1 mb-1.5">
+                    <span className="text-[9.5px] font-bold text-slate-500 uppercase tracking-wider">
+                      Personil Terdaftar ({quickLoginList.length})
+                    </span>
+                    <span className="text-[9px] text-slate-400">Pilih untuk login cepat</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5 max-h-[190px] overflow-y-auto pr-0.5 scrollbar-thin">
+                    {quickLoginList.map((acc) => (
+                      <button
+                        key={acc.nik}
+                        type="button"
+                        onClick={() => handleQuickLogin(acc)}
+                        className="p-1.5 rounded-lg bg-white border border-slate-200 hover:border-blue-500 hover:shadow-xs text-left transition group cursor-pointer focus:outline-none"
+                      >
+                        <div className="flex items-center justify-between gap-1 mb-0.5">
+                          <span className={`text-[8px] font-bold px-1 rounded border ${getRoleBadge(acc.role)}`}>
+                            {getRoleLabel(acc.role)}
+                          </span>
+                          <span className="font-mono text-[8.5px] font-semibold text-slate-400 group-hover:text-blue-600 transition truncate">
+                            {acc.nik}
+                          </span>
+                        </div>
+                        <div className="text-[10.5px] font-bold text-slate-800 truncate group-hover:text-blue-600 transition">
+                          {acc.name}
+                        </div>
+                        <div className="text-[8.5px] text-slate-500 truncate mt-0.5">
+                          {acc.department} • {acc.position}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -421,12 +352,6 @@ export default function LoginView() {
               </p>
             </div>
 
-          </div>
-
-          {/* Bottom Security clause note */}
-          <div className="pt-1 text-center text-[10px] text-slate-400 flex items-center justify-center gap-1">
-            <Shield className="w-3 h-3 text-slate-400" />
-            <span>Akses sistem terkendali ISO 9001:2015 Clause 7.5</span>
           </div>
 
         </div>
@@ -463,7 +388,8 @@ export default function LoginView() {
                 </div>
                 <button
                   onClick={() => {
-                    handleQuickLogin(demoAccounts[0]);
+                    const itAdmin = quickLoginList.find(e => e.nik === '123463') || quickLoginList[0];
+                    if (itAdmin) handleQuickLogin(itAdmin);
                     setShowInfoModal(null);
                   }}
                   className="w-full py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-sm shadow-blue-500/20 cursor-pointer"
@@ -481,12 +407,13 @@ export default function LoginView() {
                 </p>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1 mb-4">
                   <div className="text-slate-500">Pusat Bantuan HRGA:</div>
-                  <div className="font-bold text-slate-800">siti.nurhaliza@dji-indonesia.com</div>
+                  <div className="font-bold text-slate-800">syahla.noviyana@dji-indonesia.com</div>
                   <div className="text-[11px] text-slate-500">Document Control Officer</div>
                 </div>
                 <button
                   onClick={() => {
-                    handleQuickLogin(demoAccounts[1]);
+                    const dcOfficer = quickLoginList.find(e => e.role === 'doc_control') || quickLoginList[0];
+                    if (dcOfficer) handleQuickLogin(dcOfficer);
                     setShowInfoModal(null);
                   }}
                   className="w-full py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-sm shadow-blue-500/20 cursor-pointer"

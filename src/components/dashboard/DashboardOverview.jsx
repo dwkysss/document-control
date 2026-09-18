@@ -34,10 +34,26 @@ export default function DashboardOverview() {
   // Metrics
   const totalDocs = documents.length;
   const activeDocs = documents.filter(d => d.status === 'AKTIF').length;
-  const pendingDocs = documents.filter(d => d.status === 'VERIFIKASI').length;
+  const pendingDocs = documents.filter(d => d.status === 'REVIEW' || d.status === 'VERIFIKASI' || d.status === 'APPROVAL').length;
   const draftDocs = documents.filter(d => d.status === 'DRAFT').length;
   const obsoleteDocs = documents.filter(d => d.status === 'OBSOLETE').length;
   const rejectedDocs = documents.filter(d => d.status === 'DITOLAK').length;
+
+  // Periodic review check (Langkah 8 ISO 9001)
+  const reviewIntervalMonths = systemSettings.periodicReviewMonths || 12;
+  const reviewDueDocs = documents.filter(d => {
+    if (d.status !== 'AKTIF') return false;
+    const baseDateStr = d.lastReviewedDate || d.effectiveDate || d.approvedDate || d.createdDate;
+    if (!baseDateStr) return false;
+    const baseDate = new Date(baseDateStr);
+    const dueDate = new Date(baseDate);
+    dueDate.setMonth(dueDate.getMonth() + reviewIntervalMonths);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    dueDate.setHours(0, 0, 0, 0);
+    const days = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    return days <= 30; // Due soon or overdue
+  });
 
   const navigateTo = (menuKey, crumbs) => {
     setActiveMenu(menuKey);
@@ -58,7 +74,7 @@ export default function DashboardOverview() {
     count: documents.filter(d => d.type === type.code).length
   }));
 
-  const recentPending = documents.filter(d => d.status === 'VERIFIKASI').slice(0, 3);
+  const recentPending = documents.filter(d => d.status === 'REVIEW' || d.status === 'VERIFIKASI' || d.status === 'APPROVAL').slice(0, 3);
   const recentActivities = auditLogs.slice(0, 5);
 
   return (
@@ -77,13 +93,13 @@ export default function DashboardOverview() {
             <div className="w-5 h-5 rounded-md bg-white p-0.5 flex items-center justify-center">
               <img src="/dji-logo.png" alt="DJI" className="w-full h-full object-contain" />
             </div>
-            <span>Standar Mutu Terkendali ISO 9001:2015</span>
+            <span>ISO 9001:2015 Clause 7.5 &bull; {systemSettings.companyTagline || 'Dokumen Terkendali, Proses Lebih Pasti, Mutu Lebih Terjaga'}</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight">
-            Selamat Datang di {systemSettings.companyName} Document Control System
+            Selamat Datang di {systemSettings.companyName || 'PT DENTELLE JAYA INFINITEX'} Document Control System
           </h1>
           <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed">
-            Platform sentralisasi pengelolaan seluruh prosedur (SOP), instruksi kerja (IK), kebijakan, dan formulir operasional secara akuntabel dan terverifikasi otomatis.
+            Platform sentralisasi pengelolaan seluruh prosedur (SOP), instruksi kerja (IK), kebijakan, formulir operasional, dan dokumen eksternal secara akuntabel dan terverifikasi otomatis.
           </p>
 
           <div className="flex flex-wrap items-center gap-3 mt-5">
@@ -111,6 +127,35 @@ export default function DashboardOverview() {
           </div>
         </div>
       </div>
+
+      {/* Peringatan Monitoring & Review Berkala (Langkah 8 & 9 ISO 9001) */}
+      {reviewDueDocs.length > 0 && (
+        <div className="p-4 bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-transparent border border-amber-500/30 rounded-xl flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center flex-shrink-0">
+              <Clock className="w-5 h-5 text-amber-500 animate-pulse" />
+            </div>
+            <div>
+              <h3 className="text-xs font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                <span>Monitoring & Review Berkala (Langkah 8 ISO 9001:2015)</span>
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-500 text-white font-extrabold">
+                  {reviewDueDocs.length} Dokumen
+                </span>
+              </h3>
+              <p className="text-[11px] text-amber-800/80 dark:text-amber-300 mt-0.5">
+                Ada dokumen aktif yang telah mendekati atau melewati siklus peninjauan {reviewIntervalMonths} bulan. Harap lakukan evaluasi apakah tetap berlaku atau memerlukan revisi.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigateTo('ctrl-active', ['Dashboard', 'Document Control', 'Dokumen Aktif'])}
+            className="px-3.5 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-bold shadow-sm transition flex items-center gap-1.5"
+          >
+            <span>Tinjau Dokumen Sekarang</span>
+            <ArrowUpRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* KPI Stat Cards Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">

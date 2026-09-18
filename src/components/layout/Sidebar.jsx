@@ -53,25 +53,27 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
 
   // Auto-expand accordion section when activeMenu changes
   React.useEffect(() => {
-    if (activeMenu.startsWith('reg-')) {
+    const menu = String(activeMenu || '');
+    if (menu.startsWith('reg-')) {
       setOpenSections(prev => ({ ...prev, registration: true }));
-    } else if (activeMenu.startsWith('ctrl-')) {
+    } else if (menu.startsWith('ctrl-')) {
       setOpenSections(prev => ({ ...prev, control: true }));
-    } else if (activeMenu.startsWith('rev-')) {
+    } else if (menu.startsWith('rev-')) {
       setOpenSections(prev => ({ ...prev, revision: true }));
-    } else if (activeMenu.startsWith('master-')) {
+    } else if (menu.startsWith('master-')) {
       setOpenSections(prev => ({ ...prev, master: true }));
-    } else if (activeMenu.startsWith('rep-')) {
+    } else if (menu.startsWith('rep-')) {
       setOpenSections(prev => ({ ...prev, report: true }));
     }
   }, [activeMenu]);
 
   // Badge counts
-  const draftCount = documents.filter(d => d.status === 'DRAFT').length;
-  const pendingCount = documents.filter(d => d.status === 'VERIFIKASI').length;
-  const activeCount = documents.filter(d => d.status === 'AKTIF').length;
-  const obsoleteCount = documents.filter(d => d.status === 'OBSOLETE').length;
-  const rejectedCount = documents.filter(d => d.status === 'DITOLAK').length;
+  const safeDocs = Array.isArray(documents) ? documents : [];
+  const draftCount = safeDocs.filter(d => d?.status === 'DRAFT').length;
+  const pendingCount = safeDocs.filter(d => d?.status === 'REVIEW' || d?.status === 'VERIFIKASI' || d?.status === 'APPROVAL').length;
+  const activeCount = safeDocs.filter(d => d?.status === 'AKTIF').length;
+  const obsoleteCount = safeDocs.filter(d => d?.status === 'OBSOLETE').length;
+  const rejectedCount = safeDocs.filter(d => d?.status === 'DITOLAK').length;
 
   const handleNavClick = (menuKey, crumbs) => {
     setActiveMenu(menuKey);
@@ -102,7 +104,7 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
           {!isCollapsed && (
             <div className="overflow-hidden">
               <h2 className="font-extrabold text-sm tracking-wider text-white truncate font-sans">
-                {systemSettings.companyName || 'PT DJI'}
+                {systemSettings.companyName || 'PT DENTELLE JAYA INFINITEX'}
               </h2>
               <p className="text-[10px] text-sky-400 font-semibold tracking-widest uppercase truncate mt-0.5">
                 {systemSettings.systemName || 'DOCUMENT CONTROL SYSTEM'}
@@ -376,6 +378,19 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
                   }`}
                 >
                   <span>Team Verifikator</span>
+                </button>
+                <button
+                  onClick={() => handleNavClick('master-role', ['Dashboard', 'Master Data', 'Role & Hak Akses'])}
+                  className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
+                    activeMenu === 'master-role'
+                      ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
+                      : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
+                  }`}
+                >
+                  <span>Role & Hak Akses</span>
+                  <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-purple-500/20 text-purple-300">
+                    5
+                  </span>
                 </button>
               </div>
             )}

@@ -324,23 +324,27 @@ export function exportControlledDocumentPDF(docData, systemSettings = {}, qrData
   doc.setFontSize(9);
   doc.setFont('helvetica', 'italic');
   doc.setTextColor(71, 85, 105);
+  const approverStatusText = docData.approvedBy ? `[VERIFIED] ${docData.approvedBy}` : (docData.targetApprover ? `[PENDING] ${docData.targetApprover}` : (docData.status === 'AKTIF' ? 'Management Rep.' : '-'));
+  const approverNameText = docData.approvedBy || docData.targetApprover || 'MR / Dept Head';
+  const approverPosText = docData.approvedDate ? `Tgl: ${docData.approvedDate}` : (docData.approverPosition || 'Pejabat Penyetuju');
+
   doc.text(docData.creator || 'Staff', startX + matColW / 2, matrixY + 45, { align: 'center' });
   doc.text(docData.verifierTeam || 'Verifier Team', startX + matColW + matColW / 2, matrixY + 45, { align: 'center' });
-  doc.text(docData.approvedBy ? `[VERIFIED] ${docData.approvedBy}` : (docData.status === 'AKTIF' ? 'Management Rep.' : '-'), startX + matColW * 2 + matColW / 2, matrixY + 45, { align: 'center' });
+  doc.text(approverStatusText, startX + matColW * 2 + matColW / 2, matrixY + 45, { align: 'center' });
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(15, 23, 42);
   doc.text(docData.creator, startX + matColW / 2, matrixY + 65, { align: 'center' });
   doc.text('Tim Verifikator', startX + matColW + matColW / 2, matrixY + 65, { align: 'center' });
-  doc.text(docData.approvedBy || 'MR / Dept Head', startX + matColW * 2 + matColW / 2, matrixY + 65, { align: 'center' });
+  doc.text(approverNameText, startX + matColW * 2 + matColW / 2, matrixY + 65, { align: 'center' });
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
   doc.setTextColor(100, 116, 139);
   doc.text(docData.creatorPosition || 'Pembuat Dokumen', startX + matColW / 2, matrixY + 74, { align: 'center' });
   doc.text(docData.verifierTeam, startX + matColW + matColW / 2, matrixY + 74, { align: 'center' });
-  doc.text(docData.approvedDate ? `Tgl: ${docData.approvedDate}` : 'Otoritas Pengesahan', startX + matColW * 2 + matColW / 2, matrixY + 74, { align: 'center' });
+  doc.text(approverPosText, startX + matColW * 2 + matColW / 2, matrixY + 74, { align: 'center' });
 
   // QR Code on bottom left
   if (qrDataUrl) {

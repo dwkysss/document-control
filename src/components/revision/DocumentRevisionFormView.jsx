@@ -7,6 +7,7 @@ import Badge from '../common/Badge';
 export default function DocumentRevisionFormView() {
   const {
     documents,
+    employees,
     verifierTeams,
     currentUser,
     systemSettings,
@@ -29,8 +30,21 @@ export default function DocumentRevisionFormView() {
   const [selectedVerifierTeam, setSelectedVerifierTeam] = useState('Document Control Team');
   const [revisedContent, setRevisedContent] = useState('');
   const [fileAttachment, setFileAttachment] = useState(null);
+  const isDcoOrAdmin = currentUser?.role === 'doc_control' || currentUser?.role === 'admin' || currentUser?.role === 'approver';
+  const [directPublish, setDirectPublish] = useState(false);
 
   const currentDoc = documents.find(d => d.id === targetDocId);
+
+  // Available real approvers: Khusus Management Representative (MR)
+  const availableApprovers = (employees || []).filter(
+    e => e.status !== 'Nonaktif' && e.role === 'approver'
+  );
+
+  const getDefaultApproverNik = () => {
+    return 'DJI012548'; // BABAN RACHMAT SUBAGJA (Manager HRGA & MR)
+  };
+
+  const [selectedApproverNik, setSelectedApproverNik] = useState(() => getDefaultApproverNik(currentDoc?.department));
 
   useEffect(() => {
     if (selectedDocForRevision) {
@@ -43,8 +57,20 @@ export default function DocumentRevisionFormView() {
       setRevisedTitle(currentDoc.title);
       setRevisedContent(currentDoc.content || '');
       setSelectedVerifierTeam(currentDoc.verifierTeam || 'Document Control Team');
+      const suggestedNik = getDefaultApproverNik(currentDoc.department);
+      if (availableApprovers.some(a => a.nik === suggestedNik)) {
+        setSelectedApproverNik(suggestedNik);
+      }
     }
   }, [targetDocId, currentDoc]);
+
+  const activeApprover = availableApprovers.find(a => a.nik === selectedApproverNik) || availableApprovers[0] || {
+    name: 'DENI RAMDAN',
+    nik: 'DJI092115',
+    position: 'GENERAL MANAGER',
+    department: 'MGMT',
+    role: 'approver'
+  };
 
   if (!currentDoc) {
     return (
@@ -75,8 +101,13 @@ export default function DocumentRevisionFormView() {
         changeReason,
         changeDescription,
         verifierTeam: selectedVerifierTeam,
+        targetApprover: activeApprover?.name || 'DENI RAMDAN',
+        approverNik: activeApprover?.nik || 'DJI092115',
+        approverName: activeApprover?.name || 'DENI RAMDAN',
+        approverPosition: activeApprover?.position || 'GENERAL MANAGER',
         content: revisedContent,
         isDraft,
+        directPublish: isDcoOrAdmin ? directPublish : false,
         fileName: fileAttachment ? fileAttachment.name : `${newDocNumber}.pdf`,
         fileSize: fileAttachment ? fileAttachment.size : null,
         fileType: fileAttachment ? fileAttachment.type : null,
@@ -87,6 +118,9 @@ export default function DocumentRevisionFormView() {
       if (isDraft) {
         setActiveMenu('reg-draft');
         setBreadcrumbs(['Dashboard', 'Registrasi Dokumen', 'Draft']);
+      } else if (isDcoOrAdmin && directPublish) {
+        setActiveMenu('ctrl-all');
+        setBreadcrumbs(['Dashboard', 'Master Dokumen', 'Semua Dokumen']);
       } else {
         setActiveMenu('reg-pending');
         setBreadcrumbs(['Dashboard', 'Registrasi Dokumen', 'Menunggu Verifikasi']);
@@ -200,18 +234,36 @@ export default function DocumentRevisionFormView() {
                 />
               </div>
 
-              {/* Tim Verifikator */}
+              {/* ISO 9001 Pipeline Banner for Revision */}
+              <div className="p-3 bg-gradient-to-r from-purple-50 to-blue-50/50 dark:from-purple-950/40 dark:to-blue-950/30 rounded-xl border border-purple-200 dark:border-purple-800 text-xs">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                  <div>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">Tahap 1: Verifikasi Format ISO</span>
+                    <p className="text-[11px] text-slate-500">Otomatis oleh: <strong className="text-blue-700 dark:text-blue-400">Document Control Team (SYAHLA NOVIYANA)</strong></p>
+                  </div>
+                  <div className="hidden sm:block text-slate-400 font-bold">➔</div>
+                  <div>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">Tahap 2: Otorisasi Pengesahan Revisi</span>
+                    <p className="text-[11px] text-slate-500">Oleh: <strong className="text-purple-700 dark:text-purple-400">{activeApprover.name} ({activeApprover.position})</strong></p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pejabat Penyetuju (Approver) */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Tim Verifikator Penguji <span className="text-red-500">*</span>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
+                  <span>Pejabat Penyetuju Revisi (Approver) <span className="text-red-500">*</span></span>
+                  <span className="text-[10px] text-slate-400">Departemen {currentDoc.department}</span>
                 </label>
                 <select
-                  value={selectedVerifierTeam}
-                  onChange={(e) => setSelectedVerifierTeam(e.target.value)}
-                  className="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5"
+                  value={selectedApproverNik}
+                  onChange={(e) => setSelectedApproverNik(e.target.value)}
+                  className="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 transition"
                 >
-                  {verifierTeams.map(t => (
-                    <option key={t.id} value={t.name}>{t.name} (Lead: {t.leader})</option>
+                  {availableApprovers.map((emp) => (
+                    <option key={emp.nik} value={emp.nik}>
+                      {emp.name} — {emp.position} ({emp.department})
+                    </option>
                   ))}
                 </select>
               </div>
@@ -219,12 +271,12 @@ export default function DocumentRevisionFormView() {
               {/* Lampiran File Revisi */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Lampiran Berkas Hasil Revisi (PDF / DOCX)
+                  Lampiran Berkas Hasil Revisi (PDF / Word / Excel)
                 </label>
                 <div className="border-2 border-dashed border-purple-300 dark:border-purple-800 rounded-xl p-4 bg-purple-50/40 dark:bg-slate-800/40 text-center hover:bg-purple-50/70 transition cursor-pointer relative">
                   <input
                     type="file"
-                    accept=".pdf,.doc,.docx"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.csv"
                     onChange={(e) => {
                       if (e.target.files && e.target.files[0]) {
                         setFileAttachment(e.target.files[0]);
@@ -235,16 +287,33 @@ export default function DocumentRevisionFormView() {
                   <div className="flex flex-col items-center justify-center gap-1.5 pointer-events-none">
                     <UploadCloud className="w-6 h-6 text-purple-600" />
                     {fileAttachment ? (
-                      <div className="text-xs">
-                        <span className="font-bold text-emerald-600">Berkas Revisi Terlampir:</span> {fileAttachment.name} ({(fileAttachment.size / 1024).toFixed(0)} KB)
+                      <div className="text-xs flex items-center justify-center gap-2 flex-wrap">
+                        <span className="font-bold text-emerald-600">Berkas Revisi Terlampir:</span>
+                        <span className="font-medium text-slate-800 dark:text-slate-200">{fileAttachment.name}</span>
+                        <span className="text-[10px] text-slate-400">({(fileAttachment.size / 1024).toFixed(0)} KB)</span>
+                        {/\.(xlsx?|csv)$/i.test(fileAttachment.name) && (
+                          <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold text-[10px]">
+                            EXCEL / SPREADSHEET
+                          </span>
+                        )}
+                        {/\.(docx?)$/i.test(fileAttachment.name) && (
+                          <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 font-bold text-[10px]">
+                            WORD (.DOCX)
+                          </span>
+                        )}
+                        {/\.pdf$/i.test(fileAttachment.name) && (
+                          <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 font-bold text-[10px]">
+                            PDF
+                          </span>
+                        )}
                       </div>
                     ) : (
                       <>
                         <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                          Klik untuk memilih berkas revisi atau seret file PDF ke sini
+                          Klik untuk memilih berkas revisi atau seret file PDF / Word / Excel ke sini
                         </p>
                         <p className="text-[10px] text-slate-400">
-                          Format yang didukung: PDF, DOCX (Maks. 25 MB)
+                          Format yang didukung: PDF, DOCX, XLSX, XLS, CSV (Maks. 25 MB)
                         </p>
                       </>
                     )}
@@ -252,22 +321,78 @@ export default function DocumentRevisionFormView() {
                 </div>
               </div>
 
+              {/* Opsi Khusus DCO & Admin: Direct Publish Dokumen Fisik / Info Bypass */}
+              {isDcoOrAdmin && (
+                <div className="p-3.5 bg-purple-50/70 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded-xl space-y-2.5">
+                  <div className="flex items-start gap-2.5">
+                    <Shield className="w-4 h-4 text-purple-600 dark:text-purple-400 flex-shrink-0 mt-0.5" />
+                    <div className="text-xs">
+                      <p className="font-bold text-purple-900 dark:text-purple-200">
+                        Mode Revisi Document Control
+                      </p>
+                      <p className="text-purple-800 dark:text-purple-300 mt-0.5 leading-relaxed">
+                        Sebagai DCO, pengajuan revisi otomatis lolos verifikasi format (Tahap 1) dan langsung masuk ke Pejabat Penyetuju (<strong>{activeApprover?.name || 'Approver'}</strong>) untuk pengesahan resmi.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-purple-200/60 dark:border-purple-800/60">
+                    <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={directPublish}
+                        onChange={(e) => setDirectPublish(e.target.checked)}
+                        className="w-4 h-4 mt-0.5 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer"
+                      />
+                      <div>
+                        <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                          Revisi telah disahkan fisik / bertanda tangan basah
+                        </span>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                          Centang opsi ini jika naskah revisi sudah ditandatangani basah oleh pejabat berwenang. Revisi baru akan langsung <strong>AKTIF</strong> dan versi lama ({currentDoc.docNumber}) otomatis diubah menjadi <strong>OBSOLETE</strong>.
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              )}
+
               {/* Action Buttons */}
               <div className="flex items-center justify-end gap-3 pt-4 border-t">
                 <button
                   type="button"
                   onClick={() => handleSubmitRevision(true)}
-                  className="px-4 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg"
+                  className="px-4 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer"
                 >
                   Simpan Draft Revisi
                 </button>
                 <button
                   type="button"
                   onClick={() => handleSubmitRevision(false)}
-                  className="px-5 py-2 text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 rounded-lg shadow flex items-center gap-1.5"
+                  className={`px-5 py-2 text-xs font-bold text-white rounded-lg shadow flex items-center gap-1.5 cursor-pointer ${
+                    directPublish
+                      ? 'bg-emerald-600 hover:bg-emerald-700'
+                      : isDcoOrAdmin
+                      ? 'bg-purple-600 hover:bg-purple-700'
+                      : 'bg-purple-600 hover:bg-purple-700'
+                  }`}
                 >
-                  <Send className="w-4 h-4" />
-                  Ajukan Revisi untuk Verifikasi
+                  {directPublish ? (
+                    <>
+                      <CheckCircle2 className="w-4 h-4" />
+                      Terbitkan Langsung Revisi (Aktif)
+                    </>
+                  ) : isDcoOrAdmin ? (
+                    <>
+                      <Send className="w-4 h-4" />
+                      Ajukan ke Approver (Tahap 2)
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      Ajukan Revisi untuk Verifikasi
+                    </>
+                  )}
                 </button>
               </div>
             </div>

@@ -10,7 +10,7 @@ export default function VerifierTeamMasterView() {
   const [editingTeam, setEditingTeam] = useState(null);
 
   const [name, setName] = useState('');
-  const [leader, setLeader] = useState('Siti Nurhaliza');
+  const [leader, setLeader] = useState('');
   const [description, setDescription] = useState('');
 
   const filtered = verifierTeams.filter(t =>

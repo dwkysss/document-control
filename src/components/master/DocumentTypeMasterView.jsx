@@ -83,7 +83,7 @@ export default function DocumentTypeMasterView() {
             Master Jenis Dokumen (ISO Document Hierarchy)
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Daftar klasifikasi dokumen mutu (Level 1 Kebijakan, Level 2 SOP, Level 3 IK/WI, Level 4 Formulir).
+            Daftar klasifikasi dokumen mutu (Level 1 Kebijakan, Level 2 SOP, Level 3 IK/WI, Level 4 Formulir, dan Dokumen Eksternal).
           </p>
         </div>
         <button
@@ -118,8 +118,12 @@ export default function DocumentTypeMasterView() {
                   </td>
                   <td className="py-3.5 px-4 font-bold text-slate-800 dark:text-slate-200">{item.name}</td>
                   <td className="py-3.5 px-4 text-center font-bold">
-                    <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-[10px]">
-                      Level {item.level}
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      item.level === 5
+                        ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border border-purple-200 dark:border-purple-800'
+                        : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                    }`}>
+                      {item.level === 5 ? 'Dokumen Eksternal' : `Level ${item.level}`}
                     </span>
                   </td>
                   <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400">{item.description}</td>
@@ -182,8 +186,9 @@ export default function DocumentTypeMasterView() {
                 >
                   <option value={1}>Level 1 (Kebijakan / Policy)</option>
                   <option value={2}>Level 2 (Prosedur / SOP)</option>
-                  <option value={3}>Level 3 (Instruksi Kerja / IK)</option>
-                  <option value={4}>Level 4 (Formulir & Rekaman)</option>
+                  <option value={3}>Level 3 (Instruksi Kerja / IK / WI)</option>
+                  <option value={4}>Level 4 (Formulir & Rekaman Mutu)</option>
+                  <option value={5}>Level Eksternal (Dokumen Eksternal / External Document)</option>
                 </select>
               </div>
             </div>

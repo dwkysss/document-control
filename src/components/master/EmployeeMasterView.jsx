@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Users, Plus, Edit, Trash2, Search, UserCheck, Mail, Shield } from 'lucide-react';
 import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
+import { initialEmployees } from '../../data/initialData';
 
 export default function EmployeeMasterView() {
   const { employees, departments, addEmployee, updateEmployee, deleteEmployee, isAdmin, showToast } = useDocumentControl();
@@ -18,11 +19,19 @@ export default function EmployeeMasterView() {
   const [role, setRole] = useState('staff');
   const [status, setStatus] = useState('Aktif');
 
-  const filteredEmployees = employees.filter(e =>
-    e.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    e.nik.includes(searchTerm) ||
-    e.department.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const safeEmployees = Array.isArray(employees) && employees.length > 0 ? employees : initialEmployees;
+  const safeDepartments = Array.isArray(departments) ? departments : [];
+
+  const filteredEmployees = safeEmployees.filter(e => {
+    if (!e) return false;
+    const term = String(searchTerm || '').toLowerCase().trim();
+    if (!term) return true;
+    const nameStr = String(e.name || '').toLowerCase();
+    const nikStr = String(e.nik || '').toLowerCase();
+    const deptStr = String(e.department || '').toLowerCase();
+    const posStr = String(e.position || '').toLowerCase();
+    return nameStr.includes(term) || nikStr.includes(term) || deptStr.includes(term) || posStr.includes(term);
+  });
 
   const handleOpenAddModal = () => {
     setEditingEmployee(null);
@@ -149,24 +158,38 @@ export default function EmployeeMasterView() {
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filteredEmployees.map((emp, idx) => (
-                <tr key={emp.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                <tr key={emp?.id || emp?.nik || idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
                   <td className="py-3.5 px-4 text-center text-slate-400">{idx + 1}</td>
-                  <td className="py-3.5 px-4 font-mono font-bold text-slate-900 dark:text-white">{emp.nik}</td>
-                  <td className="py-3.5 px-4 font-bold text-slate-800 dark:text-slate-200">{emp.name}</td>
-                  <td className="py-3.5 px-4 font-semibold text-slate-600 dark:text-slate-400">{emp.department}</td>
-                  <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400">{emp.position}</td>
-                  <td className="py-3.5 px-4 text-slate-500 font-mono text-[11px]">{emp.email}</td>
+                  <td className="py-3.5 px-4 font-mono font-bold text-slate-900 dark:text-white">{String(emp?.nik || '')}</td>
+                  <td className="py-3.5 px-4 font-bold text-slate-800 dark:text-slate-200">{String(emp?.name || '')}</td>
+                  <td className="py-3.5 px-4 font-semibold text-slate-600 dark:text-slate-400">{String(emp?.department || '')}</td>
+                  <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400">{String(emp?.position || '')}</td>
+                  <td className="py-3.5 px-4 text-slate-500 font-mono text-[11px]">{String(emp?.email || '')}</td>
                   <td className="py-3.5 px-4 text-center">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                      emp.role === 'admin'
-                        ? 'bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-950 dark:text-purple-300'
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                      emp.department === 'MGMT' || emp.position?.toUpperCase().includes('GENERAL MANAGER') || emp.position?.toUpperCase().includes('DIREKTUR')
+                        ? 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950 dark:text-amber-200'
+                        : emp.role === 'admin'
+                        ? 'bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-200'
                         : emp.role === 'approver'
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300'
+                        ? 'bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950 dark:text-rose-300'
                         : emp.role === 'doc_control'
-                        ? 'bg-sky-50 text-sky-700 border-sky-300 dark:bg-sky-950 dark:text-sky-300'
+                        ? 'bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950 dark:text-amber-300'
+                        : emp.role === 'reviewer'
+                        ? 'bg-teal-50 text-teal-700 border-teal-300 dark:bg-teal-950 dark:text-teal-300'
                         : 'bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950 dark:text-blue-300'
                     }`}>
-                      {emp.role === 'admin' ? 'System Admin' : emp.role === 'approver' ? 'Approver' : emp.role === 'doc_control' ? 'Doc Control' : 'Staff'}
+                      {emp.department === 'MGMT' || emp.position?.toUpperCase().includes('GENERAL MANAGER') || emp.position?.toUpperCase().includes('DIREKTUR')
+                        ? 'Top Management / MR'
+                        : emp.role === 'admin'
+                        ? 'System Admin'
+                        : emp.role === 'approver'
+                        ? '04. APPROVER (MR)'
+                        : emp.role === 'doc_control'
+                        ? '03. DOC CONTROL'
+                        : emp.role === 'reviewer'
+                        ? '02. REVIEWER (Atasan)'
+                        : '01. USER (Staff)'}
                     </span>
                   </td>
                   <td className="py-3.5 px-4 text-center">
@@ -227,7 +250,7 @@ export default function EmployeeMasterView() {
                   value={nik}
                   onChange={(e) => setNik(e.target.value)}
                   className="w-full p-2.5 border rounded-lg dark:bg-slate-800 font-mono"
-                  placeholder="123456"
+                  placeholder="DJI012548"
                 />
               </div>
               <div>
@@ -237,8 +260,8 @@ export default function EmployeeMasterView() {
                   onChange={(e) => setDepartment(e.target.value)}
                   className="w-full p-2.5 border rounded-lg dark:bg-slate-800 font-medium"
                 >
-                  {departments.map(d => (
-                    <option key={d.id} value={d.code}>{d.code} - {d.name}</option>
+                  {safeDepartments.map(d => (
+                    <option key={d?.id || d?.code} value={d?.code}>{d?.code} - {d?.name}</option>
                   ))}
                 </select>
               </div>
@@ -287,10 +310,11 @@ export default function EmployeeMasterView() {
                   onChange={(e) => setRole(e.target.value)}
                   className="w-full p-2.5 border rounded-lg dark:bg-slate-800 text-xs font-semibold"
                 >
-                  <option value="staff">Staff (Creator) - Pengajuan Dokumen</option>
-                  <option value="doc_control">Document Control Officer - Pengajuan & Report ISO</option>
-                  <option value="approver">Approver / Verifikator - Finalisasi Dokumen</option>
-                  <option value="admin">System Administrator - Rules Semua, Hapus & Pembatalan</option>
+                  <option value="staff">01. USER (Staff Office - Staff Produksi)</option>
+                  <option value="reviewer">02. REVIEWER (Atasan / Kepala Departemen)</option>
+                  <option value="doc_control">03. DOCUMENT CONTROL (DCO - Pengendali Format & Nomor)</option>
+                  <option value="approver">04. APPROVER (Management Representative / MR)</option>
+                  <option value="admin">System Administrator (Otoritas Sistem & Pengaturan)</option>
                 </select>
               </div>
               <div>
@@ -316,6 +340,16 @@ export default function EmployeeMasterView() {
               {role === 'doc_control' && 'Dapat mendaftarkan dokumen dari semua departemen, mengelola penomoran, distribusi salinan resmi, dan akses report.'}
               {role === 'approver' && 'Memiliki wewenang memeriksa, menyetujui (Approve), atau menolak (Reject) berkas pada Menunggu Verifikasi.'}
               {role === 'admin' && 'Akses penuh ke semua modul sistem, kelola master data & pengaturan, serta hak khusus menghapus dan membatalkan dokumen.'}
+            </div>
+
+            {/* Guide Tip for Top Management */}
+            <div className="p-3 bg-gradient-to-r from-amber-50 to-purple-50 dark:from-amber-950/30 dark:to-purple-950/30 border border-amber-200 dark:border-amber-800 rounded-lg text-[11px] text-slate-700 dark:text-slate-300">
+              <div className="font-bold text-amber-900 dark:text-amber-200 mb-0.5">
+                Panduan Role General Manager / Direksi (Departemen MGMT):
+              </div>
+              <p className="leading-relaxed text-[10px]">
+                Pilih Departemen: <strong>MGMT (Top Management & Direksi)</strong> dan Role: <strong>Approver</strong> (atau <strong>Admin</strong> jika merangkap MR).
+              </p>
             </div>
 
             <div className="flex justify-end gap-2 pt-4 border-t">

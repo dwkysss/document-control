@@ -48,7 +48,9 @@ export default function DocumentTypeReportView() {
                   {stat.code}
                 </span>
                 <p className="text-xs font-bold text-slate-800 dark:text-slate-200">{stat.name}</p>
-                <span className="text-[10px] text-slate-400">Level {stat.level} Hierarki Mutu</span>
+                <span className="text-[10px] text-slate-400">
+                  {stat.level === 5 ? 'Dokumen Eksternal (Level 5)' : `Level ${stat.level} Hierarki Mutu`}
+                </span>
               </div>
               <span className="text-xl font-extrabold text-slate-900 dark:text-white">
                 {stat.total}

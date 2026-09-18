@@ -36,16 +36,20 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
   const userMenuRef = useRef(null);
   const searchRef = useRef(null);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = (notifications || []).filter(n => !n?.read).length;
 
   // Filtered documents from search query
-  const searchResults = searchQuery.trim()
-    ? documents.filter(d =>
-        d.docNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        d.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        d.creator.toLowerCase().includes(searchQuery.toLowerCase())
-      )
+  const searchResults = (searchQuery || '').trim()
+    ? (documents || []).filter(d => {
+        if (!d) return false;
+        const q = (searchQuery || '').toLowerCase();
+        return (
+          String(d.docNumber || '').toLowerCase().includes(q) ||
+          String(d.title || '').toLowerCase().includes(q) ||
+          String(d.department || '').toLowerCase().includes(q) ||
+          String(d.creator || '').toLowerCase().includes(q)
+        );
+      })
     : [];
 
   // Close dropdowns on outside click
@@ -344,11 +348,13 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
                         ? 'bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-950 dark:text-purple-300'
                         : currentUser.role === 'approver'
                         ? 'bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300'
+                        : currentUser.role === 'reviewer'
+                        ? 'bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-950 dark:text-purple-300'
                         : currentUser.role === 'doc_control'
                         ? 'bg-sky-50 text-sky-700 border-sky-300 dark:bg-sky-950 dark:text-sky-300'
                         : 'bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950 dark:text-blue-300'
                     }`}>
-                      {currentUser.role === 'admin' ? 'Admin' : currentUser.role === 'approver' ? 'Approver' : currentUser.role === 'doc_control' ? 'DCO' : 'Staff'}
+                      {currentUser.role === 'admin' ? 'Admin' : currentUser.role === 'approver' ? 'Approver (MR)' : currentUser.role === 'reviewer' ? 'Reviewer' : currentUser.role === 'doc_control' ? 'DCO' : 'Staff'}
                     </span>
                   )}
                   <ChevronDown className="w-3 h-3 text-slate-400" />
@@ -377,10 +383,11 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
                       </span>
                     </div>
                     <div className="text-blue-800 dark:text-blue-300 text-[10px] mt-0.5">
-                      {currentUser.role === 'admin' && 'Akses penuh seluruh fitur, master data, serta wewenang hapus & batalkan dokumen.'}
-                      {currentUser.role === 'approver' && 'Finalisasi dokumen (Persetujuan & Penolakan berkas Menunggu Verifikasi).'}
-                      {currentUser.role === 'doc_control' && 'Pengajuan dokumen lintas divisi, distribusi salinan resmi, & akses seluruh laporan ISO.'}
-                      {currentUser.role === 'staff' && 'Pengajuan berkas baru, simpan draft, serta perbaikan berkas ditolak departemennya.'}
+                      {currentUser.role === 'admin' && 'Akses penuh seluruh fitur, konfigurasi master data, serta wewenang hapus & pembatalan dokumen.'}
+                      {currentUser.role === 'approver' && 'Pengesahan akhir dokumen resmi terbit (Management Representative / MR).'}
+                      {currentUser.role === 'reviewer' && 'Pemeriksaan materi isi dokumen, alur kerja operasional, dan persyaratan teknis (Atasan / Kepala Departemen).'}
+                      {currentUser.role === 'doc_control' && 'Pemeriksaan tata naskah format ISO, penomoran resmi master list, & distribusi salinan terkendali.'}
+                      {currentUser.role === 'staff' && 'Menyusun dan mengajukan draft usulan dokumen baru departemennya.'}
                     </div>
                   </div>
                 </div>

@@ -105,17 +105,49 @@ export default function SystemSettingsView() {
 
               <div>
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Format Penomoran Dokumen Otomatis
+                  Slogan Mutu Perusahaan (Klausul 7.5)
                 </label>
                 <input
                   type="text"
-                  disabled
-                  value={formData.numberingFormat}
-                  className="w-full p-2.5 bg-slate-100 dark:bg-slate-800 border rounded-lg font-mono text-slate-600"
+                  value={formData.companyTagline || 'Dokumen Terkendali, Proses Lebih Pasti, Mutu Lebih Terjaga'}
+                  onChange={(e) => handleChange('companyTagline', e.target.value)}
+                  className="w-full p-2.5 border rounded-lg dark:bg-slate-800 font-medium italic text-sky-700 dark:text-sky-300"
+                  placeholder="Dokumen Terkendali, Proses Lebih Pasti, Mutu Lebih Terjaga"
                 />
-                <p className="text-[10px] text-slate-400 mt-1">
-                  Formula standar: {'{KODE_PERUSAHAAN}-{JENIS_DOKUMEN}-{DEPARTEMEN}-{NO_URUT:2}-{REVISI:2}'}
-                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Siklus Monitoring & Review Berkala (Bulan) *
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="60"
+                    required
+                    value={formData.periodicReviewMonths || 12}
+                    onChange={(e) => handleChange('periodicReviewMonths', parseInt(e.target.value, 10) || 12)}
+                    className="w-full p-2.5 border rounded-lg dark:bg-slate-800 font-mono font-bold"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Standar evaluasi berkala ISO 9001:2015 (Rekomendasi: 12 Bulan / 1 Tahun).
+                  </p>
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Format Penomoran Dokumen Otomatis
+                  </label>
+                  <input
+                    type="text"
+                    disabled
+                    value={formData.numberingFormat}
+                    className="w-full p-2.5 bg-slate-100 dark:bg-slate-800 border rounded-lg font-mono text-slate-600"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Formula standar: {'{KODE_PERUSAHAAN}-{JENIS_DOKUMEN}-{DEPARTEMEN}-{NO_URUT:2}-{REVISI:2}'}
+                  </p>
+                </div>
               </div>
 
               <div>

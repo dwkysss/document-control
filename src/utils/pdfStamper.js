@@ -73,8 +73,14 @@ export async function stampOfficialLetterheadOnPDF(docData, systemSettings = {},
     if (docData.status === 'OBSOLETE') {
       watermarkText = 'OBSOLETE - DO NOT USE';
       wmColor = rgb(0.9, 0.2, 0.2); // Red
-    } else if (docData.status === 'DRAFT' || docData.status === 'VERIFIKASI') {
-      watermarkText = docData.status === 'VERIFIKASI' ? 'MENUNGGU VERIFIKASI / UNVERIFIED' : 'DRAFT - NOT FOR OPERATIONAL USE';
+    } else if (docData.status === 'DRAFT' || docData.status === 'REVIEW' || docData.status === 'VERIFIKASI' || docData.status === 'APPROVAL') {
+      watermarkText = docData.status === 'REVIEW'
+        ? 'MENUNGGU REVIEW ATASAN / UNDER REVIEW'
+        : docData.status === 'VERIFIKASI'
+        ? 'MENUNGGU VERIFIKASI DCO / UNVERIFIED'
+        : docData.status === 'APPROVAL'
+        ? 'MENUNGGU PENGESAHAN MR / PENDING APPROVAL'
+        : 'DRAFT - NOT FOR OPERATIONAL USE';
       wmColor = rgb(0.85, 0.5, 0.1); // Amber
     }
 

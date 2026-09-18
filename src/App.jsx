@@ -20,6 +20,7 @@ import EmployeeMasterView from './components/master/EmployeeMasterView';
 import DepartmentMasterView from './components/master/DepartmentMasterView';
 import DocumentTypeMasterView from './components/master/DocumentTypeMasterView';
 import VerifierTeamMasterView from './components/master/VerifierTeamMasterView';
+import RoleMasterView from './components/master/RoleMasterView';
 import MasterRegisterReportView from './components/report/MasterRegisterReportView';
 import DepartmentReportView from './components/report/DepartmentReportView';
 import DocumentTypeReportView from './components/report/DocumentTypeReportView';
@@ -28,6 +29,46 @@ import SystemSettingsView from './components/settings/SystemSettingsView';
 import LoginView from './components/auth/LoginView';
 
 import { DocumentControlProvider, useDocumentControl } from './context/DocumentControlContext';
+
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('UI Render Error caught by boundary:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-8 max-w-lg mx-auto my-12 bg-white dark:bg-slate-900 rounded-2xl shadow-card border border-rose-200 dark:border-rose-900 text-center space-y-4">
+          <div className="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-950 text-rose-600 flex items-center justify-center mx-auto text-xl font-black">
+            !
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">Gagal Memuat Halaman</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              {this.state.error?.message || 'Terjadi kesalahan saat merender tampilan.'}
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              this.setState({ hasError: false, error: null });
+              window.location.reload();
+            }}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg shadow-sm transition"
+          >
+            Muat Ulang Halaman
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function MainAppContent() {
   const { currentUser, isAuthenticated, activeMenu, viewingDocument, setViewingDocument, systemSettings } = useDocumentControl();
@@ -75,6 +116,8 @@ function MainAppContent() {
         return <DocumentTypeMasterView />;
       case 'master-team':
         return <VerifierTeamMasterView />;
+      case 'master-role':
+        return <RoleMasterView />;
       case 'rep-register':
         return <MasterRegisterReportView />;
       case 'rep-dept':
@@ -86,7 +129,7 @@ function MainAppContent() {
       case 'settings':
         return <SystemSettingsView />;
       default:
-        return <NewRegistrationView />;
+        return <DashboardOverview />;
     }
   };
 
@@ -115,7 +158,9 @@ function MainAppContent() {
 
         {/* Dynamic Page Content */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto">
-          {renderActiveView()}
+          <ErrorBoundary>
+            {renderActiveView()}
+          </ErrorBoundary>
         </main>
 
         {/* Bottom Footer */}
@@ -138,8 +183,10 @@ function MainAppContent() {
 
 export default function App() {
   return (
-    <DocumentControlProvider>
-      <MainAppContent />
-    </DocumentControlProvider>
+    <ErrorBoundary>
+      <DocumentControlProvider>
+        <MainAppContent />
+      </DocumentControlProvider>
+    </ErrorBoundary>
   );
 }
