@@ -203,7 +203,13 @@ export default function DraftListView() {
                           <div className="mt-1 text-[10.5px] text-amber-900 dark:text-amber-300 bg-amber-100/70 dark:bg-amber-950/50 p-2 rounded-md border border-amber-300 dark:border-amber-800 leading-snug">
                             <span className="font-bold flex items-center gap-1">
                               <RotateCcw className="w-3 h-3 text-amber-700 dark:text-amber-400 shrink-0" />
-                              Catatan Revisi ({doc.revisionRequestedBy || 'Atasan'}):
+                              Catatan Revisi ({doc.revisionRequestedBy || 'Verifikator'}{
+                                doc.revisionRequestedStage === 'FORMAT' || doc.revisionRequestedStage === 'VERIFIKASI'
+                                  ? ' • Tahap 2 DCO'
+                                  : doc.revisionRequestedStage === 'APPROVAL'
+                                  ? ' • Tahap 3 MR'
+                                  : ' • Tahap 1 Review'
+                              }):
                             </span>
                             <span className="mt-0.5 block italic">"{doc.revisionNotes}"</span>
                           </div>
@@ -263,7 +269,7 @@ export default function DraftListView() {
                               });
                             }}
                             className="p-1.5 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 dark:hover:bg-slate-800 rounded transition cursor-pointer"
-                            title="Ajukan Verifikasi Sekarang"
+                            title={doc.status === 'PERLU REVISI' ? 'Ajukan Ulang ke Tahap Terakhir' : 'Ajukan Verifikasi Sekarang'}
                           >
                             <Send className="w-4 h-4" />
                           </button>

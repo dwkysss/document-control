@@ -846,9 +846,68 @@ export function DocumentControlProvider({ children }) {
       approvedBy = docData.targetApprover || currentUser?.name || 'Authorized Approver';
       approvedDate = createdDate;
       approvalNotes = 'Diterbitkan langsung sebagai Dokumen Aktif bertanda tangan basah.';
-    } else if (isResubmission || isDifferentCreator) {
-      // Pengajuan ulang dokumen revisi atau berkas milik staff:
-      // WAJIB kembali ke Tahap 1 (REVIEW) agar Atasan Departemen dapat memeriksa hasil perbaikan
+    } else if (isResubmission) {
+      // Dokumen ini merupakan pengajuan ulang setelah perbaikan / revisi.
+      // Kembalikan ke tahap terakhir asalnya sebelum diminta revisi:
+      let targetStage = 'REVIEW';
+      if (docData.returnStage) {
+        targetStage = docData.returnStage;
+      } else if (docData.revisionRequestedStage === 'FORMAT' || docData.revisionRequestedStage === 'VERIFIKASI') {
+        targetStage = 'VERIFIKASI';
+      } else if (docData.revisionRequestedStage === 'APPROVAL') {
+        targetStage = 'APPROVAL';
+      } else if (docData.previousStatus && ['REVIEW', 'VERIFIKASI', 'APPROVAL'].includes(docData.previousStatus)) {
+        targetStage = docData.previousStatus;
+      } else if (docData.verifiedBy) {
+        targetStage = 'APPROVAL';
+      } else if (docData.reviewedBy) {
+        targetStage = 'VERIFIKASI';
+      } else {
+        targetStage = 'REVIEW';
+      }
+
+      docStatus = targetStage;
+
+      if (targetStage === 'APPROVAL') {
+        // Diminta revisi oleh Approver / MR (Tahap 3):
+        // Review Atasan (Tahap 1) dan Verifikasi Format DCO (Tahap 2) tetap sah
+        reviewedBy = docData.reviewedBy || null;
+        reviewedDate = docData.reviewedDate || null;
+        reviewNotes = docData.reviewNotes || null;
+        verifiedBy = docData.verifiedBy || null;
+        verifiedDate = docData.verifiedDate || null;
+        verificationNotes = docData.verificationNotes || null;
+        approvedBy = null;
+        approvedDate = null;
+        approvalNotes = null;
+      } else if (targetStage === 'VERIFIKASI') {
+        // Diminta revisi format oleh DCO (Tahap 2):
+        // Review Atasan (Tahap 1) tetap sah, verifikasi format direset untuk diperiksa DCO
+        reviewedBy = docData.reviewedBy || null;
+        reviewedDate = docData.reviewedDate || null;
+        reviewNotes = docData.reviewNotes || null;
+        verifiedBy = null;
+        verifiedDate = null;
+        verificationNotes = null;
+        approvedBy = null;
+        approvedDate = null;
+        approvalNotes = null;
+      } else {
+        // Diminta revisi isi oleh Atasan (Tahap 1):
+        // Kembali ke Tahap 1 untuk ditelaah ulang oleh Atasan Departemen
+        docStatus = 'REVIEW';
+        reviewedBy = null;
+        reviewedDate = null;
+        reviewNotes = null;
+        verifiedBy = null;
+        verifiedDate = null;
+        verificationNotes = null;
+        approvedBy = null;
+        approvedDate = null;
+        approvalNotes = null;
+      }
+    } else if (isDifferentCreator) {
+      // Pendaftaran dokumen baru oleh staf: WAJIB mulai dari Tahap 1 (Review Atasan)
       docStatus = 'REVIEW';
       reviewedBy = null;
       reviewedDate = null;
@@ -920,6 +979,8 @@ export function DocumentControlProvider({ children }) {
       revisionRequestedBy: isResubmission ? null : (docData.revisionRequestedBy || null),
       revisionRequestedDate: isResubmission ? null : (docData.revisionRequestedDate || null),
       revisionRequestedStage: isResubmission ? null : (docData.revisionRequestedStage || null),
+      returnStage: isResubmission ? null : (docData.returnStage || null),
+      previousStatus: isResubmission ? null : (docData.previousStatus || null),
       revisionHistory: [
         ...(docData.revisionHistory || []),
         {
@@ -927,7 +988,11 @@ export function DocumentControlProvider({ children }) {
           date: createdDate,
           author: currentUser.name,
           note: isResubmission
-            ? `Pengajuan ulang berkas hasil revisi oleh ${currentUser.name}. Menunggu Review Atasan Departemen.`
+            ? (docStatus === 'APPROVAL'
+                ? `Pengajuan ulang berkas hasil revisi oleh ${currentUser.name}. Menunggu Pengesahan Akhir (${docData.targetApprover || 'Approver'}).`
+                : docStatus === 'VERIFIKASI'
+                ? `Pengajuan ulang berkas hasil perbaikan format oleh ${currentUser.name}. Menunggu Verifikasi Format Document Control.`
+                : `Pengajuan ulang berkas hasil revisi oleh ${currentUser.name}. Menunggu Review Atasan Departemen (${docData.department}).`)
             : isDirectPublish
             ? `Penerbitan langsung dokumen aktif bertanda tangan fisik oleh ${currentUser.name}`
             : (docStatus === 'APPROVAL')
@@ -1306,9 +1371,15 @@ export function DocumentControlProvider({ children }) {
         if (doc.id === docId) {
           targetDoc = doc;
           const noteText = revisionNotes || 'Perlu perbaikan isi materi / kelengkapan format sebelum diverifikasi ulang.';
+          const returnStage = (stage === 'FORMAT' || stage === 'VERIFIKASI')
+            ? 'VERIFIKASI'
+            : (stage === 'APPROVAL' ? 'APPROVAL' : 'REVIEW');
+
           return {
             ...doc,
             status: 'PERLU REVISI',
+            previousStatus: doc.status,
+            returnStage,
             rejectionReason: noteText,
             revisionNotes: noteText,
             revisionRequestedBy: currentUser.name,
