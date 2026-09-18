@@ -821,6 +821,22 @@ export function DocumentControlProvider({ children }) {
     let approvedDate = null;
     let approvalNotes = null;
 
+    // Cek apakah dokumen ini merupakan pengajuan ulang dari perbaikan/revisi
+    // atau berkas milik staff yang tidak boleh membypass alur verifikasi Atasan
+    const isResubmission = Boolean(
+      docData.isResubmission ||
+      docData.status === 'PERLU REVISI' ||
+      docData.status === 'REVISI' ||
+      docData.revisionRequestedBy ||
+      docData.revisionNotes ||
+      docData.revisionRequestedStage
+    );
+
+    const isDifferentCreator = Boolean(
+      (docData.creatorNik && currentUser?.nik && (docData.creatorNik.trim().toUpperCase() !== currentUser.nik.trim().toUpperCase())) ||
+      (docData.creator && currentUser?.name && (docData.creator.trim().toLowerCase() !== currentUser.name.trim().toLowerCase()))
+    );
+
     if (isDirectPublish) {
       docStatus = 'AKTIF';
       verifiedBy = currentUser?.name || 'Document Control';
@@ -830,8 +846,22 @@ export function DocumentControlProvider({ children }) {
       approvedBy = docData.targetApprover || currentUser?.name || 'Authorized Approver';
       approvedDate = createdDate;
       approvalNotes = 'Diterbitkan langsung sebagai Dokumen Aktif bertanda tangan basah.';
-    } else if (isDcoOrAdmin) {
-      // DCO / Admin: Otomatis lolos Tahap 1 (Review) & Tahap 2 (Format), langsung Tahap 3 (APPROVAL)
+    } else if (isResubmission || isDifferentCreator) {
+      // Pengajuan ulang dokumen revisi atau berkas milik staff:
+      // WAJIB kembali ke Tahap 1 (REVIEW) agar Atasan Departemen dapat memeriksa hasil perbaikan
+      docStatus = 'REVIEW';
+      reviewedBy = null;
+      reviewedDate = null;
+      reviewNotes = null;
+      verifiedBy = null;
+      verifiedDate = null;
+      verificationNotes = null;
+      approvedBy = null;
+      approvedDate = null;
+      approvalNotes = null;
+    } else if (isDcoOrAdmin && (!docData.creator || docData.creator === currentUser?.name)) {
+      // DCO / Admin mendaftarkan dokumen baru atas namanya sendiri:
+      // Otomatis lolos Tahap 1 (Review) & Tahap 2 (Format), langsung Tahap 3 (APPROVAL)
       docStatus = 'APPROVAL';
       reviewedBy = currentUser?.name || 'Reviewer (Bypass DCO)';
       reviewedDate = createdDate;
@@ -839,8 +869,8 @@ export function DocumentControlProvider({ children }) {
       verifiedBy = currentUser?.name || 'Document Control';
       verifiedDate = createdDate;
       verificationNotes = 'Format dan tata naskah diverifikasi langsung oleh Document Control saat pendaftaran.';
-    } else if (isReviewerUser) {
-      // Reviewer (Atasan / Kepala Dept) mendaftarkan sendiri dokumen:
+    } else if (isReviewerUser && (!docData.creator || docData.creator === currentUser?.name)) {
+      // Reviewer (Atasan / Kepala Dept) mendaftarkan dokumen baru atas namanya sendiri:
       // Otomatis lolos Tahap 1 (Review), langsung Tahap 2 (VERIFIKASI DCO)
       docStatus = 'VERIFIKASI';
       reviewedBy = currentUser?.name;
@@ -885,16 +915,26 @@ export function DocumentControlProvider({ children }) {
       fileSize: docData.fileSize || '520 KB',
       fileType: docData.fileType || null,
       fileUrl: docData.fileUrl || null,
-      revisionHistory: docData.revisionHistory || [
+      rejectionReason: isResubmission ? null : (docData.rejectionReason || null),
+      revisionNotes: isResubmission ? null : (docData.revisionNotes || null),
+      revisionRequestedBy: isResubmission ? null : (docData.revisionRequestedBy || null),
+      revisionRequestedDate: isResubmission ? null : (docData.revisionRequestedDate || null),
+      revisionRequestedStage: isResubmission ? null : (docData.revisionRequestedStage || null),
+      revisionHistory: [
+        ...(docData.revisionHistory || []),
         {
           revision,
           date: createdDate,
           author: currentUser.name,
-          note: isDirectPublish
+          note: isResubmission
+            ? `Pengajuan ulang berkas hasil revisi oleh ${currentUser.name}. Menunggu Review Atasan Departemen.`
+            : isDirectPublish
             ? `Penerbitan langsung dokumen aktif bertanda tangan fisik oleh ${currentUser.name}`
-            : isDcoOrAdmin
+            : (docStatus === 'APPROVAL')
             ? `Pendaftaran oleh DCO & verifikasi format otomatis. Menunggu pengesahan ${docData.targetApprover || 'Approver'}`
-            : 'Pengajuan verifikasi dokumen (Tahap 1 DCO)'
+            : (docStatus === 'VERIFIKASI')
+            ? `Pendaftaran oleh Kepala Departemen. Menunggu verifikasi format DCO.`
+            : 'Pengajuan verifikasi dokumen (Tahap 1 Review Atasan)'
         }
       ]
     };
@@ -930,14 +970,31 @@ export function DocumentControlProvider({ children }) {
       addAuditLog('DIRECT_PUBLISH', newDoc.docNumber, newDoc.title, `Diterbitkan langsung sebagai Dokumen Aktif oleh ${currentUser.name}`);
       addNotification('Penerbitan Dokumen Aktif', `${newDoc.docNumber} - ${newDoc.title} telah diterbitkan aktif langsung ke Master Dokumen.`, 'success', newDoc.id);
       showToast(`Dokumen ${newDoc.docNumber} berhasil diterbitkan langsung sebagai Dokumen Aktif!`, 'success');
-    } else if (isDcoOrAdmin) {
+    } else if (docStatus === 'APPROVAL') {
       addAuditLog('SUBMIT_APPROVAL', newDoc.docNumber, newDoc.title, `Didaftarkan oleh DCO, format lolos otomatis. Menunggu pengesahan ${newDoc.targetApprover || 'Approver'}`);
       addNotification('Pengajuan Pengesahan Dokumen', `${newDoc.docNumber} - ${newDoc.title} siap disahkan oleh ${newDoc.targetApprover || 'Approver'}.`, 'warning', newDoc.id);
       showToast(`Dokumen ${newDoc.docNumber} berhasil diajukan! Format lolos otomatis dan langsung diteruskan ke ${newDoc.targetApprover || 'Pejabat Penyetuju'}.`, 'success');
+    } else if (docStatus === 'VERIFIKASI') {
+      addAuditLog('SUBMIT_VERIFICATION', newDoc.docNumber, newDoc.title, `Disusun oleh Kepala Departemen / Reviewer. Menunggu verifikasi format DCO.`);
+      addNotification('Pengajuan Verifikasi Format', `${newDoc.docNumber} - ${newDoc.title} menunggu verifikasi format oleh Document Control.`, 'warning', newDoc.id);
+      showToast(`Dokumen ${newDoc.docNumber} berhasil diajukan! Menunggu verifikasi format Document Control.`, 'success');
     } else {
-      addAuditLog('SUBMIT_VERIFICATION', newDoc.docNumber, newDoc.title, `Diajukan ke ${newDoc.verifierTeam}`);
-      addNotification('Pengajuan Verifikasi Baru', `${newDoc.docNumber} - ${newDoc.title} diajukan untuk verifikasi.`, 'warning', newDoc.id);
-      showToast(`Dokumen ${newDoc.docNumber} berhasil diajukan untuk verifikasi format!`, 'success');
+      const isRe = isResubmission;
+      addAuditLog(isRe ? 'RESUBMIT_REVIEW' : 'SUBMIT_REVIEW', newDoc.docNumber, newDoc.title, isRe ? `Diajukan ulang setelah perbaikan ke Review Atasan Departemen ${newDoc.department}` : `Diajukan ke Review Atasan Departemen ${newDoc.department}`);
+      addNotification(
+        isRe ? 'Pengajuan Ulang Dokumen Revisi' : 'Pengajuan Verifikasi Baru',
+        isRe
+          ? `Dokumen ${newDoc.docNumber} - ${newDoc.title} telah diperbaiki dan diajukan ulang untuk Review Atasan Departemen ${newDoc.department}.`
+          : `Dokumen ${newDoc.docNumber} - ${newDoc.title} diajukan untuk Review Atasan Departemen ${newDoc.department}.`,
+        'warning',
+        newDoc.id
+      );
+      showToast(
+        isRe
+          ? `Dokumen ${newDoc.docNumber} berhasil diajukan ulang! Menunggu review kembali oleh Atasan Departemen ${newDoc.department}.`
+          : `Dokumen ${newDoc.docNumber} berhasil diajukan untuk Review Atasan Departemen ${newDoc.department}!`,
+        'success'
+      );
     }
 
     if (isSupabaseConfigured && supabase) {

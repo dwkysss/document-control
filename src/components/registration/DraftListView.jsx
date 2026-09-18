@@ -83,9 +83,8 @@ export default function DraftListView() {
       if (resubmit) {
         submitForVerification({
           ...updatedDoc,
-          status: 'REVIEW'
+          isResubmission: true
         });
-        showToast(`Dokumen ${editingDraft.docNumber} dengan berkas baru berhasil diajukan ke Verifikator!`, 'success');
       } else {
         saveDraft(updatedDoc);
         showToast(`Perubahan draft ${editingDraft.docNumber} berhasil disimpan.`, 'success');
@@ -260,9 +259,8 @@ export default function DraftListView() {
                             onClick={() => {
                               submitForVerification({
                                 ...doc,
-                                status: 'REVIEW'
+                                isResubmission: doc.status === 'PERLU REVISI' || doc.status === 'REVISI' || Boolean(doc.revisionNotes)
                               });
-                              showToast(`Dokumen ${doc.docNumber} diajukan ke Verifikator!`, 'success');
                             }}
                             className="p-1.5 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 dark:hover:bg-slate-800 rounded transition cursor-pointer"
                             title="Ajukan Verifikasi Sekarang"
