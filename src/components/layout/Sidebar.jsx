@@ -32,7 +32,19 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
     setBreadcrumbs,
     documents,
     systemSettings,
+    role,
+    isViewer,
+    isStaff,
     isAdmin,
+    canRegisterDocument,
+    canManageDrafts,
+    canViewPendingVerification,
+    canRequestRevision,
+    canViewObsolete,
+    canViewAllDocuments,
+    canAccessReports,
+    canManageMasterData,
+    canManageSettings,
     canUserViewPendingDoc
   } = useDocumentControl();
 
@@ -132,91 +144,97 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
             {!isCollapsed && <span>Dashboard</span>}
           </button>
 
-          {/* 2. Document Registration Accordion */}
-          <div>
-            <button
-              onClick={() => toggleSection('registration')}
-              className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-bold text-slate-200 hover:bg-[#13233c] transition"
-            >
-              <div className="flex items-center gap-3">
-                <FilePlus2 className="w-4 h-4 text-blue-400 flex-shrink-0" />
-                {!isCollapsed && <span>Document Registration</span>}
-              </div>
-              {!isCollapsed && (
-                openSections.registration ? <ChevronUp className="w-3.5 h-3.5 text-slate-400" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-              )}
-            </button>
+          {/* 2. Document Registration Accordion (Hidden for Viewer) */}
+          {canRegisterDocument && (
+            <div>
+              <button
+                onClick={() => toggleSection('registration')}
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-bold text-slate-200 hover:bg-[#13233c] transition"
+              >
+                <div className="flex items-center gap-3">
+                  <FilePlus2 className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                  {!isCollapsed && <span>Document Registration</span>}
+                </div>
+                {!isCollapsed && (
+                  openSections.registration ? <ChevronUp className="w-3.5 h-3.5 text-slate-400" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                )}
+              </button>
 
-            {(!isCollapsed && openSections.registration) && (
-              <div className="mt-1 pl-7 pr-1 space-y-1">
-                <button
-                  onClick={() => handleNavClick('reg-new', ['Dashboard', 'Registrasi Dokumen', 'Dokumen Baru'])}
-                  className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
-                    activeMenu === 'reg-new'
-                      ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
-                      : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
-                  }`}
-                >
-                  <span>Registrasi Baru</span>
-                </button>
-                <button
-                  onClick={() => handleNavClick('reg-draft', ['Dashboard', 'Registrasi Dokumen', 'Draft'])}
-                  className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
-                    activeMenu === 'reg-draft'
-                      ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
-                      : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
-                  }`}
-                >
-                  <span>Draft</span>
-                  {draftCount > 0 && (
-                    <span className="text-[10px] bg-slate-700 text-slate-200 px-1.5 py-0.2 rounded-full font-bold">
-                      {draftCount}
-                    </span>
+              {(!isCollapsed && openSections.registration) && (
+                <div className="mt-1 pl-7 pr-1 space-y-1">
+                  <button
+                    onClick={() => handleNavClick('reg-new', ['Dashboard', 'Registrasi Dokumen', 'Dokumen Baru'])}
+                    className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
+                      activeMenu === 'reg-new'
+                        ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
+                        : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
+                    }`}
+                  >
+                    <span>Registrasi Baru</span>
+                  </button>
+                  {canManageDrafts && (
+                    <button
+                      onClick={() => handleNavClick('reg-draft', ['Dashboard', 'Registrasi Dokumen', 'Draft'])}
+                      className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
+                        activeMenu === 'reg-draft'
+                          ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
+                          : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
+                      }`}
+                    >
+                      <span>Draft</span>
+                      {draftCount > 0 && (
+                        <span className="text-[10px] bg-slate-700 text-slate-200 px-1.5 py-0.2 rounded-full font-bold">
+                          {draftCount}
+                        </span>
+                      )}
+                    </button>
                   )}
-                </button>
-                <button
-                  onClick={() => handleNavClick('reg-pending', ['Dashboard', 'Registrasi Dokumen', 'Menunggu Verifikasi'])}
-                  className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
-                    activeMenu === 'reg-pending'
-                      ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
-                      : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
-                  }`}
-                >
-                  <span>Menunggu Verifikasi</span>
-                  {pendingCount > 0 && (
-                    <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-1.5 py-0.2 rounded-full font-bold">
-                      {pendingCount}
-                    </span>
+                  {canViewPendingVerification && (
+                    <button
+                      onClick={() => handleNavClick('reg-pending', ['Dashboard', 'Registrasi Dokumen', 'Menunggu Verifikasi'])}
+                      className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
+                        activeMenu === 'reg-pending'
+                          ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
+                          : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
+                      }`}
+                    >
+                      <span>Menunggu Verifikasi</span>
+                      {pendingCount > 0 && (
+                        <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-1.5 py-0.2 rounded-full font-bold">
+                          {pendingCount}
+                        </span>
+                      )}
+                    </button>
                   )}
-                </button>
-                <button
-                  onClick={() => handleNavClick('reg-approved', ['Dashboard', 'Registrasi Dokumen', 'Disetujui'])}
-                  className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
-                    activeMenu === 'reg-approved'
-                      ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
-                      : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
-                  }`}
-                >
-                  <span>Disetujui</span>
-                </button>
-                <button
-                  onClick={() => handleNavClick('reg-rejected', ['Dashboard', 'Registrasi Dokumen', 'Ditolak'])}
-                  className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
-                    activeMenu === 'reg-rejected'
-                      ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
-                      : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
-                  }`}
-                >
-                  <span>Ditolak</span>
-                  {rejectedCount > 0 && (
-                    <span className="text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/40 px-1.5 py-0.2 rounded-full font-bold">
-                      {rejectedCount}
-                    </span>
-                  )}
-                </button>
-              </div>
-            )}
-          </div>
+                  <button
+                    onClick={() => handleNavClick('reg-approved', ['Dashboard', 'Registrasi Dokumen', 'Disetujui'])}
+                    className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
+                      activeMenu === 'reg-approved'
+                        ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
+                        : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
+                    }`}
+                  >
+                    <span>Disetujui</span>
+                  </button>
+                  <button
+                    onClick={() => handleNavClick('reg-rejected', ['Dashboard', 'Registrasi Dokumen', 'Ditolak'])}
+                    className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
+                      activeMenu === 'reg-rejected'
+                        ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
+                        : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
+                    }`}
+                  >
+                    <span>Ditolak</span>
+                    {rejectedCount > 0 && (
+                      <span className="text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/40 px-1.5 py-0.2 rounded-full font-bold">
+                        {rejectedCount}
+                      </span>
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* 3. Document Control Accordion */}
           <div>
@@ -235,17 +253,19 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
 
             {(!isCollapsed && openSections.control) && (
               <div className="mt-1 pl-7 pr-1 space-y-1">
-                <button
-                  onClick={() => handleNavClick('ctrl-all', ['Dashboard', 'Document Control', 'Semua Dokumen'])}
-                  className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
-                    activeMenu === 'ctrl-all'
-                      ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
-                      : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
-                  }`}
-                >
-                  <span>Semua Dokumen</span>
-                  <span className="text-[10px] text-slate-500">{documents.length}</span>
-                </button>
+                {canViewAllDocuments && (
+                  <button
+                    onClick={() => handleNavClick('ctrl-all', ['Dashboard', 'Document Control', 'Semua Dokumen'])}
+                    className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
+                      activeMenu === 'ctrl-all'
+                        ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
+                        : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
+                    }`}
+                  >
+                    <span>Semua Dokumen</span>
+                    <span className="text-[10px] text-slate-500">{documents.length}</span>
+                  </button>
+                )}
                 <button
                   onClick={() => handleNavClick('ctrl-active', ['Dashboard', 'Document Control', 'Dokumen Aktif'])}
                   className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
@@ -259,217 +279,229 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
                     {activeCount}
                   </span>
                 </button>
-                <button
-                  onClick={() => handleNavClick('ctrl-obsolete', ['Dashboard', 'Document Control', 'Dokumen Obsolete'])}
-                  className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
-                    activeMenu === 'ctrl-obsolete'
-                      ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
-                      : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
-                  }`}
-                >
-                  <span>Dokumen Obsolete</span>
-                  {obsoleteCount > 0 && (
-                    <span className="text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/40 px-1.5 py-0.2 rounded-full font-bold">
-                      {obsoleteCount}
-                    </span>
-                  )}
-                </button>
-                <button
-                  onClick={() => handleNavClick('ctrl-history', ['Dashboard', 'Document Control', 'Riwayat Revisi'])}
-                  className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
-                    activeMenu === 'ctrl-history'
-                      ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
-                      : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
-                  }`}
-                >
-                  <span>Riwayat Revisi</span>
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* 4. Document Revision Accordion */}
-          <div>
-            <button
-              onClick={() => toggleSection('revision')}
-              className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-bold text-slate-200 hover:bg-[#13233c] transition"
-            >
-              <div className="flex items-center gap-3">
-                <FileEdit className="w-4 h-4 text-purple-400 flex-shrink-0" />
-                {!isCollapsed && <span>Document Revision</span>}
-              </div>
-              {!isCollapsed && (
-                openSections.revision ? <ChevronUp className="w-3.5 h-3.5 text-slate-400" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-              )}
-            </button>
-
-            {(!isCollapsed && openSections.revision) && (
-              <div className="mt-1 pl-7 pr-1 space-y-1">
-                <button
-                  onClick={() => handleNavClick('rev-new', ['Dashboard', 'Document Revision', 'Pengajuan Revisi'])}
-                  className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
-                    activeMenu === 'rev-new'
-                      ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
-                      : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
-                  }`}
-                >
-                  <span>Pengajuan Revisi</span>
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* 5. Master Data Accordion */}
-          <div>
-            <button
-              onClick={() => toggleSection('master')}
-              className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-bold text-slate-200 hover:bg-[#13233c] transition"
-            >
-              <div className="flex items-center gap-3">
-                <Database className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                {!isCollapsed && (
-                  <span className="flex items-center gap-1.5">
-                    <span>Master Data</span>
-                    <span className="text-[8px] font-extrabold uppercase px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                      Admin
-                    </span>
-                  </span>
+                {canViewObsolete && (
+                  <button
+                    onClick={() => handleNavClick('ctrl-obsolete', ['Dashboard', 'Document Control', 'Dokumen Obsolete'])}
+                    className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
+                      activeMenu === 'ctrl-obsolete'
+                        ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
+                        : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
+                    }`}
+                  >
+                    <span>Dokumen Obsolete</span>
+                    {obsoleteCount > 0 && (
+                      <span className="text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/40 px-1.5 py-0.2 rounded-full font-bold">
+                        {obsoleteCount}
+                      </span>
+                    )}
+                  </button>
+                )}
+                {!isViewer && (
+                  <button
+                    onClick={() => handleNavClick('ctrl-history', ['Dashboard', 'Document Control', 'Riwayat Revisi'])}
+                    className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
+                      activeMenu === 'ctrl-history'
+                        ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
+                        : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
+                    }`}
+                  >
+                    <span>Riwayat Revisi</span>
+                  </button>
                 )}
               </div>
-              {!isCollapsed && (
-                openSections.master ? <ChevronUp className="w-3.5 h-3.5 text-slate-400" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-              )}
-            </button>
-
-            {(!isCollapsed && openSections.master) && (
-              <div className="mt-1 pl-7 pr-1 space-y-1">
-                <button
-                  onClick={() => handleNavClick('master-emp', ['Dashboard', 'Master Data', 'Karyawan'])}
-                  className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
-                    activeMenu === 'master-emp'
-                      ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
-                      : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
-                  }`}
-                >
-                  <span>Karyawan</span>
-                </button>
-                <button
-                  onClick={() => handleNavClick('master-dept', ['Dashboard', 'Master Data', 'Departemen'])}
-                  className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
-                    activeMenu === 'master-dept'
-                      ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
-                      : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
-                  }`}
-                >
-                  <span>Departemen</span>
-                </button>
-                <button
-                  onClick={() => handleNavClick('master-type', ['Dashboard', 'Master Data', 'Jenis Dokumen'])}
-                  className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
-                    activeMenu === 'master-type'
-                      ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
-                      : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
-                  }`}
-                >
-                  <span>Jenis Dokumen</span>
-                </button>
-                <button
-                  onClick={() => handleNavClick('master-role', ['Dashboard', 'Master Data', 'Role & Hak Akses'])}
-                  className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
-                    activeMenu === 'master-role'
-                      ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
-                      : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
-                  }`}
-                >
-                  <span>Role & Hak Akses</span>
-                  <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-purple-500/20 text-purple-300">
-                    5
-                  </span>
-                </button>
-              </div>
             )}
           </div>
 
-          {/* 6. Report Accordion */}
-          <div>
+          {/* 4. Document Revision Accordion (Hidden for Viewer) */}
+          {canRequestRevision && (
+            <div>
+              <button
+                onClick={() => toggleSection('revision')}
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-bold text-slate-200 hover:bg-[#13233c] transition"
+              >
+                <div className="flex items-center gap-3">
+                  <FileEdit className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                  {!isCollapsed && <span>Document Revision</span>}
+                </div>
+                {!isCollapsed && (
+                  openSections.revision ? <ChevronUp className="w-3.5 h-3.5 text-slate-400" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                )}
+              </button>
+
+              {(!isCollapsed && openSections.revision) && (
+                <div className="mt-1 pl-7 pr-1 space-y-1">
+                  <button
+                    onClick={() => handleNavClick('rev-new', ['Dashboard', 'Document Revision', 'Pengajuan Revisi'])}
+                    className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
+                      activeMenu === 'rev-new'
+                        ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
+                        : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
+                    }`}
+                  >
+                    <span>Pengajuan Revisi</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 5. Master Data Accordion (Admin & Approver Only) */}
+          {canManageMasterData && (
+            <div>
+              <button
+                onClick={() => toggleSection('master')}
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-bold text-slate-200 hover:bg-[#13233c] transition"
+              >
+                <div className="flex items-center gap-3">
+                  <Database className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                  {!isCollapsed && (
+                    <span className="flex items-center gap-1.5">
+                      <span>Master Data</span>
+                      <span className="text-[8px] font-extrabold uppercase px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                        Admin
+                      </span>
+                    </span>
+                  )}
+                </div>
+                {!isCollapsed && (
+                  openSections.master ? <ChevronUp className="w-3.5 h-3.5 text-slate-400" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                )}
+              </button>
+
+              {(!isCollapsed && openSections.master) && (
+                <div className="mt-1 pl-7 pr-1 space-y-1">
+                  <button
+                    onClick={() => handleNavClick('master-emp', ['Dashboard', 'Master Data', 'Karyawan'])}
+                    className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
+                      activeMenu === 'master-emp'
+                        ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
+                        : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
+                    }`}
+                  >
+                    <span>Karyawan</span>
+                  </button>
+                  <button
+                    onClick={() => handleNavClick('master-dept', ['Dashboard', 'Master Data', 'Departemen'])}
+                    className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
+                      activeMenu === 'master-dept'
+                        ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
+                        : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
+                    }`}
+                  >
+                    <span>Departemen</span>
+                  </button>
+                  <button
+                    onClick={() => handleNavClick('master-type', ['Dashboard', 'Master Data', 'Jenis Dokumen'])}
+                    className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
+                      activeMenu === 'master-type'
+                        ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
+                        : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
+                    }`}
+                  >
+                    <span>Jenis Dokumen</span>
+                  </button>
+                  <button
+                    onClick={() => handleNavClick('master-role', ['Dashboard', 'Master Data', 'Role & Hak Akses'])}
+                    className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
+                      activeMenu === 'master-role'
+                        ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
+                        : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
+                    }`}
+                  >
+                    <span>Role & Hak Akses</span>
+                    <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-purple-500/20 text-purple-300">
+                      6
+                    </span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 6. Report Accordion (Reviewer, DCO, Approver, Admin) */}
+          {canAccessReports && (
+            <div>
+              <button
+                onClick={() => toggleSection('report')}
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-bold text-slate-200 hover:bg-[#13233c] transition"
+              >
+                <div className="flex items-center gap-3">
+                  <BarChart3 className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+                  {!isCollapsed && <span>Report</span>}
+                </div>
+                {!isCollapsed && (
+                  openSections.report ? <ChevronUp className="w-3.5 h-3.5 text-slate-400" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                )}
+              </button>
+
+              {(!isCollapsed && openSections.report) && (
+                <div className="mt-1 pl-7 pr-1 space-y-1">
+                  <button
+                    onClick={() => handleNavClick('rep-register', ['Dashboard', 'Report', 'Register Dokumen'])}
+                    className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
+                      activeMenu === 'rep-register'
+                        ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
+                        : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
+                    }`}
+                  >
+                    <span>Register Dokumen</span>
+                  </button>
+                  <button
+                    onClick={() => handleNavClick('rep-dept', ['Dashboard', 'Report', 'Dokumen per Departemen'])}
+                    className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
+                      activeMenu === 'rep-dept'
+                        ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
+                        : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
+                    }`}
+                  >
+                    <span>Dokumen per Departemen</span>
+                  </button>
+                  <button
+                    onClick={() => handleNavClick('rep-type', ['Dashboard', 'Report', 'Dokumen per Jenis'])}
+                    className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
+                      activeMenu === 'rep-type'
+                        ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
+                        : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
+                    }`}
+                  >
+                    <span>Dokumen per Jenis</span>
+                  </button>
+                  <button
+                    onClick={() => handleNavClick('rep-history', ['Dashboard', 'Report', 'History Revision'])}
+                    className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
+                      activeMenu === 'rep-history'
+                        ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
+                        : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
+                    }`}
+                  >
+                    <span>History Revision</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 7. Setting (Admin & Approver Only) */}
+          {canManageSettings && (
             <button
-              onClick={() => toggleSection('report')}
-              className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-bold text-slate-200 hover:bg-[#13233c] transition"
+              onClick={() => handleNavClick('settings', ['Dashboard', 'Pengaturan', 'Sistem & Database'])}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition group ${
+                activeMenu === 'settings'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                  : 'text-slate-300 hover:bg-[#13233c] hover:text-white'
+              }`}
             >
-              <div className="flex items-center gap-3">
-                <BarChart3 className="w-4 h-4 text-cyan-400 flex-shrink-0" />
-                {!isCollapsed && <span>Report</span>}
-              </div>
+              <Settings className="w-4 h-4 flex-shrink-0" />
               {!isCollapsed && (
-                openSections.report ? <ChevronUp className="w-3.5 h-3.5 text-slate-400" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                <div className="flex items-center justify-between w-full">
+                  <span>Setting</span>
+                  <span className="text-[8px] font-extrabold uppercase px-1 py-0.2 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40">
+                    Admin
+                  </span>
+                </div>
               )}
             </button>
-
-            {(!isCollapsed && openSections.report) && (
-              <div className="mt-1 pl-7 pr-1 space-y-1">
-                <button
-                  onClick={() => handleNavClick('rep-register', ['Dashboard', 'Report', 'Register Dokumen'])}
-                  className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
-                    activeMenu === 'rep-register'
-                      ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
-                      : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
-                  }`}
-                >
-                  <span>Register Dokumen</span>
-                </button>
-                <button
-                  onClick={() => handleNavClick('rep-dept', ['Dashboard', 'Report', 'Dokumen per Departemen'])}
-                  className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
-                    activeMenu === 'rep-dept'
-                      ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
-                      : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
-                  }`}
-                >
-                  <span>Dokumen per Departemen</span>
-                </button>
-                <button
-                  onClick={() => handleNavClick('rep-type', ['Dashboard', 'Report', 'Dokumen per Jenis'])}
-                  className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
-                    activeMenu === 'rep-type'
-                      ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
-                      : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
-                  }`}
-                >
-                  <span>Dokumen per Jenis</span>
-                </button>
-                <button
-                  onClick={() => handleNavClick('rep-history', ['Dashboard', 'Report', 'History Revision'])}
-                  className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
-                    activeMenu === 'rep-history'
-                      ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
-                      : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
-                  }`}
-                >
-                  <span>History Revision</span>
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* 7. Setting */}
-          <button
-            onClick={() => handleNavClick('settings', ['Dashboard', 'Pengaturan', 'Sistem & Database'])}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition group ${
-              activeMenu === 'settings'
-                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                : 'text-slate-300 hover:bg-[#13233c] hover:text-white'
-            }`}
-          >
-            <Settings className="w-4 h-4 flex-shrink-0" />
-            {!isCollapsed && (
-              <div className="flex items-center justify-between w-full">
-                <span>Setting</span>
-                <span className="text-[8px] font-extrabold uppercase px-1 py-0.2 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40">
-                  Admin
-                </span>
-              </div>
-            )}
-          </button>
+          )}
         </div>
 
         {/* Footer info */}

@@ -22,6 +22,8 @@ export default function LoginView() {
     { nik: 'DJI102216', name: 'ZARRAH ALI MARIFAH', department: 'FAT', position: 'STAFF ACCOUNTING FINANCE', email: 'zarrah.ali.marifah@dji-indonesia.com', role: 'staff' },
     { nik: 'DJI032207', name: 'SITI NURDIANTI', department: 'PRODUKSI', position: 'STAFF PPIC', email: 'siti.nurdianti@dji-indonesia.com', role: 'staff' },
     { nik: 'DJI012202', name: 'ASIVA SITI FAUJIAH', department: 'PRODUKSI', position: 'STAFF ADM PRODUKSI', email: 'asiva.siti.faujiah@dji-indonesia.com', role: 'staff' },
+    { nik: 'DJI042211', name: 'AHMAD FAUZI', department: 'PRODUKSI', position: 'OPERATOR PRODUKSI', email: 'ahmad.fauzi@dji-indonesia.com', role: 'viewer' },
+    { nik: 'DJI052219', name: 'NURUL HIDAYAH', department: 'FAT', position: 'OPERATOR ADM KEUANGAN', email: 'nurul.hidayah@dji-indonesia.com', role: 'viewer' },
   ];
 
   // Exclude legacy dummy demo NIKs to ensure only 100% real accounts are shown
@@ -40,6 +42,10 @@ export default function LoginView() {
         return 'bg-sky-50 text-sky-700 border-sky-200';
       case 'approver':
         return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'reviewer':
+        return 'bg-amber-50 text-amber-700 border-amber-200';
+      case 'viewer':
+        return 'bg-teal-50 text-teal-700 border-teal-200';
       case 'staff':
       default:
         return 'bg-blue-50 text-blue-700 border-blue-200';
@@ -50,7 +56,9 @@ export default function LoginView() {
     switch (role?.toLowerCase()) {
       case 'admin': return 'SYSTEM ADMIN';
       case 'doc_control': return 'DOC CONTROL';
-      case 'approver': return 'APPROVER';
+      case 'approver': return 'APPROVER (MR)';
+      case 'reviewer': return 'REVIEWER';
+      case 'viewer': return 'KARYAWAN (VIEWER)';
       case 'staff': default: return 'STAFF';
     }
   };

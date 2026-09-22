@@ -171,7 +171,7 @@ export function DocumentControlProvider({ children }) {
       console.warn('Error saving session:', e);
     }
 
-    addAuditLog('USER_LOGIN', '-', '-', `Pengguna ${foundEmp.name} (${foundEmp.position} - ${foundEmp.role}) berhasil masuk ke sistem.`);
+    addAuditLog('USER_LOGIN', '-', '-', `Pengguna ${foundEmp.name} (${foundEmp.position} - ${foundEmp.role}) berhasil masuk ke sistem.`, foundEmp);
     showToast(`Selamat datang, ${foundEmp.name}! Berhasil masuk sebagai ${foundEmp.position}.`, 'success');
     return { success: true, user: foundEmp };
   };
@@ -190,14 +190,15 @@ export function DocumentControlProvider({ children }) {
     showToast('Anda telah keluar dari sistem.', 'info');
   };
 
-  // RBAC Permission Flags (ISO 9001:2015 Collaborative Roles)
+  // RBAC Permission Flags (ISO 9001:2015 6 Collaborative Roles)
   const role = currentUser?.role || 'staff';
+  const isViewer = role === 'viewer';
+  const isStaff = role === 'staff';
   const isApprover = role === 'approver';
   // Role MR (Approver) memiliki hak akses setara dengan System Administrator
   const isAdmin = role === 'admin' || role === 'approver';
   const isReviewer = role === 'reviewer' || role === 'admin' || role === 'approver';
   const isDocControl = role === 'doc_control' || role === 'admin' || role === 'approver';
-  const isStaff = role === 'staff';
 
   const isDeptHead = (departments || []).some(d =>
     d.head && !d.head.includes('---') &&
@@ -205,16 +206,24 @@ export function DocumentControlProvider({ children }) {
     (d.head.toLowerCase() === currentUser.name.toLowerCase() ||
      currentUser.name.toLowerCase().includes(d.head.toLowerCase()))
   );
-  const canSubmitDocument = Boolean(currentUser);
-  const canReviewContent = isReviewer || isApprover || isDeptHead || isAdmin;
-  const canVerifyFormat = isDocControl || isAdmin || isApprover;
-  const canApproveDocument = isApprover || isAdmin;
-  const canFinalizeDocument = isApprover || isAdmin;
-  const canDeleteDocument = isAdmin;
-  const canCancelDocument = isAdmin;
-  const canManageMasterData = isAdmin;
-  const canManageSettings = isAdmin;
-  const canAccessReports = isReviewer || isDocControl || isApprover || isAdmin;
+
+  // Functional permission flags based on ISO 9001:2015 Segregation of Duties
+  const canRegisterDocument = !isViewer && Boolean(currentUser);
+  const canSubmitDocument = canRegisterDocument;
+  const canManageDrafts = !isViewer && Boolean(currentUser);
+  const canViewPendingVerification = !isViewer && Boolean(currentUser);
+  const canRequestRevision = !isViewer && Boolean(currentUser);
+  const canReviewContent = (isReviewer || isDeptHead) && !isViewer;
+  const canVerifyFormat = isDocControl && !isViewer;
+  const canApproveDocument = (isApprover || isAdmin) && !isViewer;
+  const canFinalizeDocument = (isApprover || isAdmin) && !isViewer;
+  const canDeleteDocument = isAdmin && !isViewer;
+  const canCancelDocument = isAdmin && !isViewer;
+  const canManageMasterData = isAdmin && !isViewer;
+  const canManageSettings = isAdmin && !isViewer;
+  const canAccessReports = (isReviewer || isDocControl || isApprover || isAdmin) && !isViewer;
+  const canViewObsolete = (isReviewer || isDocControl || isApprover || isAdmin) && !isViewer;
+  const canViewAllDocuments = (isReviewer || isDocControl || isApprover || isAdmin) && !isViewer;
 
   // Scope akses berkas Menunggu Verifikasi berdasarkan Departemen & Role (ISO 9001 Segregation)
   const canUserViewPendingDoc = (doc) => {
@@ -222,6 +231,9 @@ export function DocumentControlProvider({ children }) {
     if (!currentUser) return false;
 
     const userRole = currentUser.role || 'staff';
+    // 0. Viewer tidak memiliki akses ke antrean verifikasi
+    if (userRole === 'viewer') return false;
+
     const userDept = (currentUser.department || '').toUpperCase().trim();
     const docDept = (doc.department || '').toUpperCase().trim();
     const userName = (currentUser.name || '').toUpperCase().trim();
@@ -338,6 +350,32 @@ export function DocumentControlProvider({ children }) {
       window.removeEventListener('hashchange', handleHashChange);
     };
   }, []);
+
+  // Role Access Guard: Otomatis alihkan halaman jika user mencoba membuka menu yang tidak berizin
+  useEffect(() => {
+    if (!currentUser) return;
+    const userRole = currentUser.role || 'staff';
+
+    if (userRole === 'viewer') {
+      const allowedViewerMenus = ['dashboard', 'ctrl-active'];
+      if (!allowedViewerMenus.includes(activeMenu)) {
+        setActiveMenu('ctrl-active');
+      }
+    } else if (userRole === 'staff') {
+      const forbiddenStaff = ['settings', 'ctrl-obsolete', 'ctrl-all'];
+      if (activeMenu.startsWith('master-') || activeMenu.startsWith('rep-') || forbiddenStaff.includes(activeMenu)) {
+        setActiveMenu('dashboard');
+      }
+    } else if (userRole === 'reviewer') {
+      if (activeMenu.startsWith('master-') || activeMenu === 'settings') {
+        setActiveMenu('dashboard');
+      }
+    } else if (userRole === 'doc_control') {
+      if (activeMenu === 'settings') {
+        setActiveMenu('dashboard');
+      }
+    }
+  }, [currentUser, activeMenu]);
 
   // Global Search Query
   const [searchQuery, setSearchQuery] = useState('');
@@ -676,13 +714,14 @@ export function DocumentControlProvider({ children }) {
   };
 
   // Helper to log audit trail
-  const addAuditLog = (action, docNumber, docTitle, details) => {
+  const addAuditLog = (action, docNumber, docTitle, details, userOverride = null) => {
     const now = new Date();
+    const activeUser = userOverride || currentUser || { name: 'Sistem', nik: '-' };
     const newLog = {
       id: `log-${Date.now()}`,
       timestamp: `${now.toISOString().slice(0, 10)} ${now.toLocaleTimeString('id-ID')}`,
-      user: currentUser.name,
-      nik: currentUser.nik,
+      user: activeUser.name || 'Sistem',
+      nik: activeUser.nik || '-',
       action,
       docNumber,
       docTitle,
@@ -2055,12 +2094,17 @@ export function DocumentControlProvider({ children }) {
         login,
         logout,
         role,
+        isViewer,
         isAdmin,
         isReviewer,
         isApprover,
         isDocControl,
         isStaff,
+        canRegisterDocument,
         canSubmitDocument,
+        canManageDrafts,
+        canViewPendingVerification,
+        canRequestRevision,
         canReviewContent,
         canVerifyFormat,
         canApproveDocument,
@@ -2070,6 +2114,8 @@ export function DocumentControlProvider({ children }) {
         canManageMasterData,
         canManageSettings,
         canAccessReports,
+        canViewObsolete,
+        canViewAllDocuments,
         canUserViewPendingDoc,
         cancelDocument,
         confirmDocumentPeriodicReview,

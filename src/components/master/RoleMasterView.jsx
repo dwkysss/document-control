@@ -17,7 +17,8 @@ import {
   FileText,
   Building2,
   Sparkles,
-  Info
+  Info,
+  Eye
 } from 'lucide-react';
 import { useDocumentControl } from '../../context/DocumentControlContext';
 import Modal from '../common/Modal';
@@ -168,6 +169,32 @@ export default function RoleMasterView() {
         'Akses Dokumen Terkendali Aktif',
         'Ajukan Usulan Revisi Dokumen'
       ]
+    },
+    {
+      id: 'viewer',
+      code: 'VWR',
+      name: 'Karyawan Umum (Viewer / Read-Only)',
+      alias: 'Operator / Karyawan Pelaksana',
+      level: 'Akses Baca Terbatas (Controlled Copy Only)',
+      badgeColor: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-200 dark:border-teal-800',
+      tagColor: 'bg-teal-600 text-white',
+      accentBorder: 'border-teal-200 dark:border-teal-800/80 hover:border-teal-400',
+      icon: Eye,
+      iconBg: 'bg-teal-100 dark:bg-teal-950 text-teal-600 dark:text-teal-400',
+      description:
+        'Personil operasional lapangan. Memiliki wewenang mencari, membaca, dan mengunduh dokumen resmi berstatus AKTIF (SOP, IK, Formulir) sebagai acuan kerja harian. Tidak memiliki akses pembuatan draf, verifikasi, maupun revisi dokumen.',
+      responsibilities: [
+        'Pelaksanaan operasional kerja harian sesuai SOP dan IK yang berstatus AKTIF',
+        'Pencarian dan pembacaan salinan resmi dokumen terkendali (Controlled Copy)',
+        'Pengunduhan format formulir standar operasional resmi perusahaan',
+        'Pencegahan penggunaan dokumen kadaluarsa atau tidak sah di lingkungan kerja'
+      ],
+      keyPermissions: [
+        'Akses Dokumen Terkendali Aktif',
+        'Pencarian & Unduh Controlled Copy',
+        'Preview Berkas Resmi ISO 9001',
+        'Dashboard Ringkasan Operasional'
+      ]
     }
   ];
 
@@ -199,43 +226,43 @@ export default function RoleMasterView() {
     return matchesRole || matchesMember;
   });
 
-  // Permission Matrix Feature Definitions
+  // Permission Matrix Feature Definitions (6 Roles ISO 9001:2015)
   const permissionFeatures = [
     {
       category: 'Registrasi & Pengajuan Dokumen',
       features: [
-        { name: 'Buat Registrasi Dokumen Baru', staff: true, reviewer: true, doc_control: true, approver: true, admin: true },
-        { name: 'Simpan & Kelola Draft Pribadi', staff: true, reviewer: true, doc_control: true, approver: true, admin: true },
-        { name: 'Ajukan Draft ke Verifikasi (Submit)', staff: true, reviewer: true, doc_control: true, approver: true, admin: true },
-        { name: 'Unggah Lampiran Berkas (Cloud Storage)', staff: true, reviewer: true, doc_control: true, approver: true, admin: true }
+        { name: 'Buat Registrasi Dokumen Baru', viewer: false, staff: true, reviewer: true, doc_control: true, approver: true, admin: true },
+        { name: 'Simpan & Kelola Draft Pribadi', viewer: false, staff: true, reviewer: true, doc_control: true, approver: true, admin: true },
+        { name: 'Ajukan Draft ke Verifikasi (Submit)', viewer: false, staff: true, reviewer: true, doc_control: true, approver: true, admin: true },
+        { name: 'Unggah Lampiran Berkas (Cloud Storage)', viewer: false, staff: true, reviewer: true, doc_control: true, approver: true, admin: true }
       ]
     },
     {
       category: 'Alur Verifikasi ISO 9001',
       features: [
-        { name: 'Pemeriksaan Konten Teknis (Review Step)', staff: false, reviewer: true, doc_control: false, approver: true, admin: true },
-        { name: 'Verifikasi Format Dokumen & Penomoran Resmi (DCO Step)', staff: false, reviewer: false, doc_control: true, approver: true, admin: true },
-        { name: 'Pengesahan Akhir Terbit Dokumen (Approval Step)', staff: false, reviewer: false, doc_control: false, approver: true, admin: true },
-        { name: 'Penolakan / Catatan Perbaikan Dokumen', staff: false, reviewer: true, doc_control: true, approver: true, admin: true }
+        { name: 'Pemeriksaan Konten Teknis (Review Step)', viewer: false, staff: false, reviewer: true, doc_control: false, approver: true, admin: true },
+        { name: 'Verifikasi Format Dokumen & Penomoran Resmi (DCO Step)', viewer: false, staff: false, reviewer: false, doc_control: true, approver: true, admin: true },
+        { name: 'Pengesahan Akhir Terbit Dokumen (Approval Step)', viewer: false, staff: false, reviewer: false, doc_control: false, approver: true, admin: true },
+        { name: 'Penolakan / Catatan Perbaikan Dokumen', viewer: false, staff: false, reviewer: true, doc_control: true, approver: true, admin: true }
       ]
     },
     {
       category: 'Pengendalian & Siklus Dokumen',
       features: [
-        { name: 'Lihat & Unduh Dokumen Terkendali (Controlled Copy)', staff: true, reviewer: true, doc_control: true, approver: true, admin: true },
-        { name: 'Tandai Dokumen Kadaluarsa (Obsolete)', staff: false, reviewer: false, doc_control: true, approver: true, admin: true },
-        { name: 'Ajukan Permohonan Revisi Dokumen', staff: true, reviewer: true, doc_control: true, approver: true, admin: true },
-        { name: 'Konfirmasi Peninjauan Berkala (Periodic Review)', staff: false, reviewer: true, doc_control: true, approver: true, admin: true }
+        { name: 'Lihat & Unduh Dokumen Terkendali (Controlled Copy)', viewer: true, staff: true, reviewer: true, doc_control: true, approver: true, admin: true },
+        { name: 'Tandai Dokumen Kadaluarsa (Obsolete)', viewer: false, staff: false, reviewer: false, doc_control: true, approver: true, admin: true },
+        { name: 'Ajukan Permohonan Revisi Dokumen', viewer: false, staff: true, reviewer: true, doc_control: true, approver: true, admin: true },
+        { name: 'Konfirmasi Peninjauan Berkala (Periodic Review)', viewer: false, staff: false, reviewer: true, doc_control: true, approver: true, admin: true }
       ]
     },
     {
       category: 'Master Data & Tata Kelola Sistem',
       features: [
-        { name: 'Kelola Master Karyawan & Akun', staff: false, reviewer: false, doc_control: false, approver: true, admin: true },
-        { name: 'Kelola Master Departemen & Tim Verifikator', staff: false, reviewer: false, doc_control: false, approver: true, admin: true },
-        { name: 'Kelola Master Jenis & Template Dokumen', staff: false, reviewer: false, doc_control: false, approver: true, admin: true },
-        { name: 'Akses Laporan Master Register & Audit Log', staff: false, reviewer: true, doc_control: true, approver: true, admin: true },
-        { name: 'Konfigurasi Sistem & Backup/Restore JSON Database', staff: false, reviewer: false, doc_control: false, approver: true, admin: true }
+        { name: 'Kelola Master Karyawan & Akun', viewer: false, staff: false, reviewer: false, doc_control: false, approver: true, admin: true },
+        { name: 'Kelola Master Departemen & Tim Verifikator', viewer: false, staff: false, reviewer: false, doc_control: false, approver: true, admin: true },
+        { name: 'Kelola Master Jenis & Template Dokumen', viewer: false, staff: false, reviewer: false, doc_control: false, approver: true, admin: true },
+        { name: 'Akses Laporan Master Register & Audit Log', viewer: false, staff: false, reviewer: true, doc_control: true, approver: true, admin: true },
+        { name: 'Konfigurasi Sistem & Backup/Restore JSON Database', viewer: false, staff: false, reviewer: false, doc_control: false, approver: true, admin: true }
       ]
     }
   ];
@@ -504,7 +531,7 @@ export default function RoleMasterView() {
                 Matriks Hak Akses & Kewenangan (Permission Matrix)
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Perbandingan komparatif hak akses 5 role pengguna pada setiap kapabilitas operasional sistem.
+                Perbandingan komparatif hak akses 6 role pengguna pada setiap kapabilitas operasional sistem ISO 9001:2015.
               </p>
             </div>
             <div className="flex items-center gap-4 text-xs font-semibold">
@@ -522,6 +549,11 @@ export default function RoleMasterView() {
               <thead className="bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 uppercase tracking-wider font-bold border-b border-slate-200 dark:border-slate-700">
                 <tr>
                   <th className="p-4 min-w-[280px]">Fitur & Kapabilitas Sistem</th>
+                  <th className="p-4 text-center min-w-[100px]">
+                    <span className="px-2 py-0.5 rounded bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300 font-black">
+                      Viewer
+                    </span>
+                  </th>
                   <th className="p-4 text-center min-w-[110px]">
                     <span className="px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-black">
                       Staff / User
@@ -553,7 +585,7 @@ export default function RoleMasterView() {
                 {permissionFeatures.map((cat, catIdx) => (
                   <React.Fragment key={catIdx}>
                     <tr className="bg-slate-100/70 dark:bg-slate-900/40">
-                      <td colSpan={6} className="p-2.5 pl-4 font-bold text-slate-900 dark:text-slate-200 text-[11px] uppercase tracking-wider">
+                      <td colSpan={7} className="p-2.5 pl-4 font-bold text-slate-900 dark:text-slate-200 text-[11px] uppercase tracking-wider">
                         {cat.category}
                       </td>
                     </tr>
@@ -561,6 +593,13 @@ export default function RoleMasterView() {
                       <tr key={fIdx} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition">
                         <td className="p-3 pl-6 font-medium text-slate-800 dark:text-slate-200">
                           {feat.name}
+                        </td>
+                        <td className="p-3 text-center">
+                          {feat.viewer ? (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 inline-block" />
+                          ) : (
+                            <span className="w-3 h-0.5 bg-slate-200 dark:bg-slate-700 inline-block" />
+                          )}
                         </td>
                         <td className="p-3 text-center">
                           {feat.staff ? (

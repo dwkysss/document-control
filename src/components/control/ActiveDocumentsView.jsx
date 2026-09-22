@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ShieldCheck,
   Eye,
@@ -13,7 +13,14 @@ import {
   Clock,
   Check,
   FileEdit,
-  Building2
+  Building2,
+  Filter,
+  RotateCcw,
+  X,
+  FileText,
+  SlidersHorizontal,
+  ArrowUpDown,
+  Tag
 } from 'lucide-react';
 import Badge from '../common/Badge';
 import Modal from '../common/Modal';
@@ -70,6 +77,14 @@ function getPeriodicReviewInfo(doc, reviewIntervalMonths = 12) {
 export default function ActiveDocumentsView() {
   const {
     documents,
+    departments = [],
+    documentTypes = [],
+    currentUser,
+    canRequestRevision,
+    canReviewContent,
+    canVerifyFormat,
+    canApproveDocument,
+    isViewer,
     setViewingDocument,
     setSelectedDocForRevision,
     setActiveMenu,
@@ -81,8 +96,16 @@ export default function ActiveDocumentsView() {
     showToast
   } = useDocumentControl();
 
+  const userDept = currentUser?.department || currentUser?.dept || '';
+
+  // Filter States
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterMode, setFilterMode] = useState('ALL'); // 'ALL' | 'DUE'
+  const [filterMode, setFilterMode] = useState('ALL'); // 'ALL' | 'MY_DEPT' | 'DUE' | 'NORMAL'
+  const [filterDept, setFilterDept] = useState('ALL');
+  const [filterType, setFilterType] = useState('ALL');
+  const [sortBy, setSortBy] = useState('DATE_DESC');
+
+  // Modal State untuk Pembatalan (Admin)
   const [docToCancel, setDocToCancel] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
 
@@ -91,29 +114,155 @@ export default function ActiveDocumentsView() {
   const [reviewNotes, setReviewNotes] = useState('');
 
   const reviewIntervalMonths = systemSettings.periodicReviewMonths || 12;
-  const activeDocs = documents.filter(d => d.status === 'AKTIF');
+  const activeDocs = useMemo(() => (documents || []).filter(d => d.status === 'AKTIF'), [documents]);
 
   // Hitung dokumen yang mendekati / lewat jatuh tempo review berkala
-  const reviewDueDocs = activeDocs.filter(d => {
+  const reviewDueDocs = useMemo(() => activeDocs.filter(d => {
     const info = getPeriodicReviewInfo(d, reviewIntervalMonths);
     return info.status === 'OVERDUE' || info.status === 'DUE_SOON';
-  });
+  }), [activeDocs, reviewIntervalMonths]);
 
-  const filtered = activeDocs.filter(d => {
-    const matchesSearch =
-      d.docNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      d.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      d.department.toLowerCase().includes(searchTerm.toLowerCase());
+  // Hitung dokumen normal / terkendali
+  const normalDocs = useMemo(() => activeDocs.filter(d => {
+    const info = getPeriodicReviewInfo(d, reviewIntervalMonths);
+    return info.status === 'NORMAL';
+  }), [activeDocs, reviewIntervalMonths]);
 
-    if (!matchesSearch) return false;
+  // Dokumen departemen user login
+  const myDeptDocs = useMemo(() => {
+    if (!userDept) return [];
+    return activeDocs.filter(d => (d.department || '').toUpperCase() === userDept.toUpperCase());
+  }, [activeDocs, userDept]);
 
-    if (filterMode === 'DUE') {
-      const info = getPeriodicReviewInfo(d, reviewIntervalMonths);
-      return info.status === 'OVERDUE' || info.status === 'DUE_SOON';
-    }
+  // Hitung distribusi jumlah dokumen per departemen
+  const deptCountMap = useMemo(() => {
+    const counts = {};
+    activeDocs.forEach(d => {
+      const code = (d.department || 'LAINNYA').toUpperCase();
+      counts[code] = (counts[code] || 0) + 1;
+    });
+    return counts;
+  }, [activeDocs]);
 
-    return true;
-  });
+  // Hitung distribusi jumlah dokumen per tipe
+  const typeCountMap = useMemo(() => {
+    const counts = {};
+    activeDocs.forEach(d => {
+      const code = (d.type || 'LAINNYA').toUpperCase();
+      counts[code] = (counts[code] || 0) + 1;
+    });
+    return counts;
+  }, [activeDocs]);
+
+  // Daftar unik departemen yang ada di database atau dokumen aktif
+  const availableDepartments = useMemo(() => {
+    const list = [...departments];
+    Object.keys(deptCountMap).forEach(code => {
+      if (!list.some(d => d.code.toUpperCase() === code)) {
+        list.push({ id: `dept-extra-${code}`, code, name: code });
+      }
+    });
+    return list;
+  }, [departments, deptCountMap]);
+
+  // Daftar unik tipe dokumen yang ada di database atau dokumen aktif
+  const availableDocTypes = useMemo(() => {
+    const list = [...documentTypes];
+    Object.keys(typeCountMap).forEach(code => {
+      if (!list.some(t => t.code.toUpperCase() === code)) {
+        list.push({ id: `type-extra-${code}`, code, name: code });
+      }
+    });
+    return list;
+  }, [documentTypes, typeCountMap]);
+
+  // Logika Filter & Sorting Dokumen
+  const filtered = useMemo(() => {
+    let result = activeDocs.filter(d => {
+      // 1. Search term match
+      if (searchTerm.trim()) {
+        const q = searchTerm.toLowerCase();
+        const matchesSearch =
+          (d.docNumber || '').toLowerCase().includes(q) ||
+          (d.title || '').toLowerCase().includes(q) ||
+          (d.department || '').toLowerCase().includes(q) ||
+          (d.creator || '').toLowerCase().includes(q) ||
+          (d.type || '').toLowerCase().includes(q) ||
+          (d.revision || '').toLowerCase().includes(q);
+        if (!matchesSearch) return false;
+      }
+
+      // 2. Filter mode (tabs)
+      if (filterMode === 'MY_DEPT') {
+        if ((d.department || '').toUpperCase() !== userDept.toUpperCase()) return false;
+      } else if (filterMode === 'DUE') {
+        const info = getPeriodicReviewInfo(d, reviewIntervalMonths);
+        if (info.status !== 'OVERDUE' && info.status !== 'DUE_SOON') return false;
+      } else if (filterMode === 'NORMAL') {
+        const info = getPeriodicReviewInfo(d, reviewIntervalMonths);
+        if (info.status !== 'NORMAL') return false;
+      }
+
+      // 3. Filter Departemen dropdown
+      if (filterDept !== 'ALL') {
+        if ((d.department || '').toUpperCase() !== filterDept.toUpperCase()) return false;
+      }
+
+      // 4. Filter Jenis Dokumen dropdown
+      if (filterType !== 'ALL') {
+        if ((d.type || '').toUpperCase() !== filterType.toUpperCase()) return false;
+      }
+
+      return true;
+    });
+
+    // 5. Sorting
+    result.sort((a, b) => {
+      if (sortBy === 'DATE_DESC') {
+        const dateA = new Date(a.effectiveDate || a.approvedDate || a.createdDate || 0);
+        const dateB = new Date(b.effectiveDate || b.approvedDate || b.createdDate || 0);
+        return dateB - dateA;
+      }
+      if (sortBy === 'DATE_ASC') {
+        const dateA = new Date(a.effectiveDate || a.approvedDate || a.createdDate || 0);
+        const dateB = new Date(b.effectiveDate || b.approvedDate || b.createdDate || 0);
+        return dateA - dateB;
+      }
+      if (sortBy === 'DOC_ASC') {
+        return (a.docNumber || '').localeCompare(b.docNumber || '');
+      }
+      if (sortBy === 'DOC_DESC') {
+        return (b.docNumber || '').localeCompare(a.docNumber || '');
+      }
+      if (sortBy === 'TITLE_ASC') {
+        return (a.title || '').localeCompare(b.title || '');
+      }
+      if (sortBy === 'REV_DESC') {
+        const revA = parseInt(a.revision, 10) || 0;
+        const revB = parseInt(b.revision, 10) || 0;
+        return revB - revA;
+      }
+      return 0;
+    });
+
+    return result;
+  }, [activeDocs, searchTerm, filterMode, filterDept, filterType, sortBy, userDept, reviewIntervalMonths]);
+
+  // Cek apakah ada filter yang sedang aktif
+  const hasActiveFilters =
+    Boolean(searchTerm.trim()) ||
+    filterMode !== 'ALL' ||
+    filterDept !== 'ALL' ||
+    filterType !== 'ALL' ||
+    sortBy !== 'DATE_DESC';
+
+  const resetFilters = () => {
+    setSearchTerm('');
+    setFilterMode('ALL');
+    setFilterDept('ALL');
+    setFilterType('ALL');
+    setSortBy('DATE_DESC');
+  };
 
   const handleRevisionClick = (doc) => {
     setSelectedDocForRevision(doc);
@@ -158,46 +307,232 @@ export default function ActiveDocumentsView() {
         </div>
       </div>
 
-      {/* Filter Tabs & Search Bar */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 p-4 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
+      {/* Filter Tabs & Multi Filter Bar */}
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 p-4 space-y-4">
+        {/* Quick Filter Tabs */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setFilterMode('ALL')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
                 filterMode === 'ALL'
                   ? 'bg-blue-600 text-white shadow-sm'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
               }`}
             >
               Semua Dokumen Aktif ({activeDocs.length})
             </button>
+
+            {/* Quick Tab: Dokumen Departemen Saya (Sangat berguna untuk Karyawan/Operator) */}
+            {userDept && myDeptDocs.length > 0 && (
+              <button
+                onClick={() => setFilterMode('MY_DEPT')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                  filterMode === 'MY_DEPT'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 border border-indigo-200 dark:border-indigo-900'
+                }`}
+                title={`Hanya tampilkan dokumen departemen ${userDept}`}
+              >
+                <Building2 className="w-3.5 h-3.5" />
+                Departemen Saya: {userDept} ({myDeptDocs.length})
+              </button>
+            )}
+
             <button
               onClick={() => setFilterMode('DUE')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
                 filterMode === 'DUE'
                   ? 'bg-amber-600 text-white shadow-sm'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
               }`}
             >
-              <Clock className="w-3.5 h-3.5" />
+              <Clock className="w-3.5 h-3.5 text-amber-500" />
               Perlu Review Berkala ({reviewDueDocs.length})
             </button>
+
+            <button
+              onClick={() => setFilterMode('NORMAL')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                filterMode === 'NORMAL'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+              Terkendali Normal ({normalDocs.length})
+            </button>
           </div>
-          <span className="text-[11px] text-slate-400">
-            Interval Peninjauan ISO: <strong>{reviewIntervalMonths} Bulan</strong>
-          </span>
+
+          <div className="flex items-center gap-3 text-[11px] text-slate-400">
+            <span>
+              Interval Peninjauan ISO: <strong className="text-slate-700 dark:text-slate-300">{reviewIntervalMonths} Bulan</strong>
+            </span>
+          </div>
         </div>
 
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Cari dokumen aktif berdasarkan nomor / judul / divisi..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+        {/* Multi Filter Controls Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-center">
+          {/* 1. Search Box (col-span-4) */}
+          <div className="lg:col-span-4 relative">
+            <input
+              type="text"
+              placeholder="Cari no. dokumen, judul, pembuat..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-8 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+            />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                title="Hapus pencarian"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* 2. Filter Departemen (col-span-3) */}
+          <div className="lg:col-span-3">
+            <select
+              value={filterDept}
+              onChange={(e) => setFilterDept(e.target.value)}
+              className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="ALL">Semua Departemen ({activeDocs.length})</option>
+              {availableDepartments.map(d => {
+                const count = deptCountMap[d.code.toUpperCase()] || 0;
+                return (
+                  <option key={d.id || d.code} value={d.code}>
+                    {d.code} - {d.name} ({count})
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+
+          {/* 3. Filter Jenis Dokumen (col-span-3) */}
+          <div className="lg:col-span-3">
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="ALL">Semua Jenis Dokumen ({activeDocs.length})</option>
+              {availableDocTypes.map(t => {
+                const count = typeCountMap[t.code.toUpperCase()] || 0;
+                return (
+                  <option key={t.id || t.code} value={t.code}>
+                    {t.code} - {t.name} ({count})
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+
+          {/* 4. Sort By & Reset (col-span-2) */}
+          <div className="lg:col-span-2 flex items-center gap-2">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-2 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+              title="Urutkan dokumen"
+            >
+              <option value="DATE_DESC">Tgl Berlaku (Terbaru)</option>
+              <option value="DATE_ASC">Tgl Berlaku (Terlama)</option>
+              <option value="DOC_ASC">No. Dokumen (A - Z)</option>
+              <option value="DOC_DESC">No. Dokumen (Z - A)</option>
+              <option value="TITLE_ASC">Judul Dokumen (A - Z)</option>
+              <option value="REV_DESC">Revisi Tertinggi</option>
+            </select>
+
+            {hasActiveFilters && (
+              <button
+                onClick={resetFilters}
+                className="px-2.5 py-2 text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 border border-rose-200 dark:border-rose-900 rounded-lg transition flex items-center gap-1 flex-shrink-0"
+                title="Reset semua filter ke standar"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span className="hidden xl:inline">Reset</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Active Filter Chips & Summary */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 text-xs text-slate-500">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="font-medium text-slate-600 dark:text-slate-400">
+              Menampilkan <strong className="text-blue-600 dark:text-blue-400 font-bold">{filtered.length}</strong> dari {activeDocs.length} dokumen aktif
+            </span>
+
+            {/* Filter Chips */}
+            {searchTerm && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900 text-[11px]">
+                Cari: "{searchTerm}"
+                <button onClick={() => setSearchTerm('')} className="hover:text-blue-900 dark:hover:text-white">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+
+            {filterDept !== 'ALL' && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-900 text-[11px]">
+                Dept: {filterDept}
+                <button onClick={() => setFilterDept('ALL')} className="hover:text-purple-900 dark:hover:text-white">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+
+            {filterType !== 'ALL' && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-900 text-[11px]">
+                Jenis: {filterType}
+                <button onClick={() => setFilterType('ALL')} className="hover:text-teal-900 dark:hover:text-white">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+
+            {filterMode === 'MY_DEPT' && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-900 text-[11px]">
+                Departemen Saya
+                <button onClick={() => setFilterMode('ALL')} className="hover:text-indigo-900 dark:hover:text-white">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+
+            {filterMode === 'DUE' && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900 text-[11px]">
+                Perlu Review Berkala
+                <button onClick={() => setFilterMode('ALL')} className="hover:text-amber-900 dark:hover:text-white">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+
+            {filterMode === 'NORMAL' && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900 text-[11px]">
+                Terkendali Normal
+                <button onClick={() => setFilterMode('ALL')} className="hover:text-emerald-900 dark:hover:text-white">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+          </div>
+
+          {hasActiveFilters && (
+            <button
+              onClick={resetFilters}
+              className="text-xs font-semibold text-slate-500 hover:text-rose-600 transition underline underline-offset-2 flex items-center gap-1"
+            >
+              <RotateCcw className="w-3 h-3" />
+              Bersihkan Semua Filter
+            </button>
+          )}
         </div>
       </div>
 
@@ -222,8 +557,29 @@ export default function ActiveDocumentsView() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-8 text-center text-slate-400 text-xs">
-                    Tidak ada dokumen aktif yang cocok dengan filter saat ini.
+                  <td colSpan={10} className="py-12 text-center">
+                    <div className="flex flex-col items-center justify-center max-w-sm mx-auto space-y-3 text-slate-500">
+                      <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+                        <Filter className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-slate-800 dark:text-slate-200 text-sm">
+                          Tidak ada dokumen aktif yang sesuai filter
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Coba sesuaikan kata kunci pencarian atau ubah kriteria filter departemen dan jenis dokumen.
+                        </p>
+                      </div>
+                      {hasActiveFilters && (
+                        <button
+                          onClick={resetFilters}
+                          className="mt-2 px-3 py-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 rounded-lg transition flex items-center gap-1.5"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          Reset Semua Filter
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (
@@ -264,24 +620,29 @@ export default function ActiveDocumentsView() {
                             Pratinjau
                           </button>
 
-                          {/* Tombol Tinjau / Review Berkala (Langkah 8 & 9 ISO 9001) */}
-                          <button
-                            onClick={() => handleOpenReviewModal(doc)}
-                            className="px-2 py-1 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/40 dark:text-teal-300 rounded-md transition flex items-center gap-1"
-                            title="Monitoring & Peninjauan Berkala (Klausul 7.5)"
-                          >
-                            <ClipboardCheck className="w-3.5 h-3.5" />
-                            Tinjau
-                          </button>
+                          {/* Tombol Tinjau / Review Berkala (Langkah 8 & 9 ISO 9001) - Hanya untuk Reviewer/DCO/MR/Admin */}
+                          {(canReviewContent || canVerifyFormat || canApproveDocument || isAdmin) && (
+                            <button
+                              onClick={() => handleOpenReviewModal(doc)}
+                              className="px-2 py-1 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/40 dark:text-teal-300 rounded-md transition flex items-center gap-1"
+                              title="Monitoring & Peninjauan Berkala (Klausul 7.5)"
+                            >
+                              <ClipboardCheck className="w-3.5 h-3.5" />
+                              Tinjau
+                            </button>
+                          )}
 
-                          <button
-                            onClick={() => handleRevisionClick(doc)}
-                            className="px-2 py-1 text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:text-purple-300 rounded-md transition flex items-center gap-1"
-                            title="Ajukan Revisi Dokumen"
-                          >
-                            <RefreshCw className="w-3.5 h-3.5" />
-                            Revisi
-                          </button>
+                          {/* Tombol Ajukan Revisi - Terbuka untuk Originator / Staff / Reviewer / DCO / Admin, Tersembunyi untuk Viewer */}
+                          {canRequestRevision && (
+                            <button
+                              onClick={() => handleRevisionClick(doc)}
+                              className="px-2 py-1 text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:text-purple-300 rounded-md transition flex items-center gap-1"
+                              title="Ajukan Revisi Dokumen"
+                            >
+                              <RefreshCw className="w-3.5 h-3.5" />
+                              Revisi
+                            </button>
+                          )}
 
                           {/* Batalkan Dokumen (Wewenang Khusus System Administrator) */}
                           {isAdmin && (

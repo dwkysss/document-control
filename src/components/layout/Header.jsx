@@ -349,12 +349,14 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
                         : currentUser.role === 'approver'
                         ? 'bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300'
                         : currentUser.role === 'reviewer'
-                        ? 'bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-950 dark:text-purple-300'
+                        ? 'bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950 dark:text-amber-300'
                         : currentUser.role === 'doc_control'
                         ? 'bg-sky-50 text-sky-700 border-sky-300 dark:bg-sky-950 dark:text-sky-300'
+                        : currentUser.role === 'viewer'
+                        ? 'bg-teal-50 text-teal-700 border-teal-300 dark:bg-teal-950 dark:text-teal-300'
                         : 'bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950 dark:text-blue-300'
                     }`}>
-                      {currentUser.role === 'admin' ? 'Admin' : currentUser.role === 'approver' ? 'Approver (MR)' : currentUser.role === 'reviewer' ? 'Reviewer' : currentUser.role === 'doc_control' ? 'DCO' : 'Staff'}
+                      {currentUser.role === 'admin' ? 'Admin' : currentUser.role === 'approver' ? 'Approver (MR)' : currentUser.role === 'reviewer' ? 'Reviewer' : currentUser.role === 'doc_control' ? 'DCO' : currentUser.role === 'viewer' ? 'Viewer' : 'Staff'}
                     </span>
                   )}
                   <ChevronDown className="w-3 h-3 text-slate-400" />
@@ -388,6 +390,7 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
                       {currentUser.role === 'reviewer' && 'Pemeriksaan materi isi dokumen, alur kerja operasional, dan persyaratan teknis (Atasan / Kepala Departemen).'}
                       {currentUser.role === 'doc_control' && 'Pemeriksaan tata naskah format ISO, penomoran resmi master list, & distribusi salinan terkendali.'}
                       {currentUser.role === 'staff' && 'Menyusun dan mengajukan draft usulan dokumen baru departemennya.'}
+                      {currentUser.role === 'viewer' && 'Hanya membaca dan mengunduh salinan dokumen terkendali berstatus AKTIF (Controlled Copy) untuk operasional kerja.'}
                     </div>
                   </div>
                 </div>

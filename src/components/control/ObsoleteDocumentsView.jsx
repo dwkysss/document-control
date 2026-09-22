@@ -1,25 +1,42 @@
-import React, { useState } from 'react';
-import { Archive, Eye, AlertTriangle, Search, Trash2 } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Archive, Eye, AlertTriangle, Search, Trash2, X, RotateCcw, Filter } from 'lucide-react';
 import Badge from '../common/Badge';
 import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
 
 export default function ObsoleteDocumentsView() {
-  const { documents, setViewingDocument, deleteDocument, isAdmin } = useDocumentControl();
+  const { documents, departments = [], documentTypes = [], setViewingDocument, deleteDocument, isAdmin } = useDocumentControl();
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterDept, setFilterDept] = useState('ALL');
+  const [filterType, setFilterType] = useState('ALL');
   const [docToDelete, setDocToDelete] = useState(null);
 
-  const obsoleteDocs = (documents || []).filter(d => d.status === 'OBSOLETE');
+  const obsoleteDocs = useMemo(() => (documents || []).filter(d => d.status === 'OBSOLETE'), [documents]);
 
-  const filtered = obsoleteDocs.filter(d => {
-    const term = (searchTerm || '').toLowerCase();
-    return (
-      (d.docNumber || '').toLowerCase().includes(term) ||
-      (d.title || '').toLowerCase().includes(term) ||
-      (d.department || '').toLowerCase().includes(term) ||
-      (d.creator || '').toLowerCase().includes(term)
-    );
-  });
+  const filtered = useMemo(() => {
+    return obsoleteDocs.filter(d => {
+      const term = (searchTerm || '').toLowerCase();
+      const matchesSearch =
+        (d.docNumber || '').toLowerCase().includes(term) ||
+        (d.title || '').toLowerCase().includes(term) ||
+        (d.department || '').toLowerCase().includes(term) ||
+        (d.creator || '').toLowerCase().includes(term);
+
+      if (!matchesSearch) return false;
+      if (filterDept !== 'ALL' && (d.department || '').toUpperCase() !== filterDept.toUpperCase()) return false;
+      if (filterType !== 'ALL' && (d.type || '').toUpperCase() !== filterType.toUpperCase()) return false;
+
+      return true;
+    });
+  }, [obsoleteDocs, searchTerm, filterDept, filterType]);
+
+  const hasActiveFilters = Boolean(searchTerm.trim()) || filterDept !== 'ALL' || filterType !== 'ALL';
+
+  const resetFilters = () => {
+    setSearchTerm('');
+    setFilterDept('ALL');
+    setFilterType('ALL');
+  };
 
   return (
     <div className="space-y-6">
@@ -34,17 +51,7 @@ export default function ObsoleteDocumentsView() {
             Arsip dokumen standar yang sudah tidak berlaku karena telah diterbitkan revisi baru atau penarikan operasional.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="relative min-w-[220px]">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Cari nomor, judul, dept..."
-              className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 text-slate-900 dark:text-white"
-            />
-          </div>
+        <div className="flex items-center gap-2">
           <div className="text-xs font-semibold px-3 py-1.5 bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 rounded-lg border border-rose-200 dark:border-rose-900 whitespace-nowrap">
             {obsoleteDocs.length} Dokumen Obsolete Tersimpan
           </div>
@@ -60,6 +67,83 @@ export default function ObsoleteDocumentsView() {
             Dokumen obsolete tetap disimpan untuk keperluan audit rekam jejak, namun telah dicap watermark <strong>OBSOLETE</strong> dan tidak boleh digunakan di area operasional kerja. Administrator dan MR memiliki wewenang untuk membersihkan atau menghapus berkas yang sudah kadaluarsa jika masa retensi telah berakhir.
           </p>
         </div>
+      </div>
+
+      {/* Multi Filter Bar */}
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 p-4 space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-center">
+          <div className="lg:col-span-5 relative">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Cari nomor, judul, pembuat..."
+              className="w-full pl-9 pr-8 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 text-slate-900 dark:text-white"
+            />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="lg:col-span-3">
+            <select
+              value={filterDept}
+              onChange={(e) => setFilterDept(e.target.value)}
+              className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-rose-500"
+            >
+              <option value="ALL">Semua Departemen ({obsoleteDocs.length})</option>
+              {departments.map(d => (
+                <option key={d.id} value={d.code}>{d.code} - {d.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="lg:col-span-3">
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-rose-500"
+            >
+              <option value="ALL">Semua Jenis Dokumen ({obsoleteDocs.length})</option>
+              {documentTypes.map(t => (
+                <option key={t.id} value={t.code}>{t.code} - {t.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="lg:col-span-1 flex justify-end">
+            {hasActiveFilters && (
+              <button
+                onClick={resetFilters}
+                className="w-full py-2 px-2 text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 rounded-lg border border-rose-200 dark:border-rose-900 transition flex items-center justify-center gap-1"
+                title="Reset filter"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Reset</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {hasActiveFilters && (
+          <div className="text-xs text-slate-500 pt-1 flex items-center justify-between">
+            <span>
+              Menampilkan <strong className="text-rose-600 dark:text-rose-400">{filtered.length}</strong> dari {obsoleteDocs.length} arsip obsolete
+            </span>
+            <button
+              onClick={resetFilters}
+              className="text-[11px] text-slate-500 hover:text-rose-600 underline"
+            >
+              Bersihkan Filter
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Table */}

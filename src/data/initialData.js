@@ -28,6 +28,8 @@ export const initialEmployees = [
   { id: 'emp-6', nik: 'DJI102216', name: 'ZARRAH ALI MARIFAH', department: 'FAT', position: 'STAFF ACCOUNTING FINANCE', email: 'zarrah.ali.marifah@dji-indonesia.com', role: 'staff', status: 'Aktif' },
   { id: 'emp-7', nik: 'DJI032207', name: 'SITI NURDIANTI', department: 'PRODUKSI', position: 'STAFF PPIC', email: 'siti.nurdianti@dji-indonesia.com', role: 'staff', status: 'Aktif' },
   { id: 'emp-8', nik: 'DJI012202', name: 'ASIVA SITI FAUJIAH', department: 'PRODUKSI', position: 'STAFF ADM PRODUKSI', email: 'asiva.siti.faujiah@dji-indonesia.com', role: 'staff', status: 'Aktif' },
+  { id: 'emp-9', nik: 'DJI042211', name: 'AHMAD FAUZI', department: 'PRODUKSI', position: 'OPERATOR PRODUKSI', email: 'ahmad.fauzi@dji-indonesia.com', role: 'viewer', status: 'Aktif' },
+  { id: 'emp-10', nik: 'DJI052219', name: 'NURUL HIDAYAH', department: 'FAT', position: 'OPERATOR ADM KEUANGAN', email: 'nurul.hidayah@dji-indonesia.com', role: 'viewer', status: 'Aktif' },
 ];
 
 export const initialVerifierTeams = [

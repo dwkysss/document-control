@@ -176,6 +176,8 @@ export default function EmployeeMasterView() {
                         : emp.role === 'doc_control'
                         ? 'bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950 dark:text-amber-300'
                         : emp.role === 'reviewer'
+                        ? 'bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-950 dark:text-purple-300'
+                        : emp.role === 'viewer'
                         ? 'bg-teal-50 text-teal-700 border-teal-300 dark:bg-teal-950 dark:text-teal-300'
                         : 'bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950 dark:text-blue-300'
                     }`}>
@@ -189,6 +191,8 @@ export default function EmployeeMasterView() {
                         ? '03. DOC CONTROL'
                         : emp.role === 'reviewer'
                         ? '02. REVIEWER (Atasan)'
+                        : emp.role === 'viewer'
+                        ? '00. KARYAWAN (Viewer)'
                         : '01. USER (Staff)'}
                     </span>
                   </td>
@@ -310,7 +314,8 @@ export default function EmployeeMasterView() {
                   onChange={(e) => setRole(e.target.value)}
                   className="w-full p-2.5 border rounded-lg dark:bg-slate-800 text-xs font-semibold"
                 >
-                  <option value="staff">01. USER (Staff Office - Staff Produksi)</option>
+                  <option value="viewer">00. KARYAWAN (Viewer - Hanya Baca Dokumen Aktif)</option>
+                  <option value="staff">01. USER (Staff Pemohon - Inisiator Dokumen)</option>
                   <option value="reviewer">02. REVIEWER (Atasan / Kepala Departemen)</option>
                   <option value="doc_control">03. DOCUMENT CONTROL (DCO - Pengendali Format & Nomor)</option>
                   <option value="approver">04. APPROVER (Management Representative / MR)</option>
@@ -336,7 +341,9 @@ export default function EmployeeMasterView() {
                 <Shield className="w-3.5 h-3.5 text-blue-600" />
                 Matriks Wewenang Role ({role}):
               </div>
+              {role === 'viewer' && 'Hanya memiliki hak akses membaca dan mengunduh dokumen terkendali berstatus AKTIF (Controlled Copy). Tidak dapat membuat draft, revisi, atau mengakses master data.'}
               {role === 'staff' && 'Hanya dapat membuat registrasi baru, menyimpan draf, dan mengajukan revisi untuk departemennya.'}
+              {role === 'reviewer' && 'Berwenang memeriksa dan memberikan tinjauan teknis (Review Tahap 1) untuk dokumen departemen terkait.'}
               {role === 'doc_control' && 'Dapat mendaftarkan dokumen dari semua departemen, mengelola penomoran, distribusi salinan resmi, dan akses report.'}
               {role === 'approver' && 'Memiliki wewenang memeriksa, menyetujui (Approve), atau menolak (Reject) berkas pada Menunggu Verifikasi.'}
               {role === 'admin' && 'Akses penuh ke semua modul sistem, kelola master data & pengaturan, serta hak khusus menghapus dan membatalkan dokumen.'}
