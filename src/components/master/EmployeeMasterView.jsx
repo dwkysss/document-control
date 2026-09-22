@@ -348,17 +348,6 @@ export default function EmployeeMasterView() {
               {role === 'approver' && 'Memiliki wewenang memeriksa, menyetujui (Approve), atau menolak (Reject) berkas pada Menunggu Verifikasi.'}
               {role === 'admin' && 'Akses penuh ke semua modul sistem, kelola master data & pengaturan, serta hak khusus menghapus dan membatalkan dokumen.'}
             </div>
-
-            {/* Guide Tip for Top Management */}
-            <div className="p-3 bg-gradient-to-r from-amber-50 to-purple-50 dark:from-amber-950/30 dark:to-purple-950/30 border border-amber-200 dark:border-amber-800 rounded-lg text-[11px] text-slate-700 dark:text-slate-300">
-              <div className="font-bold text-amber-900 dark:text-amber-200 mb-0.5">
-                Panduan Role General Manager / Direksi (Departemen MGMT):
-              </div>
-              <p className="leading-relaxed text-[10px]">
-                Pilih Departemen: <strong>MGMT (Top Management & Direksi)</strong> dan Role: <strong>Approver</strong> (atau <strong>Admin</strong> jika merangkap MR).
-              </p>
-            </div>
-
             <div className="flex justify-end gap-2 pt-4 border-t">
               <button
                 type="button"
