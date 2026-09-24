@@ -5,23 +5,18 @@ import QRCode from 'qrcode';
  */
 export async function generateDocumentQRCode(doc) {
   try {
-    const payload = JSON.stringify({
-      docNo: doc.docNumber,
-      title: doc.title,
-      rev: doc.revision,
-      status: doc.status,
-      dept: doc.department,
-      effective: doc.effectiveDate || doc.createdDate,
-      verifiedBy: 'DJI Document Control System',
-      verifyUrl: `https://dc.dji-indonesia.com/verify?doc=${encodeURIComponent(doc.docNumber)}`
-    });
+    // Best Practice ISO 9001 EDMS: Barcode memuat tautan verifikasi dinamis real-time
+    const origin = typeof window !== 'undefined' && window.location.origin
+      ? window.location.origin
+      : 'https://dc.dji-indonesia.com';
+    const verifyUrl = `${origin}/?verify=${encodeURIComponent(doc.docNumber)}`;
 
-    const qrDataUrl = await QRCode.toDataURL(payload, {
-      errorCorrectionLevel: 'H',
-      margin: 1,
-      width: 160,
+    const qrDataUrl = await QRCode.toDataURL(verifyUrl, {
+      errorCorrectionLevel: 'M',
+      margin: 2,
+      width: 480,
       color: {
-        dark: '#0b1a30',
+        dark: '#000000',
         light: '#ffffff'
       }
     });

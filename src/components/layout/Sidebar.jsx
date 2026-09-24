@@ -45,7 +45,8 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
     canAccessReports,
     canManageMasterData,
     canManageSettings,
-    canUserViewPendingDoc
+    canUserViewPendingDoc,
+    canUserViewDraftDoc
   } = useDocumentControl();
 
   // Accordion open/close state
@@ -82,7 +83,10 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
 
   // Badge counts
   const safeDocs = Array.isArray(documents) ? documents : [];
-  const draftCount = safeDocs.filter(d => d?.status === 'DRAFT' || d?.status === 'PERLU REVISI' || d?.status === 'REVISI').length;
+  const draftCount = safeDocs
+    .filter(d => d?.status === 'DRAFT' || d?.status === 'PERLU REVISI' || d?.status === 'REVISI')
+    .filter(d => (canUserViewDraftDoc ? canUserViewDraftDoc(d) : true))
+    .length;
   const pendingCount = safeDocs
     .filter(d => d?.status === 'REVIEW' || d?.status === 'VERIFIKASI' || d?.status === 'APPROVAL')
     .filter(d => (canUserViewPendingDoc ? canUserViewPendingDoc(d) : true))
@@ -467,14 +471,14 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
                     <span>Dokumen per Jenis</span>
                   </button>
                   <button
-                    onClick={() => handleNavClick('rep-history', ['Dashboard', 'Report', 'History Revision'])}
+                    onClick={() => handleNavClick('rep-history', ['Dashboard', 'Laporan & Audit', 'Audit Trail (Log Sistem)'])}
                     className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
                       activeMenu === 'rep-history'
                         ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
                         : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
                     }`}
                   >
-                    <span>History Revision</span>
+                    <span>Audit Trail (Log Sistem)</span>
                   </button>
                 </div>
               )}

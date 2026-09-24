@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   ShieldCheck,
   Eye,
@@ -20,7 +20,11 @@ import {
   FileText,
   SlidersHorizontal,
   ArrowUpDown,
-  Tag
+  Tag,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react';
 import Badge from '../common/Badge';
 import Modal from '../common/Modal';
@@ -247,6 +251,40 @@ export default function ActiveDocumentsView() {
 
     return result;
   }, [activeDocs, searchTerm, filterMode, filterDept, filterType, sortBy, userDept, reviewIntervalMonths]);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Reset ke halaman 1 saat filter atau pageSize berubah
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterMode, filterDept, filterType, sortBy, pageSize]);
+
+  // Pagination Calculation
+  const totalEntries = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalEntries / pageSize));
+  const startIndex = (currentPage - 1) * pageSize;
+  const paginatedDocs = useMemo(() => {
+    return filtered.slice(startIndex, startIndex + pageSize);
+  }, [filtered, startIndex, pageSize]);
+
+  // Generate Page Numbers
+  const pageNumbers = useMemo(() => {
+    const pages = [];
+    if (totalPages <= 5) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      if (currentPage <= 3) {
+        pages.push(1, 2, 3, 4, '...', totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        pages.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages);
+      }
+    }
+    return pages;
+  }, [currentPage, totalPages]);
 
   // Cek apakah ada filter yang sedang aktif
   const hasActiveFilters =
@@ -583,11 +621,11 @@ export default function ActiveDocumentsView() {
                   </td>
                 </tr>
               ) : (
-                filtered.map((doc, idx) => {
+                paginatedDocs.map((doc, idx) => {
                   const reviewInfo = getPeriodicReviewInfo(doc, reviewIntervalMonths);
                   return (
                     <tr key={doc.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
-                      <td className="py-3.5 px-4 text-center text-slate-400">{idx + 1}</td>
+                      <td className="py-3.5 px-4 text-center text-slate-400">{startIndex + idx + 1}</td>
                       <td className="py-3.5 px-4 font-bold font-mono text-slate-900 dark:text-white whitespace-nowrap">
                         {doc.docNumber}
                       </td>
@@ -600,7 +638,7 @@ export default function ActiveDocumentsView() {
                       <td className="py-3.5 px-4 text-center font-mono font-bold text-emerald-700 dark:text-emerald-400">
                         {doc.revision}
                       </td>
-                      <td className="py-3.5 px-4 text-center font-mono text-[11px] text-slate-700 dark:text-slate-300">
+                      <td className="py-3.5 px-4 text-center font-mono text-[11px] text-slate-700 dark:text-slate-300 whitespace-nowrap">
                         {doc.effectiveDate || doc.createdDate}
                       </td>
                       {/* Kolom Review Status (Langkah 8) */}
@@ -666,6 +704,105 @@ export default function ActiveDocumentsView() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Footer Pagination Lengkap */}
+        <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+          {/* Kiri: Page Size & Counter */}
+          <div className="flex items-center gap-3 flex-wrap text-slate-600 dark:text-slate-400">
+            <div className="flex items-center gap-1.5">
+              <span>Tampilkan:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => setPageSize(Number(e.target.value))}
+                className="py-1 px-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <span>dokumen / hal</span>
+            </div>
+
+            <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">•</span>
+
+            <span className="font-mono text-[11.5px]">
+              Menampilkan <strong className="text-slate-900 dark:text-white font-bold">{totalEntries > 0 ? startIndex + 1 : 0}</strong> -{' '}
+              <strong className="text-slate-900 dark:text-white font-bold">{Math.min(startIndex + pageSize, totalEntries)}</strong> dari{' '}
+              <strong className="text-slate-900 dark:text-white font-bold">{totalEntries}</strong> dokumen aktif
+            </span>
+          </div>
+
+          {/* Kanan: Navigasi Halaman */}
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className="p-1.5 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                title="Halaman Pertama"
+              >
+                <ChevronsLeft className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="p-1.5 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                title="Halaman Sebelumnya"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+
+              <div className="flex items-center gap-1 mx-1">
+                {pageNumbers.map((page, i) => {
+                  if (page === '...') {
+                    return (
+                      <span key={`ellipsis-act-${i}`} className="px-1.5 text-slate-400 font-mono">
+                        ...
+                      </span>
+                    );
+                  }
+                  const isActive = currentPage === page;
+                  return (
+                    <button
+                      key={`page-act-${page}`}
+                      type="button"
+                      onClick={() => setCurrentPage(page)}
+                      className={`min-w-[28px] h-7 px-2 text-xs font-mono rounded transition cursor-pointer ${
+                        isActive
+                          ? 'bg-blue-600 text-white font-bold shadow-xs'
+                          : 'text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="p-1.5 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                title="Halaman Selanjutnya"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+                className="p-1.5 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                title="Halaman Terakhir"
+              >
+                <ChevronsRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

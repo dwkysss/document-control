@@ -1,5 +1,17 @@
 import React, { useState } from 'react';
-import { CheckCircle2, XCircle, Eye, ShieldAlert, FileText, UserCheck, AlertCircle, Clock, ArrowRight, ShieldCheck, RotateCcw } from 'lucide-react';
+import {
+  CheckCircle2,
+  XCircle,
+  Eye,
+  FileText,
+  UserCheck,
+  AlertCircle,
+  Clock,
+  ArrowRight,
+  ShieldCheck,
+  RotateCcw,
+  Search
+} from 'lucide-react';
 import Badge from '../common/Badge';
 import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
@@ -23,6 +35,8 @@ export default function PendingVerificationView() {
   } = useDocumentControl();
 
   const [activeTab, setActiveTab] = useState('ALL'); // 'ALL' | 'REVIEW' | 'VERIFIKASI' | 'APPROVAL'
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterDept, setFilterDept] = useState('ALL');
 
   // State Tahap 1: Review Atasan
   const [selectedReviewDoc, setSelectedReviewDoc] = useState(null);
@@ -54,10 +68,25 @@ export default function PendingVerificationView() {
   const stage2Count = pendingDocs.filter(d => d.status === 'VERIFIKASI').length;
   const stage3Count = pendingDocs.filter(d => d.status === 'APPROVAL').length;
 
-  // Berkas terfilter berdasarkan Tab aktif
+  // Berkas terfilter berdasarkan Tab aktif dan Pencarian
   const displayedDocs = activeTab === 'ALL'
     ? pendingDocs
     : pendingDocs.filter(d => d.status === activeTab);
+
+  const filteredDocs = displayedDocs.filter(d => {
+    if (filterDept !== 'ALL' && (d.department || '').toUpperCase() !== filterDept.toUpperCase()) {
+      return false;
+    }
+    if (searchTerm.trim()) {
+      const q = searchTerm.toLowerCase();
+      const matchNo = (d.docNumber || '').toLowerCase().includes(q);
+      const matchTitle = (d.title || '').toLowerCase().includes(q);
+      const matchCreator = (d.creator || '').toLowerCase().includes(q);
+      const matchDept = (d.department || '').toLowerCase().includes(q);
+      if (!matchNo && !matchTitle && !matchCreator && !matchDept) return false;
+    }
+    return true;
+  });
 
   // Handler Tahap 1: Review Isi & Alur Kerja oleh Atasan Departemen / Reviewer
   const handleOpenReviewModal = (doc) => {
@@ -182,344 +211,347 @@ export default function PendingVerificationView() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header Info */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 p-5 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Clock className="w-5 h-5 text-blue-600" />
-            Antrean Verifikasi & Persetujuan Dokumen ISO 9001
-          </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Rantai Persetujuan 3 Tingkat: Tahap 1 Review Isi (Atasan) ➔ Tahap 2 Verifikasi Format (DCO) ➔ Tahap 3 Pengesahan (MR).
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-          <span className="px-3 py-1.5 bg-purple-50 dark:bg-purple-950/40 text-purple-800 dark:text-purple-300 rounded-lg border border-purple-200 dark:border-purple-800">
-            Tahap 1 (Reviewer): {stage1Count}
-          </span>
-          <span className="px-3 py-1.5 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 rounded-lg border border-amber-200 dark:border-amber-800">
-            Tahap 2 (DCO): {stage2Count}
-          </span>
-          <span className="px-3 py-1.5 bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300 rounded-lg border border-blue-200 dark:border-blue-800">
-            Tahap 3 (MR): {stage3Count}
-          </span>
-        </div>
-      </div>
-
-      {/* Filter Tabs by Stage */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2 text-xs">
-        <button
-          type="button"
-          onClick={() => setActiveTab('ALL')}
-          className={`px-3.5 py-1.5 rounded-lg font-bold transition cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'ALL'
-              ? 'bg-blue-600 text-white shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-          }`}
-        >
-          <span>Semua Antrean</span>
-          <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'ALL' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'}`}>
-            {pendingDocs.length}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('REVIEW')}
-          className={`px-3.5 py-1.5 rounded-lg font-bold transition cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'REVIEW'
-              ? 'bg-purple-600 text-white shadow-sm'
-              : 'text-purple-700 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/30'
-          }`}
-        >
-          <span>Tahap 1: Review Atasan</span>
-          <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'REVIEW' ? 'bg-white/20 text-white' : 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300'}`}>
-            {stage1Count}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('VERIFIKASI')}
-          className={`px-3.5 py-1.5 rounded-lg font-bold transition cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'VERIFIKASI'
-              ? 'bg-amber-600 text-white shadow-sm'
-              : 'text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30'
-          }`}
-        >
-          <span>Tahap 2: Verifikasi DCO</span>
-          <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'VERIFIKASI' ? 'bg-white/20 text-white' : 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'}`}>
-            {stage2Count}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('APPROVAL')}
-          className={`px-3.5 py-1.5 rounded-lg font-bold transition cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'APPROVAL'
-              ? 'bg-emerald-600 text-white shadow-sm'
-              : 'text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30'
-          }`}
-        >
-          <span>Tahap 3: Pengesahan MR</span>
-          <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'APPROVAL' ? 'bg-white/20 text-white' : 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'}`}>
-            {stage3Count}
-          </span>
-        </button>
-      </div>
-
-      {/* Info Banner untuk Atasan Departemen (Reviewer) */}
-      {currentUser?.role === 'reviewer' && (
-        <div className="bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-900 rounded-xl p-3.5 flex items-start gap-3 animate-fade-in">
-          <UserCheck className="w-5 h-5 text-purple-600 dark:text-purple-400 flex-shrink-0 mt-0.5" />
-          <div className="text-xs">
-            <p className="font-bold text-purple-900 dark:text-purple-200">
-              Antrean Verifikasi Khusus Departemen {currentUser?.department || ''} ({currentUser?.name || ''})
-            </p>
-            <p className="text-purple-800 dark:text-purple-300 mt-0.5 leading-relaxed">
-              Sesuai aturan pemisahan wewenang ISO 9001, Anda hanya menampilkan antrean dokumen yang berasal dari departemen <strong>{currentUser?.department || 'Anda'}</strong> atau dokumen di mana Anda ditugaskan khusus sebagai Reviewer. Dokumen dari departemen lain tidak ditampilkan.
+    <div className="space-y-4">
+      {/* 1. Header Bar (Clean & Simple) */}
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+            <Clock className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                Menunggu Verifikasi
+              </h2>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-mono">
+                {pendingDocs.length} Berkas
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Antrean verifikasi 3 tahap (Review Atasan, Verifikasi DCO, Pengesahan MR).
             </p>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Info Banner untuk Staf Biasa */}
-      {!canReviewContent && !canVerifyFormat && !canApproveDocument && (
-        <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 rounded-xl p-3.5 flex items-start gap-3 animate-fade-in">
-          <ShieldAlert className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-          <div className="text-xs">
-            <p className="font-bold text-blue-900 dark:text-blue-200">
-              Mode Pemantauan ({currentUser?.position || 'Staff'})
-            </p>
-            <p className="text-blue-800 dark:text-blue-300 mt-0.5 leading-relaxed">
-              Sesuai aturan wewenang ISO 9001:2015 PT Dentelle Jaya Infinitex, Anda dapat memantau progres persetujuan berkas. Dokumen diawali dari pemeriksaan isi oleh <strong>Atasan / Reviewer</strong>, lalu diverifikasi tata naskahnya oleh <strong>Document Control (DCO)</strong>, hingga disahkan secara resmi oleh <strong>Management Representative (MR)</strong>.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Table */}
+      {/* 2. Unified Card: Toolbar (Tabs + Search/Filter) & Table */}
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 overflow-hidden">
+        {/* Toolbar Header */}
+        <div className="p-3 sm:p-4 border-b border-slate-200 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/50">
+          {/* Segmented Filter Pills */}
+          <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/90 rounded-lg shrink-0 overflow-x-auto">
+            <button
+              type="button"
+              onClick={() => setActiveTab('ALL')}
+              className={`px-3 py-1.5 rounded-md text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'ALL'
+                  ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-2xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <span>Semua Antrean</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                activeTab === 'ALL' ? 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+              }`}>
+                {pendingDocs.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('REVIEW')}
+              className={`px-3 py-1.5 rounded-md text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'REVIEW'
+                  ? 'bg-white dark:bg-slate-700 text-purple-600 dark:text-purple-400 shadow-2xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+              <span>Tahap 1: Review Atasan</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                activeTab === 'REVIEW' ? 'bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+              }`}>
+                {stage1Count}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('VERIFIKASI')}
+              className={`px-3 py-1.5 rounded-md text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'VERIFIKASI'
+                  ? 'bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-400 shadow-2xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+              <span>Tahap 2: Verifikasi DCO</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                activeTab === 'VERIFIKASI' ? 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+              }`}>
+                {stage2Count}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('APPROVAL')}
+              className={`px-3 py-1.5 rounded-md text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'APPROVAL'
+                  ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-2xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              <span>Tahap 3: Pengesahan MR</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                activeTab === 'APPROVAL' ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+              }`}>
+                {stage3Count}
+              </span>
+            </button>
+          </div>
+
+          {/* Search & Dept Filter */}
+          <div className="flex items-center gap-2">
+            <div className="relative w-full sm:w-60">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Cari nomor, judul, pembuat..."
+                className="w-full pl-8 pr-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <select
+              value={filterDept}
+              onChange={(e) => setFilterDept(e.target.value)}
+              className="text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="ALL">Semua Dept</option>
+              {departments.map(d => (
+                <option key={d.id || d.code} value={d.code}>{d.code}</option>
+              ))}
+            </select>
+
+            {(searchTerm || filterDept !== 'ALL') && (
+              <button
+                type="button"
+                onClick={() => { setSearchTerm(''); setFilterDept('ALL'); }}
+                className="p-1.5 text-xs text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer"
+                title="Reset Filter"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Clean Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-[#102a4e] text-white uppercase text-[10px] tracking-wider">
-                <th className="py-3 px-3 text-center">No.</th>
-                <th className="py-3 px-3">No. Dokumen</th>
-                <th className="py-3 px-3">Judul Dokumen</th>
-                <th className="py-3 px-3">Departemen</th>
-                <th className="py-3 px-3">Pembuat (User)</th>
-                <th className="py-3 px-3">Atasan (Reviewer)</th>
-                <th className="py-3 px-3">Pengesah (MR)</th>
-                <th className="py-3 px-3 text-center">Tahap Saat Ini</th>
-                <th className="py-3 px-3 text-center">Tgl. Pengajuan</th>
-                <th className="py-3 px-3 text-center">Aksi</th>
+              <tr className="bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 uppercase text-[10px] font-bold tracking-wider">
+                <th className="py-3.5 px-4 text-center w-12 whitespace-nowrap">No.</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">No. Dokumen</th>
+                <th className="py-3.5 px-4">Judul Dokumen</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">Departemen</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">Pembuat</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">Tahap Berjalan</th>
+                <th className="py-3.5 px-4 text-right whitespace-nowrap">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {displayedDocs.length === 0 ? (
+              {filteredDocs.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-12 text-center text-slate-400">
+                  <td colSpan={7} className="py-14 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <FileText className="w-8 h-8 text-slate-300 dark:text-slate-600" />
-                      <p className="font-medium text-slate-600 dark:text-slate-400">Tidak ada berkas pada tahap ini</p>
-                      <p className="text-xs text-slate-400">Semua dokumen dalam kategori ini telah diproses.</p>
+                      <p className="font-bold text-slate-700 dark:text-slate-300 text-sm">Tidak ada berkas pada antrean ini</p>
+                      <p className="text-xs text-slate-400">Semua dokumen pada kategori ini telah selesai diproses.</p>
                     </div>
                   </td>
                 </tr>
               ) : (
-                displayedDocs.map((doc, idx) => {
+                filteredDocs.map((doc, idx) => {
                   const isStage1 = doc.status === 'REVIEW';
                   const isStage2 = doc.status === 'VERIFIKASI';
                   const isStage3 = doc.status === 'APPROVAL';
 
                   return (
-                    <tr key={doc.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition">
-                      <td className="py-3 px-3 text-center text-slate-400 font-medium">{idx + 1}</td>
-                      <td className="py-3 px-3 font-bold font-mono text-slate-900 dark:text-white whitespace-nowrap">
-                        {doc.docNumber}
+                    <tr key={doc.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition">
+                      {/* 1. No */}
+                      <td className="py-3.5 px-4 text-center text-slate-400 font-medium whitespace-nowrap">
+                        {idx + 1}
                       </td>
-                      <td className="py-3 px-3 font-medium text-slate-800 dark:text-slate-200 max-w-[190px] truncate" title={doc.title}>
-                        {doc.title}
-                      </td>
-                      <td className="py-3 px-3 font-semibold text-slate-600 dark:text-slate-400">{doc.department}</td>
-                      <td className="py-3 px-3 text-slate-600 dark:text-slate-400 whitespace-nowrap">
-                        <div className="font-semibold text-slate-800 dark:text-slate-200">{doc.creator}</div>
-                        <div className="text-[10px] text-slate-400">{doc.creatorPosition}</div>
-                      </td>
-                      <td className="py-3 px-3 text-slate-700 dark:text-slate-300">
-                        <div className="font-semibold text-xs text-slate-900 dark:text-white truncate max-w-[150px]">
-                          {doc.targetReviewer || doc.reviewerName || 'Atasan Departemen'}
-                        </div>
-                        {doc.reviewedBy && (
-                          <div className="text-[10px] text-emerald-600 font-medium">✓ Disetujui: {doc.reviewedBy}</div>
-                        )}
-                      </td>
-                      <td className="py-3 px-3 text-slate-700 dark:text-slate-300">
-                        <div className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
-                          <UserCheck className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
-                          <span className="truncate max-w-[150px]">{doc.targetApprover || 'MR / Approver'}</span>
-                        </div>
-                        <div className="text-[10px] text-slate-400 mt-0.5">
-                          Format: {doc.verifierTeam || 'DCO'}
-                        </div>
-                      </td>
-                      <td className="py-3 px-3 text-center whitespace-nowrap">
-                        {isStage1 && (
-                          <div>
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-purple-800 bg-purple-100 dark:bg-purple-950/60 dark:text-purple-300 px-2 py-0.5 rounded border border-purple-300 dark:border-purple-800">
-                              Tahap 1: Review Atasan
-                            </span>
-                            <div className="text-[9.5px] text-slate-400 mt-0.5">Pemeriksaan Isi & Alur Kerja</div>
-                          </div>
-                        )}
-                        {isStage2 && (
-                          <div>
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100 dark:bg-amber-950/60 dark:text-amber-300 px-2 py-0.5 rounded border border-amber-300 dark:border-amber-800">
-                              Tahap 2: Verifikasi DCO
-                            </span>
-                            <div className="text-[9.5px] text-purple-700 font-medium mt-0.5">
-                              Lolos Review oleh {doc.reviewedBy || 'Atasan'}
-                            </div>
-                          </div>
-                        )}
-                        {isStage3 && (
-                          <div>
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-800 bg-blue-100 dark:bg-blue-950/60 dark:text-blue-300 px-2 py-0.5 rounded border border-blue-300 dark:border-blue-800">
-                              Tahap 3: Pengesahan MR
-                            </span>
-                            <div className="text-[9.5px] text-emerald-600 font-medium mt-0.5">
-                              Format Lolos oleh {doc.verifiedBy || 'DCO'}
-                            </div>
-                          </div>
-                        )}
-                      </td>
-                      <td className="py-3 px-3 text-center text-slate-500 font-mono text-[11px] whitespace-nowrap">
-                        {doc.createdDate}
-                      </td>
-                      <td className="py-3 px-3 text-center whitespace-nowrap">
-                        <div className="flex items-center justify-center gap-1.5">
-                          {/* Tombol Lihat Berkas */}
+
+                      {/* 2. No Dokumen */}
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5">
                           <button
                             type="button"
                             onClick={() => setViewingDocument(doc)}
-                            className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-800 rounded transition cursor-pointer"
+                            className="font-bold font-mono text-blue-600 dark:text-blue-400 hover:underline cursor-pointer text-xs"
+                            title="Buka Pratinjau Dokumen"
+                          >
+                            {doc.docNumber}
+                          </button>
+                          <span className="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900">
+                            {doc.type || 'SOP'}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* 3. Judul Dokumen */}
+                      <td className="py-3.5 px-4">
+                        <div className="font-semibold text-slate-900 dark:text-white max-w-[260px] truncate" title={doc.title}>
+                          {doc.title}
+                        </div>
+                      </td>
+
+                      {/* 4. Departemen */}
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                          {doc.department}
+                        </span>
+                      </td>
+
+                      {/* 5. Pembuat */}
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <div className="font-semibold text-slate-800 dark:text-slate-200 text-xs">
+                          {doc.creator}
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          {doc.createdDate}
+                        </div>
+                      </td>
+
+                      {/* 6. Tahap Berjalan */}
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        {isStage1 && (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></span>
+                            Tahap 1: Review Atasan
+                          </span>
+                        )}
+                        {isStage2 && (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                            Tahap 2: Verifikasi DCO
+                          </span>
+                        )}
+                        {isStage3 && (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+                            Tahap 3: Pengesahan MR
+                          </span>
+                        )}
+                      </td>
+
+                      {/* 7. Tindakan / Aksi */}
+                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {/* Quick Preview Button */}
+                          <button
+                            type="button"
+                            onClick={() => setViewingDocument(doc)}
+                            className="px-2.5 py-1 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition flex items-center gap-1 cursor-pointer"
                             title="Pratinjau Dokumen"
                           >
-                            <Eye className="w-4 h-4" />
+                            <Eye className="w-3.5 h-3.5 text-slate-500" />
+                            <span>Lihat</span>
                           </button>
 
-                          {/* AKSI TAHAP 1 (REVIEW ISI OLEH ATASAN / REVIEWER) */}
-                          {isStage1 && (
-                            canReviewContent && isAssignedReviewer(doc) ? (
-                              <>
-                                <button
-                                  onClick={() => handleOpenReviewModal(doc)}
-                                  className="px-2.5 py-1 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white rounded-md shadow-sm transition flex items-center gap-1 cursor-pointer"
-                                  title="Review Isi Dokumen & Alur Kerja (Atasan)"
-                                >
-                                  <UserCheck className="w-3.5 h-3.5" />
-                                  Review Isi
-                                </button>
-                                <button
-                                  onClick={() => handleOpenRevisionModal(doc, 'REVIEW')}
-                                  className="px-2.5 py-1 text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 dark:text-amber-300 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 rounded-md transition flex items-center gap-1 cursor-pointer shadow-xs"
-                                  title="Kembalikan ke Pembuat untuk Direvisi / Diperbaiki"
-                                >
-                                  <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
-                                  Minta Revisi
-                                </button>
-                                <button
-                                  onClick={() => handleOpenRejectModal(doc, 'REVIEW')}
-                                  className="px-2.5 py-1 text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-md transition flex items-center gap-1 cursor-pointer"
-                                  title="Tolak Isi Dokumen"
-                                >
-                                  <XCircle className="w-3.5 h-3.5" />
-                                  Tolak
-                                </button>
-                              </>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-purple-700 bg-purple-50 dark:bg-purple-950/40 dark:text-purple-300 px-2 py-1 rounded border border-purple-200 dark:border-purple-800">
-                                <Clock className="w-3 h-3 text-purple-500" />
-                                Menunggu Review Atasan
-                              </span>
-                            )
+                          {/* Tombol Otorisasi Tahap 1 */}
+                          {isStage1 && canReviewContent && isAssignedReviewer(doc) && (
+                            <>
+                              <button
+                                onClick={() => handleOpenReviewModal(doc)}
+                                className="px-2.5 py-1 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white rounded-md shadow-xs transition flex items-center gap-1 cursor-pointer"
+                              >
+                                <UserCheck className="w-3.5 h-3.5" />
+                                <span>Review</span>
+                              </button>
+                              <button
+                                onClick={() => handleOpenRevisionModal(doc, 'REVIEW')}
+                                className="p-1 text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-800 dark:text-amber-300 border border-amber-200 rounded-md transition cursor-pointer"
+                                title="Minta Revisi"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
+                              </button>
+                              <button
+                                onClick={() => handleOpenRejectModal(doc, 'REVIEW')}
+                                className="p-1 text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-md transition cursor-pointer"
+                                title="Tolak Berkas"
+                              >
+                                <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                              </button>
+                            </>
                           )}
 
-                          {/* AKSI TAHAP 2 (VERIFIKASI FORMAT OLEH DCO) */}
-                          {isStage2 && (
-                            canVerifyFormat ? (
-                              <>
-                                <button
-                                  onClick={() => handleOpenVerifyModal(doc)}
-                                  className="px-2.5 py-1 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-md shadow-sm transition flex items-center gap-1 cursor-pointer"
-                                  title="Verifikasi Format Dokumen (DCO)"
-                                >
-                                  <ShieldCheck className="w-3.5 h-3.5" />
-                                  Verifikasi Format
-                                </button>
-                                <button
-                                  onClick={() => handleOpenRevisionModal(doc, 'FORMAT')}
-                                  className="px-2.5 py-1 text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 dark:text-amber-300 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 rounded-md transition flex items-center gap-1 cursor-pointer shadow-xs"
-                                  title="Minta Perbaikan Format ke Pembuat"
-                                >
-                                  <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
-                                  Minta Revisi
-                                </button>
-                                <button
-                                  onClick={() => handleOpenRejectModal(doc, 'FORMAT')}
-                                  className="px-2.5 py-1 text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-md transition flex items-center gap-1 cursor-pointer"
-                                  title="Tolak Format Berkas"
-                                >
-                                  <XCircle className="w-3.5 h-3.5" />
-                                  Tolak
-                                </button>
-                              </>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-300 px-2 py-1 rounded border border-amber-200 dark:border-amber-800">
-                                <Clock className="w-3 h-3 text-amber-500" />
-                                Menunggu DCO
-                              </span>
-                            )
+                          {/* Tombol Otorisasi Tahap 2 */}
+                          {isStage2 && canVerifyFormat && (
+                            <>
+                              <button
+                                onClick={() => handleOpenVerifyModal(doc)}
+                                className="px-2.5 py-1 text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-md shadow-xs transition flex items-center gap-1 cursor-pointer"
+                              >
+                                <ShieldCheck className="w-3.5 h-3.5" />
+                                <span>Verifikasi</span>
+                              </button>
+                              <button
+                                onClick={() => handleOpenRevisionModal(doc, 'FORMAT')}
+                                className="p-1 text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-800 dark:text-amber-300 border border-amber-200 rounded-md transition cursor-pointer"
+                                title="Minta Revisi Format"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
+                              </button>
+                              <button
+                                onClick={() => handleOpenRejectModal(doc, 'FORMAT')}
+                                className="p-1 text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-md transition cursor-pointer"
+                                title="Tolak Format"
+                              >
+                                <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                              </button>
+                            </>
                           )}
 
-                          {/* AKSI TAHAP 3 (PENGESAHAN OLEH APPROVER / MR) */}
-                          {isStage3 && (
-                            canApproveDocument && isAssignedApprover(doc) ? (
-                              <>
-                                <button
-                                  onClick={() => handleOpenApproveModal(doc)}
-                                  className="px-2.5 py-1 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-md shadow-sm transition flex items-center gap-1 cursor-pointer"
-                                  title="Sahkan & Terbitkan Dokumen Menjadi Aktif (MR)"
-                                >
-                                  <CheckCircle2 className="w-3.5 h-3.5" />
-                                  Setujui & Terbitkan
-                                </button>
-                                <button
-                                  onClick={() => handleOpenRevisionModal(doc, 'APPROVAL')}
-                                  className="px-2.5 py-1 text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 dark:text-amber-300 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 rounded-md transition flex items-center gap-1 cursor-pointer shadow-xs"
-                                  title="Kembalikan Dokumen untuk Direvisi sebelum Disahkan"
-                                >
-                                  <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
-                                  Minta Revisi
-                                </button>
-                                <button
-                                  onClick={() => handleOpenRejectModal(doc, 'APPROVAL')}
-                                  className="px-2.5 py-1 text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-md transition flex items-center gap-1 cursor-pointer"
-                                  title="Tolak Pengesahan Dokumen"
-                                >
-                                  <XCircle className="w-3.5 h-3.5" />
-                                  Tolak
-                                </button>
-                              </>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-600 bg-slate-100 dark:bg-slate-800 dark:text-slate-300 px-2 py-1 rounded border border-slate-200 dark:border-slate-700">
-                                <Clock className="w-3 h-3 text-slate-400" />
-                                Menunggu {doc.targetApprover || 'MR'}
-                              </span>
-                            )
+                          {/* Tombol Otorisasi Tahap 3 */}
+                          {isStage3 && canApproveDocument && isAssignedApprover(doc) && (
+                            <>
+                              <button
+                                onClick={() => handleOpenApproveModal(doc)}
+                                className="px-2.5 py-1 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-md shadow-xs transition flex items-center gap-1 cursor-pointer"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <span>Sahkan</span>
+                              </button>
+                              <button
+                                onClick={() => handleOpenRevisionModal(doc, 'APPROVAL')}
+                                className="p-1 text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-800 dark:text-amber-300 border border-amber-200 rounded-md transition cursor-pointer"
+                                title="Minta Revisi sebelum Pengesahan"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
+                              </button>
+                              <button
+                                onClick={() => handleOpenRejectModal(doc, 'APPROVAL')}
+                                className="p-1 text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-md transition cursor-pointer"
+                                title="Tolak Pengesahan"
+                              >
+                                <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                              </button>
+                            </>
+                          )}
+
+                          {/* Jika user hanya memantau (Staff / bukan giliran otorisasi) */}
+                          {((isStage1 && (!canReviewContent || !isAssignedReviewer(doc))) ||
+                            (isStage2 && !canVerifyFormat) ||
+                            (isStage3 && (!canApproveDocument || !isAssignedApprover(doc)))) && (
+                            <span className="text-[11px] text-slate-400 font-medium px-2 py-0.5 rounded bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                              {isStage1 ? 'Menunggu Atasan' : (isStage2 ? 'Menunggu DCO' : 'Menunggu MR')}
+                            </span>
                           )}
                         </div>
                       </td>

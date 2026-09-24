@@ -1,22 +1,91 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Download, Printer, QrCode, ShieldCheck, CheckCircle2, AlertTriangle, FileText, Calendar, User, Building2, History, X, ExternalLink, Paperclip, Eye, UploadCloud, RefreshCw, FileCheck2, Stamp } from 'lucide-react';
+import {
+  Download,
+  Printer,
+  QrCode,
+  ShieldCheck,
+  CheckCircle2,
+  AlertTriangle,
+  X,
+  ExternalLink,
+  Paperclip,
+  UploadCloud,
+  RefreshCw,
+  Stamp,
+  Layers,
+  ChevronDown,
+  ChevronUp,
+  UserCheck,
+  RotateCcw,
+  Clock
+} from 'lucide-react';
 import Modal from './Modal';
 import Badge from './Badge';
 import { generateDocumentQRCode } from '../../utils/qrGenerator';
 import { exportControlledDocumentPDF } from '../../utils/exportUtils';
 import { stampOfficialLetterheadOnPDF, downloadBlobAsFile } from '../../utils/pdfStamper';
 import { useDocumentControl } from '../../context/DocumentControlContext';
+import { renderAsync } from 'docx-preview';
+import * as XLSX from 'xlsx';
 
 export default function DocumentViewerModal({ doc, isOpen, onClose }) {
   const { systemSettings, showToast, attachFileToDocument } = useDocumentControl();
   const [qrCodeUrl, setQrCodeUrl] = useState(null);
   const [showQrVerifyInfo, setShowQrVerifyInfo] = useState(false);
-  const [activeTab, setActiveTab] = useState('iso'); // 'iso' by default so official preview shows immediately without auto-download
   const [blobUrl, setBlobUrl] = useState(null);
   const [includeLetterhead, setIncludeLetterhead] = useState(true);
+  const [showSignOffMatrix, setShowSignOffMatrix] = useState(true);
   const [isProcessingDownload, setIsProcessingDownload] = useState(false);
   const fileInputRef = useRef(null);
 
+  // Word (.docx) Rendering State
+  const docxContainerRef = useRef(null);
+  const [isRenderingDocx, setIsRenderingDocx] = useState(false);
+  const [docxError, setDocxError] = useState(false);
+
+  // Excel (.xlsx/.csv) Rendering State
+  const [excelData, setExcelData] = useState(null);
+  const [isParsingExcel, setIsParsingExcel] = useState(false);
+  const [excelError, setExcelError] = useState(false);
+
+  // File type detection
+  const fileNameLower = (doc?.fileName || '').toLowerCase();
+  const fileTypeLower = (doc?.fileType || '').toLowerCase();
+
+  const isImageFile = Boolean(
+    doc?.fileUrl && (
+      fileTypeLower.startsWith('image/') ||
+      doc.fileUrl.startsWith('data:image/') ||
+      /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(fileNameLower)
+    )
+  );
+
+  const isWordFile = Boolean(
+    doc?.fileUrl && (
+      fileTypeLower.includes('word') ||
+      fileTypeLower.includes('officedocument.wordprocessingml') ||
+      /\.(docx?|doc)$/i.test(fileNameLower)
+    )
+  );
+
+  const isExcelFile = Boolean(
+    doc?.fileUrl && (
+      fileTypeLower.includes('sheet') ||
+      fileTypeLower.includes('excel') ||
+      /\.(xlsx?|csv)$/i.test(fileNameLower)
+    )
+  );
+
+  const isPdfFile = Boolean(
+    doc?.fileUrl && (
+      fileTypeLower === 'application/pdf' ||
+      /\.pdf$/i.test(fileNameLower) ||
+      doc.fileUrl.startsWith('data:application/pdf') ||
+      (!isWordFile && !isExcelFile && !isImageFile)
+    )
+  );
+
+  // Siapkan QR Code dan Blob URL
   useEffect(() => {
     let isMounted = true;
     let createdUrl = null;
@@ -25,9 +94,6 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
       generateDocumentQRCode(doc).then(url => {
         if (isMounted) setQrCodeUrl(url);
       });
-
-      // Default to official ISO 9001 standard document sheet for reliable instant preview
-      setActiveTab('iso');
 
       if (doc.fileUrl) {
         if (doc.fileUrl.startsWith('data:')) {
@@ -44,10 +110,11 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
             createdUrl = URL.createObjectURL(blob);
             setBlobUrl(createdUrl);
           } catch (e) {
-            setBlobUrl(null);
+            setBlobUrl(doc.fileUrl);
           }
+        } else if (doc.fileUrl.startsWith('blob:')) {
+          setBlobUrl(doc.fileUrl);
         } else if (doc.fileUrl.startsWith('http')) {
-          // Fetch as in-memory blob to strip server Content-Disposition attachment headers
           fetch(doc.fileUrl)
             .then(res => res.blob())
             .then(blob => {
@@ -58,8 +125,10 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
             })
             .catch(err => {
               console.warn('Could not fetch file as blob for preview:', err);
-              if (isMounted) setBlobUrl(null);
+              if (isMounted) setBlobUrl(doc.fileUrl);
             });
+        } else {
+          setBlobUrl(doc.fileUrl);
         }
       } else {
         setBlobUrl(null);
@@ -72,20 +141,93 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
     };
   }, [doc, doc?.fileUrl]);
 
+  // Render Word document (.docx) secara langsung
+  useEffect(() => {
+    if (isWordFile && (blobUrl || doc?.fileUrl) && docxContainerRef.current) {
+      setIsRenderingDocx(true);
+      setDocxError(false);
+
+      const targetUrl = blobUrl || doc.fileUrl;
+      fetch(targetUrl)
+        .then(res => {
+          if (!res.ok) throw new Error('Gagal mengambil berkas Word');
+          return res.blob();
+        })
+        .then(blob => {
+          if (docxContainerRef.current) {
+            docxContainerRef.current.innerHTML = '';
+            return renderAsync(blob, docxContainerRef.current, null, {
+              className: 'docx-preview-content',
+              inWrapper: true,
+              ignoreWidth: false,
+              ignoreHeight: false
+            });
+          }
+        })
+        .catch(err => {
+          console.warn('docx-preview error:', err);
+          setDocxError(true);
+        })
+        .finally(() => {
+          setIsRenderingDocx(false);
+        });
+    }
+  }, [isWordFile, blobUrl, doc?.fileUrl]);
+
+  // Render Excel document (.xlsx / .csv) secara langsung
+  useEffect(() => {
+    if (isExcelFile && (blobUrl || doc?.fileUrl)) {
+      setIsParsingExcel(true);
+      setExcelError(false);
+
+      const targetUrl = blobUrl || doc.fileUrl;
+      fetch(targetUrl)
+        .then(res => {
+          if (!res.ok) throw new Error('Gagal mengambil berkas Excel');
+          return res.arrayBuffer();
+        })
+        .then(buffer => {
+          const workbook = XLSX.read(buffer, { type: 'array' });
+          if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+            throw new Error('Spreadsheet kosong');
+          }
+          const firstSheet = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[firstSheet];
+          const html = XLSX.utils.sheet_to_html(sheet, { id: 'excel-preview-table' });
+          setExcelData({
+            workbook,
+            sheetNames: workbook.SheetNames,
+            activeSheet: firstSheet,
+            html
+          });
+        })
+        .catch(err => {
+          console.warn('xlsx parse error:', err);
+          setExcelError(true);
+        })
+        .finally(() => {
+          setIsParsingExcel(false);
+        });
+    }
+  }, [isExcelFile, blobUrl, doc?.fileUrl]);
+
   if (!doc) return null;
 
   const handlePrint = () => {
     window.print();
   };
 
-  // Download official PDF with ISO letterhead & watermark stamped onto original PDF
+  // Unduh PDF resmi dengan Kop Surat & Watermark ISO
   const handleDownloadOfficialPDF = async () => {
     if (isProcessingDownload) return;
     setIsProcessingDownload(true);
     showToast('Menyematkan Kop Surat PT DJI dan Watermark ke dalam berkas PDF...', 'info');
 
     try {
-      const fileName = await stampOfficialLetterheadOnPDF(doc, systemSettings, qrCodeUrl);
+      const fileName = await stampOfficialLetterheadOnPDF({
+        ...doc,
+        fileUrl: blobUrl || doc.fileUrl
+      }, systemSettings, qrCodeUrl);
       showToast(`Dokumen resmi (${fileName}) berhasil diunduh!`, 'success');
     } catch (e) {
       console.error('Error in PDF download:', e);
@@ -96,16 +238,18 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
     }
   };
 
-  // Download raw uploaded file with safe verified filename
+  // Unduh berkas asli yang diunggah
   const handleDownloadRawFile = () => {
     if (doc.fileUrl) {
       const cleanTitle = (doc.title || '').replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 30);
-      const fileName = doc.fileName || `${doc.docNumber}_${cleanTitle}.pdf`;
+      const ext = isWordFile ? '.docx' : isExcelFile ? '.xlsx' : isPdfFile ? '.pdf' : '';
+      const defaultName = `${doc.docNumber}_${cleanTitle}${ext}`;
+      const fileName = doc.fileName || defaultName;
 
       if (doc.fileUrl.startsWith('data:')) {
         try {
           const parts = doc.fileUrl.split(',');
-          const mime = parts[0].match(/:(.*?);/)?.[1] || 'application/pdf';
+          const mime = parts[0].match(/:(.*?);/)?.[1] || 'application/octet-stream';
           const bstr = atob(parts[1]);
           let n = bstr.length;
           const u8arr = new Uint8Array(n);
@@ -135,75 +279,32 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       attachFileToDocument(doc.id, file);
+      showToast(`Berkas ${file.name} berhasil dilampirkan ke dokumen.`, 'success');
     }
   };
 
-  // Watermark class determination
-  const getWatermarkText = () => {
-    switch (doc.status) {
-      case 'AKTIF':
-        return systemSettings.watermarkControlledText || 'CONTROLLED COPY - PT DJI';
-      case 'OBSOLETE':
-        return systemSettings.watermarkObsoleteText || 'OBSOLETE - SUPERSEDED';
-      case 'DRAFT':
-        return systemSettings.watermarkDraftText || 'DRAFT - NOT FOR OPERATIONAL USE';
-      case 'REVIEW':
-        return 'MENUNGGU REVIEW ATASAN / UNDER REVIEW';
-      case 'VERIFIKASI':
-        return 'MENUNGGU VERIFIKASI DCO / UNVERIFIED';
-      case 'APPROVAL':
-        return 'MENUNGGU PENGESAHAN MR / PENDING APPROVAL';
-      case 'DITOLAK':
-        return 'DOKUMEN DITOLAK / VOID';
-      default:
-        return 'UNCONTROLLED COPY';
-    }
+  const handleSelectExcelSheet = (name) => {
+    if (!excelData?.workbook) return;
+    const sheet = excelData.workbook.Sheets[name];
+    const html = XLSX.utils.sheet_to_html(sheet, { id: 'excel-preview-table' });
+    setExcelData(prev => ({
+      ...prev,
+      activeSheet: name,
+      html
+    }));
   };
 
   const isObsolete = doc.status === 'OBSOLETE';
   const isActive = doc.status === 'AKTIF';
-
-  const fileNameLower = (doc.fileName || '').toLowerCase();
-  const fileTypeLower = (doc.fileType || '').toLowerCase();
-
-  const isImageFile = Boolean(
-    doc.fileUrl && (
-      fileTypeLower.startsWith('image/') ||
-      doc.fileUrl.startsWith('data:image/') ||
-      /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(fileNameLower)
-    )
-  );
-
-  const isWordFile = Boolean(
-    doc.fileUrl && (
-      fileTypeLower.includes('word') ||
-      fileTypeLower.includes('officedocument.wordprocessingml') ||
-      /\.(docx?|doc)$/i.test(fileNameLower)
-    )
-  );
-
-  const isExcelFile = Boolean(
-    doc.fileUrl && (
-      fileTypeLower.includes('sheet') ||
-      fileTypeLower.includes('excel') ||
-      /\.(xlsx?|csv)$/i.test(fileNameLower)
-    )
-  );
-
-  const isPdfFile = Boolean(
-    doc.fileUrl && (
-      fileTypeLower === 'application/pdf' ||
-      /\.pdf$/i.test(fileNameLower)
-    )
-  );
+  const isNeedsRevision = doc.status === 'PERLU REVISI' || doc.status === 'REVISI';
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       title="Pratinjau Dokumen Terkendali (Controlled Document Viewer)"
-      subtitle={`No. Dokumen: ${doc.docNumber} | Standar Mutu ISO 9001:2015`}
-      maxWidth="max-w-5xl"
+      subtitle={`No. Dokumen: ${doc.docNumber} | Standar Mutu ISO 9001:2015 Klausul 7.5`}
+      maxWidth="max-w-6xl"
     >
       {/* Hidden File Input for quick attachment */}
       <input
@@ -215,546 +316,523 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
       />
 
       {/* Top Action Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 mb-3 border-b border-slate-200 dark:border-slate-800 no-print">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 mb-4 border-b border-slate-200 dark:border-slate-800 no-print">
+        {/* Identitas Ringkas & Status */}
+        <div className="flex items-center gap-2 flex-wrap">
           <Badge status={doc.status} size="lg" />
           {isActive && (
-            <span className="inline-flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-200">
+            <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
               <ShieldCheck className="w-3.5 h-3.5" /> Salinan Terkendali Resmi
             </span>
           )}
           {isObsolete && (
-            <span className="inline-flex items-center gap-1 text-xs text-rose-700 bg-rose-50 px-2 py-1 rounded border border-rose-200 font-medium">
+            <span className="inline-flex items-center gap-1 text-xs font-semibold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-md border border-rose-200">
               <AlertTriangle className="w-3.5 h-3.5" /> Telah Digantikan oleh Revisi Baru
             </span>
           )}
           {doc.fileName && (
-            <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-blue-700 bg-blue-50 dark:bg-blue-950/40 px-2.5 py-0.5 rounded-full border border-blue-200">
-              <Paperclip className="w-3 h-3 text-blue-500" />
-              {doc.fileName}
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-700 bg-blue-50 dark:bg-blue-950/40 px-2.5 py-1 rounded-full border border-blue-200 dark:border-blue-800 max-w-[280px] truncate">
+              <Paperclip className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              <span className="truncate">{doc.fileName}</span>
+              {doc.fileSize && <span className="text-[10px] text-slate-400 shrink-0">({doc.fileSize})</span>}
             </span>
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2 flex-wrap">
           <button
+            type="button"
             onClick={() => setShowQrVerifyInfo(!showQrVerifyInfo)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md transition"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg transition cursor-pointer"
             title="Scan QR Code untuk verifikasi keaslian dokumen"
           >
             <QrCode className="w-3.5 h-3.5 text-blue-600" />
-            {showQrVerifyInfo ? 'Sembunyikan QR' : 'Validasi QR'}
+            {showQrVerifyInfo ? 'Tutup QR' : 'Validasi QR'}
           </button>
+
           <button
+            type="button"
             onClick={handlePrint}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md transition"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg transition cursor-pointer"
           >
             <Printer className="w-3.5 h-3.5 text-slate-600" />
             Cetak
           </button>
+
+          {doc.fileUrl && (
+            <button
+              type="button"
+              onClick={handleDownloadRawFile}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:text-blue-300 rounded-lg border border-blue-200 dark:border-blue-800 transition cursor-pointer"
+              title="Unduh berkas asli yang diunggah"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Unduh Berkas Asli
+            </button>
+          )}
+
           <button
+            type="button"
             onClick={handleDownloadOfficialPDF}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm transition"
+            disabled={isProcessingDownload}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-lg shadow-sm transition cursor-pointer"
             title="Unduh PDF Resmi dengan Kop Surat PT DJI dan Tanda Tangan"
           >
             <Stamp className="w-3.5 h-3.5 text-amber-300" />
-            Unduh PDF + Kop Surat
-          </button>
-        </div>
-      </div>
-
-      {/* Tab Switcher & Stamping Toggle */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4 border-b border-slate-200 dark:border-slate-800 pb-2 no-print">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setActiveTab('iso')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${
-              activeTab === 'iso'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-            }`}
-          >
-            <FileText className="w-3.5 h-3.5" />
-            Lembar Standarisasi ISO 9001 (Resmi)
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('file')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${
-              activeTab === 'file'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-            }`}
-          >
-            <Paperclip className="w-3.5 h-3.5" />
-            Berkas Lampiran {doc.fileUrl ? (isWordFile ? '(.DOCX)' : isPdfFile ? '(PDF)' : isExcelFile ? '(.XLSX)' : isImageFile ? '(Gambar)' : '(Berkas)') : ''}
-          </button>
-        </div>
-
-        {/* Kop Surat Header Overlay Toggle and Upload Button */}
-        <div className="flex items-center gap-3">
-          <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg hover:bg-slate-200 transition select-none">
-            <input
-              type="checkbox"
-              checked={includeLetterhead}
-              onChange={(e) => setIncludeLetterhead(e.target.checked)}
-              className="rounded text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
-            />
-            <span className="flex items-center gap-1">
-              <Stamp className="w-3.5 h-3.5 text-blue-600" />
-              Sematkan Kop Surat Otomatis
-            </span>
-          </label>
-
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-slate-800 px-3 py-1.5 rounded-lg border border-blue-200 transition font-medium cursor-pointer"
-          >
-            <UploadCloud className="w-3.5 h-3.5" />
-            {doc.fileUrl ? (isPdfFile ? 'Ganti File PDF' : 'Unggah Versi PDF') : 'Unggah File'}
+            {isProcessingDownload ? 'Memproses...' : 'Unduh PDF + Kop Surat'}
           </button>
         </div>
       </div>
 
       {/* QR Code Verification Banner Dropdown */}
       {showQrVerifyInfo && qrCodeUrl && (
-        <div className="mb-5 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-800 rounded-xl border border-blue-200 dark:border-slate-700 flex items-center justify-between gap-4 animate-fade-in no-print">
+        <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-800 rounded-xl border border-blue-200 dark:border-slate-700 flex items-center justify-between gap-4 animate-fade-in no-print">
           <div className="flex items-center gap-4">
-            <div className="p-2 bg-white rounded-lg shadow-sm border border-slate-200">
+            <div className="p-2 bg-white rounded-lg shadow-sm border border-slate-200 shrink-0">
               <img src={qrCodeUrl} alt="QR Code Verifikasi" className="w-20 h-20" />
             </div>
             <div>
               <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                Sistem Verifikasi Digital Terdaftar
+                Sistem Verifikasi Digital Terdaftar (ISO 9001:2015)
               </h4>
               <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 max-w-lg">
                 QR Code ini membuktikan integritas dokumen resmi {systemSettings.companyName || 'PT DJI'}. Scan menggunakan kamera ponsel untuk memvalidasi nomor registrasi <strong>{doc.docNumber}</strong> dan status saat ini.
               </p>
               <div className="flex gap-3 text-[11px] text-slate-500 mt-2">
-                <span>Status: <strong className="text-slate-800">{doc.status}</strong></span>
+                <span>Status: <strong className="text-slate-800 dark:text-slate-200">{doc.status}</strong></span>
                 <span>•</span>
-                <span>Departemen: <strong className="text-slate-800">{doc.department}</strong></span>
+                <span>Departemen: <strong className="text-slate-800 dark:text-slate-200">{doc.department}</strong></span>
                 <span>•</span>
-                <span>Revisi: <strong className="text-slate-800">{doc.revision}</strong></span>
+                <span>Revisi: <strong className="text-slate-800 dark:text-slate-200">{doc.revision}</strong></span>
+              </div>
+              <div className="pt-2">
+                <a
+                  href={`/?verify=${encodeURIComponent(doc.docNumber)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" /> Uji Coba Buka Halaman Verifikasi Publik (Simulasi Scan HP)
+                </a>
               </div>
             </div>
           </div>
           <button
+            type="button"
             onClick={() => setShowQrVerifyInfo(false)}
-            className="text-slate-400 hover:text-slate-600 text-xs p-1"
+            className="text-slate-400 hover:text-slate-600 text-xs p-1 cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
-      {/* TAB 1: Berkas Dokumen dengan Kop Surat Otomatis */}
-      {activeTab === 'file' && (
-        <div className="space-y-4">
-          {/* Automatic ISO 9001 Letterhead Box (Kop Surat Terkendali) */}
-          {includeLetterhead && (
-            <div className="bg-white dark:bg-slate-900 border-2 border-slate-800 dark:border-slate-300 rounded-lg overflow-hidden shadow-sm animate-fade-in">
-              <div className="grid grid-cols-12 divide-x-2 divide-slate-800 dark:divide-slate-300">
-                {/* Logo Box */}
-                <div className="col-span-3 p-3 flex flex-col items-center justify-center text-center bg-slate-50/70 dark:bg-slate-800/50">
-                  <div className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white tracking-wider flex items-center gap-1.5">
-                    <Building2 className="w-5 h-5 text-blue-600" />
-                    {systemSettings.companyName || 'PT DJI'}
-                  </div>
-                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">
-                    DOCUMENT CONTROL
-                  </span>
-                  <span className="text-[8px] text-blue-600 font-bold uppercase tracking-wider mt-0.5">
-                    ISO 9001:2015 CERTIFIED
-                  </span>
-                </div>
+      {/* Catatan Permintaan Revisi dari Verifikator (jika status PERLU REVISI) */}
+      {isNeedsRevision && doc.revisionNotes && (
+        <div className="mb-4 p-3.5 bg-amber-50 dark:bg-amber-950/40 rounded-xl border border-amber-300 dark:border-amber-800 text-xs space-y-1.5">
+          <div className="flex items-center gap-1.5 text-amber-900 dark:text-amber-200 font-bold">
+            <RotateCcw className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>Catatan Permintaan Revisi:</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-200/80 dark:bg-amber-900/80 text-amber-900 dark:text-amber-200 font-semibold">
+              {doc.revisionRequestedBy || 'Verifikator'}
+            </span>
+          </div>
+          <p className="text-amber-800 dark:text-amber-300 leading-relaxed font-medium italic pl-5">
+            "{doc.revisionNotes}"
+          </p>
+        </div>
+      )}
 
-                {/* Document Title Header */}
-                <div className="col-span-6 p-3 flex flex-col items-center justify-center text-center">
-                  <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
-                    {doc.typeName || doc.type || 'PROSEDUR TERKENDALI'}
-                  </span>
-                  <h3 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white uppercase leading-snug mt-0.5" title={doc.title}>
-                    {doc.title}
-                  </h3>
-                </div>
+      {/* Utility Bar di atas Dokumen: Saklar Kop Surat & Buka Tab Baru */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-3 text-xs">
+        <div className="flex items-center gap-2">
+          {doc.fileUrl && (
+            <label className="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-300 cursor-pointer bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition select-none">
+              <input
+                type="checkbox"
+                checked={includeLetterhead}
+                onChange={(e) => setIncludeLetterhead(e.target.checked)}
+                className="rounded text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 cursor-pointer"
+              />
+              <span className="flex items-center gap-1">
+                <Stamp className="w-3.5 h-3.5 text-blue-600" />
+                Sematkan Kop Surat Resmi PT DJI
+              </span>
+            </label>
+          )}
+        </div>
 
-                {/* Document Metadata Box */}
-                <div className="col-span-3 p-2.5 text-[10px] space-y-1 bg-slate-50/70 dark:bg-slate-800/50">
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">No. Dokumen:</span>
-                    <span className="font-mono font-bold text-slate-900 dark:text-white">{doc.docNumber}</span>
+        <div className="flex items-center gap-3">
+          {blobUrl && isPdfFile && (
+            <a
+              href={blobUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline font-semibold cursor-pointer"
+            >
+              <ExternalLink className="w-3.5 h-3.5" /> Buka Layar Penuh di Tab Baru
+            </a>
+          )}
+
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-slate-800 px-2.5 py-1 rounded-lg border border-blue-200 dark:border-blue-800 transition font-medium cursor-pointer"
+          >
+            <UploadCloud className="w-3.5 h-3.5" />
+            {doc.fileUrl ? 'Ganti File' : 'Unggah File (PDF/Word/Excel)'}
+          </button>
+        </div>
+      </div>
+
+      {/* ================= AREA UTAMA PRATINJAU DOKUMEN ================= */}
+      <div className="space-y-4">
+        {/* Kop Surat Terkendali Resmi PT DJI (Otomatis & Terintegrasi) */}
+        {includeLetterhead && (
+          <div className="bg-white dark:bg-slate-900 border-2 border-slate-800 dark:border-slate-300 rounded-lg overflow-hidden shadow-xs animate-fade-in">
+            <div className="grid grid-cols-12 divide-x-2 divide-slate-800 dark:divide-slate-300">
+              {/* Logo Box: Bersih hanya Logo Resmi PT DJI (Centered Vertikal & Horizontal) */}
+              <div className="col-span-3 p-3 flex items-center justify-center bg-white dark:bg-slate-800/80">
+                <img
+                  src="/dji-logo.png"
+                  alt="PT DJI Logo"
+                  className="h-11 max-w-[145px] object-contain drop-shadow-2xs"
+                />
+              </div>
+
+              {/* Document Title Header (Tengah, Rapi, Simetris & Berbobot) */}
+              <div className="col-span-5 p-3 flex flex-col items-center justify-center text-center">
+                <span className="text-[10px] sm:text-[10.5px] uppercase font-bold text-slate-500 tracking-wider">
+                  {doc.typeName || doc.type || 'PROSEDUR TERKENDALI'}
+                </span>
+                <h3 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white uppercase leading-snug my-1 px-1" title={doc.title}>
+                  {doc.title}
+                </h3>
+                <span className="text-[10px] font-semibold text-sky-600 dark:text-sky-400">
+                  Status Dokumen: {doc.status} &bull; Salinan Terkendali Resmi
+                </span>
+              </div>
+
+              {/* Document Metadata Box + QR Code (col-span-4) */}
+              <div className="col-span-4 p-2.5 flex items-center justify-between gap-2.5 bg-slate-50/70 dark:bg-slate-800/50">
+                <div className="flex-1 space-y-1 text-[10px]">
+                  <div className="flex items-center">
+                    <span className="text-slate-500 w-20 shrink-0">No. Dokumen</span>
+                    <span className="text-slate-400 mr-1.5 font-bold">:</span>
+                    <span className="font-mono font-bold text-slate-900 dark:text-white truncate">{doc.docNumber}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Revisi:</span>
+                  <div className="flex items-center">
+                    <span className="text-slate-500 w-20 shrink-0">Revisi</span>
+                    <span className="text-slate-400 mr-1.5 font-bold">:</span>
                     <span className="font-mono font-bold text-slate-900 dark:text-white">{doc.revision}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Departemen:</span>
+                  <div className="flex items-center">
+                    <span className="text-slate-500 w-20 shrink-0">Departemen</span>
+                    <span className="text-slate-400 mr-1.5 font-bold">:</span>
                     <span className="font-bold text-slate-900 dark:text-white">{doc.department}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Tgl. Terbit:</span>
+                  <div className="flex items-center">
+                    <span className="text-slate-500 w-20 shrink-0">Tgl. Terbit</span>
+                    <span className="text-slate-400 mr-1.5 font-bold">:</span>
                     <span className="font-mono text-slate-900 dark:text-white">{doc.effectiveDate || doc.createdDate}</span>
                   </div>
                 </div>
-              </div>
-            </div>
-          )}
 
-          {blobUrl ? (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between bg-slate-100 dark:bg-slate-800 px-4 py-2.5 rounded-lg text-xs">
-                <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-medium">
-                  <Paperclip className="w-4 h-4 text-blue-600" />
-                  <span className="font-semibold">{doc.fileName || `${doc.docNumber}.pdf`}</span>
-                  {doc.fileSize && <span className="text-slate-400">({doc.fileSize})</span>}
-                  {isWordFile && (
-                    <span className="px-2 py-0.5 text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 rounded border border-blue-200">
-                      DOCX
-                    </span>
-                  )}
-                  {isExcelFile && (
-                    <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 rounded border border-emerald-200">
-                      XLSX
-                    </span>
-                  )}
-                  {isPdfFile && (
-                    <span className="px-2 py-0.5 text-[10px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 rounded border border-rose-200">
-                      PDF
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={handleDownloadRawFile}
-                    className="text-blue-600 hover:text-blue-800 text-xs font-semibold flex items-center gap-1 cursor-pointer"
-                  >
-                    <Download className="w-3.5 h-3.5" /> Unduh Berkas Asli
-                  </button>
-                  {isPdfFile && (
-                    <a
-                      href={blobUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center gap-1 text-blue-600 hover:underline font-semibold cursor-pointer"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" /> Buka Tab Penuh
-                    </a>
-                  )}
-                </div>
-              </div>
-
-              <div className="rounded-xl border-2 border-slate-200 dark:border-slate-700 overflow-hidden bg-slate-900 shadow-inner">
-                {isImageFile ? (
-                  <div className="p-4 flex flex-col items-center justify-center bg-slate-950 min-h-[500px]">
-                    <img
-                      src={blobUrl}
-                      alt={doc.fileName || 'Pratinjau Dokumen'}
-                      className="max-h-[600px] object-contain rounded shadow-lg border border-slate-800"
-                    />
-                    <p className="text-xs text-slate-400 mt-3">Lampiran Gambar: {doc.fileName}</p>
-                  </div>
-                ) : isPdfFile ? (
-                  <div className="relative w-full bg-white rounded-lg overflow-hidden min-h-[500px]">
-                    <iframe
-                      src={`${blobUrl}#toolbar=0&navpanes=0`}
-                      title={doc.fileName || 'Pratinjau PDF'}
-                      className="w-full h-[650px] border-0 bg-white"
-                    />
-                  </div>
-                ) : (
-                  /* Tampilan Berkas Non-PDF (Microsoft Word / Excel) - Bebas dari Blank Iframe & Auto Download */
-                  <div className="p-6 sm:p-8 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 space-y-6">
-                    {/* Notice Card */}
-                    <div className={`p-4 rounded-xl border flex flex-col sm:flex-row items-start gap-4 ${
-                      isWordFile
-                        ? 'bg-blue-50/70 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800'
-                        : isExcelFile
-                        ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800'
-                        : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'
-                    }`}>
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-extrabold text-sm flex-shrink-0 text-white shadow-sm ${
-                        isWordFile ? 'bg-blue-600' : isExcelFile ? 'bg-emerald-600' : 'bg-slate-600'
-                      }`}>
-                        {isWordFile ? 'DOCX' : isExcelFile ? 'XLSX' : 'FILE'}
-                      </div>
-                      <div className="space-y-1.5 flex-1 text-xs">
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                          {isWordFile ? 'Berkas Lampiran Microsoft Word (.docx)' : isExcelFile ? 'Berkas Lampiran Spreadsheet (.xlsx)' : 'Berkas Lampiran Dokumen'}
-                        </h4>
-                        <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
-                          Browser web secara bawaan tidak dapat menampilkan dokumen Word/Office secara langsung di dalam frame interaktif (browser hanya mendukung penayangan langsung format <strong>PDF</strong> dan <strong>Gambar</strong>).
-                        </p>
-                        <p className="text-slate-500 dark:text-slate-400">
-                          Berkas asli tersimpan dengan aman di sistem dan dapat Anda unduh untuk diedit, atau Anda dapat melihat lembar naskah resmi berstandar ISO 9001 pada tab <strong>Lembar Standarisasi ISO 9001 (Resmi)</strong>.
-                        </p>
-                        <div className="pt-2 flex flex-wrap items-center gap-2.5">
-                          <button
-                            type="button"
-                            onClick={handleDownloadRawFile}
-                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs shadow-sm transition cursor-pointer"
-                          >
-                            <Download className="w-3.5 h-3.5" />
-                            Unduh Berkas {isWordFile ? 'Word (.docx)' : isExcelFile ? 'Excel (.xlsx)' : 'Asli'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setActiveTab('iso')}
-                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs shadow-sm transition cursor-pointer"
-                          >
-                            <FileText className="w-3.5 h-3.5" />
-                            Lihat Lembar Standarisasi ISO
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => fileInputRef.current?.click()}
-                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg font-medium text-xs border border-slate-300 dark:border-slate-600 transition cursor-pointer"
-                          >
-                            <UploadCloud className="w-3.5 h-3.5 text-blue-600" />
-                            Ganti dengan Berkas PDF
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Pratinjau Naskah Dokumen Terdaftar */}
-                    <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-5 bg-slate-50/50 dark:bg-slate-800/40 space-y-4">
-                      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-3">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                          <FileCheck2 className="w-4 h-4 text-blue-600" />
-                          Ringkasan Naskah Dokumen Terdaftar
-                        </h4>
-                        <span className="text-[11px] text-slate-500 font-mono">Status: {doc.status}</span>
-                      </div>
-
-                      <div className="space-y-3 text-xs">
-                        <div>
-                          <span className="font-bold text-slate-500 block mb-1">Judul Dokumen:</span>
-                          <div className="text-slate-900 dark:text-white font-bold bg-white dark:bg-slate-800 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-sm">
-                            {doc.title}
-                          </div>
-                        </div>
-
-                        {doc.content && (
-                          <div>
-                            <span className="font-bold text-slate-500 block mb-1">Uraian / Isi Dokumen:</span>
-                            <div className="bg-white dark:bg-slate-800 p-4 rounded-lg border border-slate-200 dark:border-slate-700 font-mono text-xs leading-relaxed text-slate-700 dark:text-slate-300 whitespace-pre-wrap max-h-72 overflow-y-auto">
-                              {doc.content}
-                            </div>
-                          </div>
-                        )}
-
-                        {doc.notes && (
-                          <div>
-                            <span className="font-bold text-slate-500 block mb-1">Catatan Dokumen:</span>
-                            <div className="text-slate-600 dark:text-slate-400 bg-amber-50/60 dark:bg-amber-950/30 p-2.5 rounded-lg border border-amber-200/80 dark:border-amber-900/50">
-                              {doc.notes}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                {qrCodeUrl && (
+                  <div className="shrink-0 p-1 bg-white rounded border border-slate-200 shadow-2xs">
+                    <img src={qrCodeUrl} alt="QR Code" className="w-12 h-12 object-contain" />
                   </div>
                 )}
               </div>
             </div>
-          ) : (
-            <div className="p-8 sm:p-12 text-center bg-slate-50 dark:bg-slate-800/50 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 space-y-4">
-              <div className="w-14 h-14 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center mx-auto text-blue-600">
-                <UploadCloud className="w-7 h-7" />
-              </div>
-              <div>
-                <h4 className="font-bold text-slate-800 dark:text-slate-200 text-base">
-                  Berkas Dokumen ({doc.fileName || 'PDF Dokumen'})
-                </h4>
-                <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
-                  Dokumen ini terdaftar dengan nama berkas <strong>{doc.fileName || `${doc.docNumber}.pdf`}</strong>. Silakan pilih atau seret file PDF Anda untuk melihatnya di dalam pratinjau lengkap dengan Kop Surat resmi.
-                </p>
-              </div>
-
-              <div className="pt-2 flex flex-wrap justify-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-md shadow-blue-600/20 flex items-center gap-2 transition"
-                >
-                  <UploadCloud className="w-4 h-4" />
-                  Pilih / Unggah Berkas PDF Sekarang
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDownloadOfficialPDF}
-                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow flex items-center gap-1.5 transition"
-                >
-                  <Stamp className="w-4 h-4 text-amber-300" />
-                  Generate PDF Ber-Kop Surat
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* TAB 2: ISO Standard Paper Document Preview */}
-      {activeTab === 'iso' && (
-        <div className="relative bg-white dark:bg-slate-900 rounded-lg border-2 border-slate-300 dark:border-slate-700 shadow-sm p-6 sm:p-8 min-h-[500px] overflow-hidden">
-          {/* Dynamic Watermark */}
-          <div className={isObsolete ? 'watermark-obsolete' : (isActive ? 'watermark-controlled' : 'watermark-draft')}>
-            {getWatermarkText()}
           </div>
+        )}
 
-          {/* ISO Standard Controlled Header Table */}
-          <div className="border-2 border-slate-800 dark:border-slate-300 mb-6 bg-white dark:bg-slate-900 relative z-10">
-            <div className="grid grid-cols-12 divide-x-2 divide-slate-800 dark:divide-slate-300">
-              {/* Logo Box */}
-              <div className="col-span-3 p-3 flex flex-col items-center justify-center text-center">
-                <div className="font-extrabold text-lg text-slate-900 dark:text-white tracking-wider flex items-center gap-1.5">
-                  <Building2 className="w-5 h-5 text-blue-600" />
-                  {systemSettings.companyName || 'PT DJI'}
-                </div>
-                <span className="text-[9px] font-semibold text-slate-500 uppercase tracking-widest mt-0.5">
-                  Document Control
+        {/* Viewport Konten Berkas Dokumen */}
+        {doc.fileUrl ? (
+          <div className="space-y-3">
+            {/* 1. PDF Viewer: Native Embedded Frame */}
+            {isPdfFile && (
+              <div className="relative w-full bg-slate-900 rounded-xl overflow-hidden shadow-inner border border-slate-700 min-h-[620px]">
+                <iframe
+                  src={`${blobUrl || doc.fileUrl}#toolbar=1&navpanes=0`}
+                  title={doc.fileName || 'Pratinjau PDF Dokumen'}
+                  className="w-full h-[720px] border-0 bg-white"
+                />
+              </div>
+            )}
+
+            {/* 2. Microsoft Word Viewer: Rendered directly with docx-preview */}
+            {isWordFile && (
+              <div className="bg-slate-100 dark:bg-slate-950 p-4 sm:p-6 rounded-xl border border-slate-300 dark:border-slate-700 min-h-[500px]">
+                {isRenderingDocx && (
+                  <div className="py-20 text-center text-slate-500">
+                    <RefreshCw className="w-8 h-8 animate-spin mx-auto text-blue-600 mb-2.5" />
+                    <p className="text-xs font-bold text-slate-700 dark:text-slate-300">Merender naskah dokumen Word...</p>
+                    <p className="text-[11px] text-slate-400 mt-1">Menyiapkan format naskah asli dari berkas .docx</p>
+                  </div>
+                )}
+                {docxError && (
+                  <div className="p-6 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl text-center space-y-3">
+                    <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
+                      Format Word ini tidak dapat dirender langsung di browser. Anda dapat mengunduh berkas aslinya untuk membuka di Microsoft Word.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleDownloadRawFile}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold cursor-pointer"
+                    >
+                      Unduh Berkas Word (.docx)
+                    </button>
+                  </div>
+                )}
+                <div
+                  ref={docxContainerRef}
+                  className={`docx-preview-container bg-white shadow-lg mx-auto rounded-lg overflow-auto max-w-4xl p-6 sm:p-12 ${
+                    isRenderingDocx || docxError ? 'hidden' : 'block'
+                  }`}
+                />
+              </div>
+            )}
+
+            {/* 3. Excel Spreadsheet Viewer: Rendered directly with XLSX */}
+            {isExcelFile && (
+              <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-300 dark:border-slate-700 overflow-hidden shadow-sm">
+                {/* Excel Sheet Switcher */}
+                {excelData?.sheetNames && excelData.sheetNames.length > 1 && (
+                  <div className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 overflow-x-auto">
+                    <span className="text-[11px] font-bold text-slate-500 mr-2 flex items-center gap-1 shrink-0">
+                      <Layers className="w-3.5 h-3.5" /> Lembar Kerja:
+                    </span>
+                    {excelData.sheetNames.map((sName) => (
+                      <button
+                        key={sName}
+                        type="button"
+                        onClick={() => handleSelectExcelSheet(sName)}
+                        className={`px-3 py-1 text-xs font-semibold rounded-md transition cursor-pointer whitespace-nowrap ${
+                          excelData.activeSheet === sName
+                            ? 'bg-emerald-600 text-white shadow-xs'
+                            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                        }`}
+                      >
+                        {sName}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {isParsingExcel && (
+                  <div className="py-20 text-center text-slate-500">
+                    <RefreshCw className="w-8 h-8 animate-spin mx-auto text-emerald-600 mb-2.5" />
+                    <p className="text-xs font-bold text-slate-700 dark:text-slate-300">Membaca lembar kerja spreadsheet...</p>
+                  </div>
+                )}
+
+                {excelError && (
+                  <div className="p-6 text-center space-y-3">
+                    <p className="text-xs text-rose-600 font-semibold">Gagal memuat pratinjau tabel spreadsheet.</p>
+                    <button
+                      type="button"
+                      onClick={handleDownloadRawFile}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold cursor-pointer"
+                    >
+                      Unduh Berkas Excel (.xlsx)
+                    </button>
+                  </div>
+                )}
+
+                {excelData?.html && !isParsingExcel && !excelError && (
+                  <div
+                    className="max-h-[600px] overflow-auto p-4"
+                    dangerouslySetInnerHTML={{ __html: excelData.html }}
+                  />
+                )}
+              </div>
+            )}
+
+            {/* 4. Image Viewer */}
+            {isImageFile && (
+              <div className="p-4 flex flex-col items-center justify-center bg-slate-950 min-h-[500px] rounded-xl border border-slate-800">
+                <img
+                  src={blobUrl || doc.fileUrl}
+                  alt={doc.fileName || 'Pratinjau Dokumen'}
+                  className="max-h-[650px] object-contain rounded-lg shadow-lg border border-slate-800 bg-white"
+                />
+                <p className="text-xs text-slate-400 mt-3 font-mono">Lampiran Gambar: {doc.fileName}</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Empty State: Belum ada file yang diunggah */
+          <div className="p-12 text-center bg-slate-50 dark:bg-slate-800/50 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-blue-100 dark:bg-blue-950 flex items-center justify-center mx-auto text-blue-600 shadow-2xs">
+              <UploadCloud className="w-7 h-7" />
+            </div>
+            <div>
+              <h4 className="font-bold text-slate-900 dark:text-white text-base">
+                Berkas Dokumen Belum Dilampirkan
+              </h4>
+              <p className="text-xs text-slate-500 max-w-md mx-auto mt-1 leading-relaxed">
+                Dokumen <strong>{doc.docNumber}</strong> ({doc.title}) saat ini belum memiliki file lampiran fisik. Unggah berkas PDF, Word, atau Excel Anda untuk melihat pratinjaunya secara langsung.
+              </p>
+            </div>
+
+            <div className="pt-2 flex flex-wrap justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-sm flex items-center gap-2 transition cursor-pointer"
+              >
+                <UploadCloud className="w-4 h-4" />
+                Unggah Berkas PDF / Word Sekarang
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ================= ISO 9001 SIGN-OFF MATRIX FOOTER ================= */}
+        <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
+          <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-2xs">
+            {/* Header Strip Matriks */}
+            <div
+              onClick={() => setShowSignOffMatrix(!showSignOffMatrix)}
+              className="px-4 py-2.5 flex items-center justify-between cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/60 transition select-none"
+            >
+              <div className="flex items-center gap-2">
+                <UserCheck className="w-4 h-4 text-blue-600" />
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  Matriks Otorisasi & Rekam Jejak Pengesahan (ISO 9001:2015 Klausul 7.5.2)
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono hidden sm:inline">
+                  • 4 Tahap Pengendalian
                 </span>
               </div>
-
-              {/* Document Title Header */}
-              <div className="col-span-6 p-3 flex flex-col items-center justify-center text-center">
-                <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
-                  {doc.typeName || doc.type}
-                </span>
-                <h3 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white uppercase leading-snug mt-1">
-                  {doc.title}
-                </h3>
-              </div>
-
-              {/* Document Metadata Box */}
-              <div className="col-span-3 p-2.5 text-[10px] space-y-1 bg-slate-50 dark:bg-slate-800/50">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">No. Dokumen:</span>
-                  <span className="font-mono font-bold text-slate-900 dark:text-white">{doc.docNumber}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Revisi:</span>
-                  <span className="font-mono font-bold text-slate-900 dark:text-white">{doc.revision}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Departemen:</span>
-                  <span className="font-bold text-slate-900 dark:text-white">{doc.department}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Tgl. Terbit:</span>
-                  <span className="font-mono text-slate-900 dark:text-white">{doc.effectiveDate || doc.createdDate}</span>
-                </div>
-              </div>
+              <button
+                type="button"
+                className="text-slate-400 hover:text-slate-600 text-xs flex items-center gap-1 font-semibold"
+              >
+                <span>{showSignOffMatrix ? 'Sembunyikan' : 'Tampilkan'}</span>
+                {showSignOffMatrix ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
             </div>
-          </div>
 
-          {/* Document Content Body */}
-          <div className="relative z-10 space-y-6 text-xs text-slate-800 dark:text-slate-200 leading-relaxed font-sans min-h-[220px]">
-            {doc.content ? (
-              <div className="whitespace-pre-line font-sans text-xs bg-slate-50/50 dark:bg-slate-800/30 p-4 rounded-lg border border-slate-200 dark:border-slate-800">
-                {doc.content}
-              </div>
-            ) : (
-              <>
-                <section>
-                  <h4 className="font-bold uppercase tracking-wider text-slate-900 dark:text-white mb-2 border-b pb-1 text-xs">
-                    1. TUJUAN & RUANG LINGKUP
-                  </h4>
-                  <p className="text-slate-700 dark:text-slate-300">
-                    Prosedur ini disusun sebagai standarisasi operasional pada departemen <strong>{doc.department}</strong> guna menjamin kepatuhan terhadap pedoman mutu ISO 9001:2015.
+            {/* Konten Matriks 4 Tahap */}
+            {showSignOffMatrix && (
+              <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                {/* 01. Dibuat Oleh (Staff) */}
+                <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                      01. Pembuat
+                    </span>
+                    <span className="text-[9.5px] px-1.5 py-0.2 rounded font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300">
+                      Disubmit
+                    </span>
+                  </div>
+                  <p className="font-bold text-slate-900 dark:text-white truncate" title={doc.creator}>
+                    {doc.creator}
                   </p>
-                </section>
+                  <p className="text-[11px] text-slate-500 truncate">
+                    {doc.creatorPosition || 'Staff Pembuat'}
+                  </p>
+                  <p className="text-[10px] text-slate-400 font-mono flex items-center gap-1 pt-1 border-t border-slate-100 dark:border-slate-800">
+                    <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                    {doc.createdDate}
+                  </p>
+                </div>
 
-                <section>
-                  <h4 className="font-bold uppercase tracking-wider text-slate-900 dark:text-white mb-2 border-b pb-1 text-xs">
-                    2. KETENTUAN OPERASIONAL
-                  </h4>
-                  <ul className="list-disc list-inside space-y-1 text-slate-700 dark:text-slate-300">
-                    <li>Seluruh personel pada departemen {doc.department} wajib mematuhi ketentuan teknis yang tercantum pada berkas {doc.docNumber}.</li>
-                    <li>Dokumen ini diajukan oleh {doc.creator} ({doc.creatorPosition}) dan diawasi oleh {doc.verifierTeam}.</li>
-                    {doc.notes && <li>Catatan registrasi: <em>"{doc.notes}"</em></li>}
-                  </ul>
-                </section>
-              </>
+                {/* 02. Diperiksa (Reviewer / Atasan) */}
+                <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">
+                      02. Reviewer
+                    </span>
+                    <span className={`text-[9.5px] px-1.5 py-0.2 rounded font-bold ${
+                      doc.reviewedBy
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                        : isNeedsRevision
+                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                        : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+                    }`}>
+                      {doc.reviewedBy ? 'Disetujui' : isNeedsRevision ? 'Perlu Revisi' : 'Menunggu'}
+                    </span>
+                  </div>
+                  <p className="font-bold text-slate-900 dark:text-white truncate" title={doc.reviewedBy || doc.targetReviewer || 'Atasan Departemen'}>
+                    {doc.reviewedBy || doc.targetReviewer || 'Atasan Departemen'}
+                  </p>
+                  <p className="text-[11px] text-slate-500 truncate">
+                    Pemeriksa Alur Kerja
+                  </p>
+                  <p className="text-[10px] text-slate-400 font-mono flex items-center gap-1 pt-1 border-t border-slate-100 dark:border-slate-800">
+                    <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                    {doc.reviewedDate || 'Belum ditinjau'}
+                  </p>
+                </div>
+
+                {/* 03. Verifikasi (DCO / Document Control) */}
+                <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                      03. Verifikasi DCO
+                    </span>
+                    <span className={`text-[9.5px] px-1.5 py-0.2 rounded font-bold ${
+                      doc.verifiedBy
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                        : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+                    }`}>
+                      {doc.verifiedBy ? 'Terverifikasi' : 'Menunggu'}
+                    </span>
+                  </div>
+                  <p className="font-bold text-slate-900 dark:text-white truncate" title={doc.verifiedBy || doc.verifierTeam || 'Document Control'}>
+                    {doc.verifiedBy || doc.verifierTeam || 'Document Control'}
+                  </p>
+                  <p className="text-[11px] text-slate-500 truncate">
+                    Format & Penomoran ISO
+                  </p>
+                  <p className="text-[10px] text-slate-400 font-mono flex items-center gap-1 pt-1 border-t border-slate-100 dark:border-slate-800">
+                    <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                    {doc.verifiedDate || 'Belum diverifikasi'}
+                  </p>
+                </div>
+
+                {/* 04. Pengesahan (MR / Top Management) */}
+                <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                      04. Pengesah (MR)
+                    </span>
+                    <span className={`text-[9.5px] px-1.5 py-0.2 rounded font-bold ${
+                      doc.approvedBy || doc.status === 'AKTIF'
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                        : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+                    }`}>
+                      {doc.approvedBy || doc.status === 'AKTIF' ? 'Disahkan' : 'Menunggu'}
+                    </span>
+                  </div>
+                  <p className="font-bold text-slate-900 dark:text-white truncate" title={doc.approvedBy || doc.targetApprover || (doc.status === 'AKTIF' ? 'Management Rep.' : '-')}>
+                    {doc.approvedBy || doc.targetApprover || (doc.status === 'AKTIF' ? 'BABAN RACHMAT SUBAGJA' : 'MR / Direksi')}
+                  </p>
+                  <p className="text-[11px] text-slate-500 truncate">
+                    {doc.approverPosition || 'Management Representative'}
+                  </p>
+                  <p className="text-[10px] text-slate-400 font-mono flex items-center gap-1 pt-1 border-t border-slate-100 dark:border-slate-800">
+                    <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                    {doc.approvedDate || 'Menunggu otoritas'}
+                  </p>
+                </div>
+              </div>
             )}
-
-            {doc.rejectionReason && (
-              <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-800">
-                <span className="font-bold">Catatan Penolakan Verifikator:</span>
-                <p className="mt-0.5">{doc.rejectionReason}</p>
-              </div>
-            )}
-          </div>
-
-          {/* ISO Sign-off Matrix Table: 4 Core Roles */}
-          <div className="mt-8 border-t-2 border-slate-800 dark:border-slate-300 pt-4 grid grid-cols-2 sm:grid-cols-4 text-center text-xs relative z-10 gap-y-4 sm:gap-y-0 divide-y sm:divide-y-0 sm:divide-x divide-slate-300 dark:divide-slate-700">
-            {/* 01. User / Staff */}
-            <div className="px-2 pt-2 sm:pt-0">
-              <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">01. Dibuat Oleh (User):</span>
-              <div className="h-12 flex items-center justify-center font-serif text-slate-700 dark:text-slate-300 italic text-sm">
-                {doc.creator}
-              </div>
-              <div className="font-bold text-slate-900 dark:text-white border-t border-slate-200 dark:border-slate-700 pt-1 text-xs">
-                {doc.creator}
-              </div>
-              <div className="text-[9.5px] text-slate-500">{doc.creatorPosition || 'Staff'}</div>
-            </div>
-
-            {/* 02. Reviewer / Atasan */}
-            <div className="px-2 pt-2 sm:pt-0">
-              <span className="text-[10px] text-purple-600 uppercase font-bold tracking-wider">02. Diperiksa (Reviewer):</span>
-              <div className="h-12 flex items-center justify-center font-serif text-purple-700 dark:text-purple-300 italic text-xs font-semibold">
-                {doc.reviewedBy ? `[REVIEWED] ${doc.reviewedBy}` : (doc.targetReviewer ? `[PENDING] ${doc.targetReviewer}` : 'Atasan Departemen')}
-              </div>
-              <div className="font-bold text-slate-900 dark:text-white border-t border-slate-200 dark:border-slate-700 pt-1 text-xs">
-                {doc.reviewedBy || doc.targetReviewer || 'Atasan Departemen'}
-              </div>
-              <div className="text-[9.5px] text-slate-500">
-                {doc.reviewedDate ? `Tgl: ${doc.reviewedDate}` : 'Pemeriksa Isi & Alur Kerja'}
-              </div>
-            </div>
-
-            {/* 03. Document Control / DCO */}
-            <div className="px-2 pt-2 sm:pt-0">
-              <span className="text-[10px] text-blue-600 uppercase font-bold tracking-wider">03. Verifikasi (DCO):</span>
-              <div className="h-12 flex items-center justify-center font-serif text-blue-700 dark:text-blue-300 italic text-xs font-semibold">
-                {doc.verifiedBy ? `[VERIFIED] ${doc.verifiedBy}` : (doc.status === 'REVIEW' || doc.status === 'DRAFT' ? 'Menunggu Review' : 'Document Control')}
-              </div>
-              <div className="font-bold text-slate-900 dark:text-white border-t border-slate-200 dark:border-slate-700 pt-1 text-xs">
-                {doc.verifiedBy || doc.verifierTeam || 'Document Control Officer'}
-              </div>
-              <div className="text-[9.5px] text-slate-500">
-                {doc.verifiedDate ? `Tgl: ${doc.verifiedDate}` : 'Pengendali Format & Nomor'}
-              </div>
-            </div>
-
-            {/* 04. Approver / MR */}
-            <div className="px-2 pt-2 sm:pt-0">
-              <span className="text-[10px] text-emerald-600 uppercase font-bold tracking-wider">04. Disahkan (MR):</span>
-              <div className="h-12 flex items-center justify-center font-serif text-emerald-700 dark:text-emerald-400 italic text-xs font-bold">
-                {doc.approvedBy ? `[APPROVED] ${doc.approvedBy}` : (doc.targetApprover ? `[PENDING] ${doc.targetApprover}` : (doc.status === 'AKTIF' ? 'Management Rep.' : '-'))}
-              </div>
-              <div className="font-bold text-slate-900 dark:text-white border-t border-slate-200 dark:border-slate-700 pt-1 text-xs">
-                {doc.approvedBy || doc.targetApprover || (doc.status === 'AKTIF' ? 'BABAN RACHMAT SUBAGJA' : 'MR / Top Management')}
-              </div>
-              <div className="text-[9.5px] text-slate-500">
-                {doc.approvedDate ? `Tgl: ${doc.approvedDate}` : (doc.approverPosition || 'Management Representative')}
-              </div>
-            </div>
-          </div>
-
-          {/* Footer Security Stamp */}
-          <div className="mt-6 pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-[10px] text-slate-400 relative z-10">
-            <span>Sistem Manajemen Dokumen Terkendali - {systemSettings.companyName || 'PT DJI'}</span>
-            <span>Dicetak: {new Date().toLocaleDateString('id-ID')} | Standar ISO 9001</span>
           </div>
         </div>
-      )}
+
+        {/* Footer Disclaimer */}
+        <div className="pt-2 flex items-center justify-between text-[10.5px] text-slate-400">
+          <span>Sistem Manajemen Dokumen Terkendali • {systemSettings.companyName || 'PT DJI'}</span>
+          <span>Standar Mutu ISO 9001:2015 Klausul 7.5</span>
+        </div>
+      </div>
     </Modal>
   );
 }

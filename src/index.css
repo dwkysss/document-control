@@ -178,3 +178,35 @@ body {
   z-index: 5;
   text-align: center;
 }
+
+/* Document Word & Excel Live Preview Styles */
+.docx-preview-container {
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.08);
+}
+.docx-preview-container .docx-wrapper {
+  background: transparent !important;
+  padding: 0 !important;
+}
+.docx-preview-container .docx {
+  margin-bottom: 2rem !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
+  border-radius: 4px !important;
+}
+
+#excel-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+  background: white;
+}
+#excel-preview-table th, #excel-preview-table td {
+  border: 1px solid #e2e8f0;
+  padding: 6px 12px;
+  white-space: nowrap;
+}
+#excel-preview-table tr:first-child {
+  background-color: #f8fafc;
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+}

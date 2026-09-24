@@ -228,12 +228,7 @@ export function exportControlledDocumentPDF(docData, systemSettings = {}, qrData
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(16, 42, 78);
-  doc.text(company, startX + col1W / 2, startY + 32, { align: 'center' });
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(100, 116, 139);
-  doc.text('DOCUMENT CONTROL', startX + col1W / 2, startY + 48, { align: 'center' });
-  doc.text('ISO 9001:2015 CERTIFIED', startX + col1W / 2, startY + 58, { align: 'center' });
+  doc.text(company, startX + col1W / 2, startY + 42, { align: 'center' });
 
   // Column 2: Document Title
   doc.setFontSize(8);

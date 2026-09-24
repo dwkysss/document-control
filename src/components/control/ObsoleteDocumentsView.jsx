@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Archive, Eye, AlertTriangle, Search, Trash2, X, RotateCcw, Filter } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Archive, Eye, AlertTriangle, Search, Trash2, RotateCcw, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import Badge from '../common/Badge';
 import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
@@ -10,6 +10,10 @@ export default function ObsoleteDocumentsView() {
   const [filterDept, setFilterDept] = useState('ALL');
   const [filterType, setFilterType] = useState('ALL');
   const [docToDelete, setDocToDelete] = useState(null);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const obsoleteDocs = useMemo(() => (documents || []).filter(d => d.status === 'OBSOLETE'), [documents]);
 
@@ -30,6 +34,36 @@ export default function ObsoleteDocumentsView() {
     });
   }, [obsoleteDocs, searchTerm, filterDept, filterType]);
 
+  // Reset ke halaman 1 saat filter atau pageSize berubah
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterDept, filterType, pageSize]);
+
+  // Pagination Calculation
+  const totalEntries = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalEntries / pageSize));
+  const startIndex = (currentPage - 1) * pageSize;
+  const paginatedDocs = useMemo(() => {
+    return filtered.slice(startIndex, startIndex + pageSize);
+  }, [filtered, startIndex, pageSize]);
+
+  // Generate Page Numbers
+  const pageNumbers = useMemo(() => {
+    const pages = [];
+    if (totalPages <= 5) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      if (currentPage <= 3) {
+        pages.push(1, 2, 3, 4, '...', totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        pages.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages);
+      }
+    }
+    return pages;
+  }, [currentPage, totalPages]);
+
   const hasActiveFilters = Boolean(searchTerm.trim()) || filterDept !== 'ALL' || filterType !== 'ALL';
 
   const resetFilters = () => {
@@ -39,173 +73,160 @@ export default function ObsoleteDocumentsView() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 p-5 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Archive className="w-5 h-5 text-rose-600" />
-            Dokumen Obsolete (Kadaluarsa / Ditarik)
-          </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Arsip dokumen standar yang sudah tidak berlaku karena telah diterbitkan revisi baru atau penarikan operasional.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="text-xs font-semibold px-3 py-1.5 bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 rounded-lg border border-rose-200 dark:border-rose-900 whitespace-nowrap">
-            {obsoleteDocs.length} Dokumen Obsolete Tersimpan
+    <div className="space-y-4">
+      {/* 1. Header Bar (Clean & Simple) */}
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
+            <Archive className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                Dokumen Obsolete
+              </h2>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 font-mono">
+                {obsoleteDocs.length} Berkas
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Arsip dokumen standar yang sudah tidak berlaku karena telah diterbitkan revisi baru atau ditarik.
+            </p>
           </div>
         </div>
       </div>
 
-      {/* ISO Warning Callout */}
-      <div className="p-4 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-900 flex items-start gap-3 text-xs text-amber-900 dark:text-amber-300">
-        <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-        <div>
-          <h4 className="font-bold">Kepatuhan ISO 9001 (Klausul 7.5.3.2) - Pengendalian Dokumen Kadaluarsa:</h4>
-          <p className="mt-0.5 text-slate-700 dark:text-slate-300">
-            Dokumen obsolete tetap disimpan untuk keperluan audit rekam jejak, namun telah dicap watermark <strong>OBSOLETE</strong> dan tidak boleh digunakan di area operasional kerja. Administrator dan MR memiliki wewenang untuk membersihkan atau menghapus berkas yang sudah kadaluarsa jika masa retensi telah berakhir.
-          </p>
-        </div>
-      </div>
-
-      {/* Multi Filter Bar */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 p-4 space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-center">
-          <div className="lg:col-span-5 relative">
+      {/* 2. Unified Container: Toolbar + Table */}
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 overflow-hidden">
+        {/* Toolbar Header */}
+        <div className="p-3 sm:p-4 border-b border-slate-200 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/50">
+          <div className="relative w-full md:w-72">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Cari nomor, judul, pembuat..."
-              className="w-full pl-9 pr-8 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 text-slate-900 dark:text-white"
+              className="w-full pl-8 pr-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500"
             />
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm('')}
-                className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
           </div>
 
-          <div className="lg:col-span-3">
+          <div className="flex items-center gap-2 flex-wrap">
             <select
               value={filterDept}
               onChange={(e) => setFilterDept(e.target.value)}
-              className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-rose-500"
+              className="text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-rose-500"
             >
-              <option value="ALL">Semua Departemen ({obsoleteDocs.length})</option>
+              <option value="ALL">Semua Departemen</option>
               {departments.map(d => (
-                <option key={d.id} value={d.code}>{d.code} - {d.name}</option>
+                <option key={d.id || d.code} value={d.code}>{d.code} - {d.name}</option>
               ))}
             </select>
-          </div>
 
-          <div className="lg:col-span-3">
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-rose-500"
+              className="text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-rose-500"
             >
-              <option value="ALL">Semua Jenis Dokumen ({obsoleteDocs.length})</option>
+              <option value="ALL">Semua Jenis Dokumen</option>
               {documentTypes.map(t => (
-                <option key={t.id} value={t.code}>{t.code} - {t.name}</option>
+                <option key={t.id || t.code} value={t.code}>{t.code} - {t.name}</option>
               ))}
             </select>
-          </div>
 
-          <div className="lg:col-span-1 flex justify-end">
             {hasActiveFilters && (
               <button
+                type="button"
                 onClick={resetFilters}
-                className="w-full py-2 px-2 text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 rounded-lg border border-rose-200 dark:border-rose-900 transition flex items-center justify-center gap-1"
-                title="Reset filter"
+                className="p-1.5 text-xs text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer"
+                title="Reset Filter"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                <span>Reset</span>
               </button>
             )}
           </div>
         </div>
 
-        {hasActiveFilters && (
-          <div className="text-xs text-slate-500 pt-1 flex items-center justify-between">
-            <span>
-              Menampilkan <strong className="text-rose-600 dark:text-rose-400">{filtered.length}</strong> dari {obsoleteDocs.length} arsip obsolete
-            </span>
-            <button
-              onClick={resetFilters}
-              className="text-[11px] text-slate-500 hover:text-rose-600 underline"
-            >
-              Bersihkan Filter
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Table */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 overflow-hidden">
+        {/* Clean Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-[#102a4e] text-white uppercase text-[10px] tracking-wider">
-                <th className="py-3 px-4 text-center">No.</th>
-                <th className="py-3 px-4">No. Dokumen</th>
-                <th className="py-3 px-4">Judul Dokumen</th>
-                <th className="py-3 px-4">Departemen</th>
-                <th className="py-3 px-4">Pembuat</th>
-                <th className="py-3 px-4 text-center">Revisi</th>
-                <th className="py-3 px-4">Digantikan Oleh</th>
-                <th className="py-3 px-4 text-center">Status</th>
-                <th className="py-3 px-4 text-center">Aksi</th>
+              <tr className="bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 uppercase text-[10px] font-bold tracking-wider">
+                <th className="py-3.5 px-4 text-center whitespace-nowrap w-12">No.</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">No. Dokumen</th>
+                <th className="py-3.5 px-4 min-w-[200px]">Judul Dokumen</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">Departemen</th>
+                <th className="py-3.5 px-4 whitespace-nowrap min-w-[130px]">Pembuat</th>
+                <th className="py-3.5 px-4 text-center whitespace-nowrap">Revisi</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">Digantikan Oleh</th>
+                <th className="py-3.5 px-4 text-center whitespace-nowrap">Status</th>
+                <th className="py-3.5 px-4 text-right whitespace-nowrap">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-10 text-center text-slate-400">
-                    Tidak ada arsip dokumen obsolete yang ditemukan.
+                  <td colSpan={9} className="py-14 text-center text-slate-400">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Archive className="w-8 h-8 text-slate-300 dark:text-slate-600" />
+                      <p className="font-bold text-slate-700 dark:text-slate-300 text-sm">
+                        {obsoleteDocs.length === 0
+                          ? 'Belum Ada Arsip Dokumen Obsolete'
+                          : 'Tidak ada dokumen obsolete yang sesuai dengan filter'}
+                      </p>
+                      <p className="text-xs text-slate-400 max-w-sm">
+                        {obsoleteDocs.length === 0
+                          ? 'Dokumen yang telah diperbarui ke revisi baru atau ditarik dari operasional akan tersimpan otomatis di sini.'
+                          : 'Coba ubah kata kunci pencarian atau reset filter departemen/jenis dokumen.'}
+                      </p>
+                      {hasActiveFilters && (
+                        <button
+                          type="button"
+                          onClick={resetFilters}
+                          className="mt-2 px-3 py-1.5 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 rounded-lg transition cursor-pointer"
+                        >
+                          Reset Semua Filter
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (
-                filtered.map((doc, idx) => (
+                paginatedDocs.map((doc, idx) => (
                   <tr key={doc.id} className="hover:bg-rose-50/20 dark:hover:bg-slate-800/40 transition">
-                    <td className="py-3.5 px-4 text-center text-slate-400">{idx + 1}</td>
-                    <td className="py-3.5 px-4 font-bold font-mono text-slate-900 dark:text-white whitespace-nowrap line-through text-slate-500">
+                    <td className="py-3.5 px-4 text-center text-slate-400 whitespace-nowrap">{startIndex + idx + 1}</td>
+                    <td className="py-3.5 px-4 font-bold font-mono text-slate-500 whitespace-nowrap line-through">
                       {doc.docNumber}
                     </td>
-                    <td className="py-3.5 px-4 font-medium text-slate-700 dark:text-slate-300 max-w-[200px] truncate" title={doc.title}>
+                    <td className="py-3.5 px-4 font-medium text-slate-700 dark:text-slate-300 min-w-[200px]" title={doc.title}>
                       {doc.title}
                     </td>
-                    <td className="py-3.5 px-4 font-semibold text-slate-600 dark:text-slate-400">{doc.department}</td>
-                    <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400">{doc.creator}</td>
-                    <td className="py-3.5 px-4 text-center font-mono font-bold text-rose-700 dark:text-rose-400">
+                    <td className="py-3.5 px-4 font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap">{doc.department}</td>
+                    <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">{doc.creator}</td>
+                    <td className="py-3.5 px-4 text-center font-mono font-bold text-rose-700 dark:text-rose-400 whitespace-nowrap">
                       {doc.revision}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-700 dark:text-slate-300 font-mono text-[11px]">
+                    <td className="py-3.5 px-4 text-slate-700 dark:text-slate-300 font-mono text-[11px] whitespace-nowrap">
                       {doc.supersededBy ? (
-                        <span className="font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                        <span className="font-bold text-blue-600 dark:text-blue-400">
                           {doc.supersededBy}
                         </span>
                       ) : (
                         <span className="text-slate-400 italic">Revisi Baru</span>
                       )}
                     </td>
-                    <td className="py-3.5 px-4 text-center">
+                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
                       <Badge status={doc.status} size="sm" />
                     </td>
-                    <td className="py-3.5 px-4 text-center">
-                      <div className="flex items-center justify-center gap-1.5">
+                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1.5">
                         <button
                           onClick={() => setViewingDocument(doc)}
                           className="px-2.5 py-1 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-md transition flex items-center gap-1 cursor-pointer"
                           title="Pratinjau Dokumen Obsolete (Watermarked)"
                         >
                           <Eye className="w-3.5 h-3.5" />
-                          Lihat Arsip
+                          <span>Lihat Arsip</span>
                         </button>
 
                         {isAdmin && (
@@ -224,6 +245,105 @@ export default function ObsoleteDocumentsView() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Footer Pagination Lengkap */}
+        <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+          {/* Kiri: Page Size & Counter */}
+          <div className="flex items-center gap-3 flex-wrap text-slate-600 dark:text-slate-400">
+            <div className="flex items-center gap-1.5">
+              <span>Tampilkan:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => setPageSize(Number(e.target.value))}
+                className="py-1 px-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-rose-500 cursor-pointer"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <span>dokumen / hal</span>
+            </div>
+
+            <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">•</span>
+
+            <span className="font-mono text-[11.5px]">
+              Menampilkan <strong className="text-slate-900 dark:text-white font-bold">{totalEntries > 0 ? startIndex + 1 : 0}</strong> -{' '}
+              <strong className="text-slate-900 dark:text-white font-bold">{Math.min(startIndex + pageSize, totalEntries)}</strong> dari{' '}
+              <strong className="text-slate-900 dark:text-white font-bold">{totalEntries}</strong> dokumen obsolete
+            </span>
+          </div>
+
+          {/* Kanan: Navigasi Halaman */}
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className="p-1.5 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                title="Halaman Pertama"
+              >
+                <ChevronsLeft className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="p-1.5 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                title="Halaman Sebelumnya"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+
+              <div className="flex items-center gap-1 mx-1">
+                {pageNumbers.map((page, i) => {
+                  if (page === '...') {
+                    return (
+                      <span key={`ellipsis-obs-${i}`} className="px-1.5 text-slate-400 font-mono">
+                        ...
+                      </span>
+                    );
+                  }
+                  const isActive = currentPage === page;
+                  return (
+                    <button
+                      key={`page-obs-${page}`}
+                      type="button"
+                      onClick={() => setCurrentPage(page)}
+                      className={`min-w-[28px] h-7 px-2 text-xs font-mono rounded transition cursor-pointer ${
+                        isActive
+                          ? 'bg-rose-600 text-white font-bold shadow-xs'
+                          : 'text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="p-1.5 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                title="Halaman Selanjutnya"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+                className="p-1.5 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                title="Halaman Terakhir"
+              >
+                <ChevronsRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

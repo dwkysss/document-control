@@ -59,15 +59,15 @@ export default function RejectedListView() {
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="bg-[#102a4e] text-white uppercase text-[10px] tracking-wider">
-                <th className="py-3 px-4 text-center">No.</th>
-                <th className="py-3 px-4">No. Dokumen</th>
-                <th className="py-3 px-4">Judul Dokumen</th>
-                <th className="py-3 px-4">Departemen</th>
-                <th className="py-3 px-4">Pembuat</th>
-                <th className="py-3 px-4">Alasan Penolakan</th>
-                <th className="py-3 px-4 text-center">Status</th>
-                <th className="py-3 px-4 text-center">Tgl. Ditolak</th>
-                <th className="py-3 px-4 text-center">Aksi</th>
+                <th className="py-3 px-4 text-center whitespace-nowrap w-12">No.</th>
+                <th className="py-3 px-4 whitespace-nowrap">No. Dokumen</th>
+                <th className="py-3 px-4 min-w-[180px]">Judul Dokumen</th>
+                <th className="py-3 px-4 whitespace-nowrap">Departemen</th>
+                <th className="py-3 px-4 whitespace-nowrap min-w-[140px]">Pembuat</th>
+                <th className="py-3 px-4 min-w-[200px]">Alasan Penolakan</th>
+                <th className="py-3 px-4 text-center whitespace-nowrap">Status</th>
+                <th className="py-3 px-4 text-center whitespace-nowrap min-w-[110px]">Tgl. Ditolak</th>
+                <th className="py-3 px-4 text-center whitespace-nowrap">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -80,28 +80,28 @@ export default function RejectedListView() {
               ) : (
                 filteredDocs.map((doc, idx) => (
                   <tr key={doc.id} className="hover:bg-rose-50/30 dark:hover:bg-slate-800/50 transition">
-                    <td className="py-3.5 px-4 text-center text-slate-400">{idx + 1}</td>
+                    <td className="py-3.5 px-4 text-center text-slate-400 whitespace-nowrap">{idx + 1}</td>
                     <td className="py-3.5 px-4 font-bold font-mono text-slate-900 dark:text-white whitespace-nowrap">
                       {doc.docNumber}
                     </td>
-                    <td className="py-3.5 px-4 font-medium text-slate-800 dark:text-slate-200 max-w-[200px] truncate" title={doc.title}>
+                    <td className="py-3.5 px-4 font-medium text-slate-800 dark:text-slate-200 min-w-[180px]" title={doc.title}>
                       {doc.title}
                     </td>
-                    <td className="py-3.5 px-4 font-semibold text-slate-600 dark:text-slate-400">{doc.department}</td>
-                    <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400">{doc.creator}</td>
-                    <td className="py-3.5 px-4 text-rose-700 dark:text-rose-400 font-medium max-w-[260px]">
+                    <td className="py-3.5 px-4 font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap">{doc.department}</td>
+                    <td className="py-3.5 px-4 text-slate-700 dark:text-slate-300 font-medium whitespace-nowrap">{doc.creator}</td>
+                    <td className="py-3.5 px-4 text-rose-700 dark:text-rose-400 font-medium">
                       <div className="line-clamp-2" title={doc.rejectionReason}>
                         {doc.rejectionReason || 'Format klausul belum memenuhi standar.'}
                       </div>
                       <div className="text-[10px] text-slate-400 mt-0.5">Oleh: {doc.rejectedBy || 'Verifikator'}</div>
                     </td>
-                    <td className="py-3.5 px-4 text-center">
+                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
                       <Badge status={doc.status} size="sm" />
                     </td>
-                    <td className="py-3.5 px-4 text-center text-slate-500 font-mono text-[11px]">
+                    <td className="py-3.5 px-4 text-center text-slate-600 dark:text-slate-300 font-mono text-[11px] whitespace-nowrap">
                       {doc.rejectedDate ? doc.rejectedDate.slice(0, 10) : doc.createdDate}
                     </td>
-                    <td className="py-3.5 px-4 text-center">
+                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
                       <div className="flex items-center justify-center gap-1.5">
                         <button
                           onClick={() => setViewingDocument(doc)}

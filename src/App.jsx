@@ -69,10 +69,33 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+import PublicDocumentVerifyView from './components/common/PublicDocumentVerifyView';
+
 function MainAppContent() {
   const { currentUser, isAuthenticated, activeMenu, viewingDocument, setViewingDocument, systemSettings } = useDocumentControl();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  const [publicVerifyDoc, setPublicVerifyDoc] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('verify') || params.get('doc') || null;
+    }
+    return null;
+  });
+
+  // Jika URL memiliki parameter ?verify= atau ?doc=, tampilkan portal verifikasi publik tanpa perlu login!
+  if (publicVerifyDoc) {
+    return (
+      <PublicDocumentVerifyView
+        docNumber={publicVerifyDoc}
+        onBackToApp={() => {
+          window.history.replaceState({}, document.title, window.location.pathname);
+          setPublicVerifyDoc(null);
+        }}
+      />
+    );
+  }
 
   if (!currentUser) {
     return (

@@ -78,37 +78,37 @@ export default function ApprovedListView() {
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="bg-[#102a4e] text-white uppercase text-[10px] tracking-wider">
-                <th className="py-3 px-4 text-center">No.</th>
-                <th className="py-3 px-4">No. Dokumen</th>
-                <th className="py-3 px-4">Judul Dokumen</th>
-                <th className="py-3 px-4">Departemen</th>
-                <th className="py-3 px-4">Pembuat</th>
-                <th className="py-3 px-4 text-center">Revisi</th>
-                <th className="py-3 px-4 text-center">Status</th>
-                <th className="py-3 px-4 text-center">Tgl. Efektif</th>
-                <th className="py-3 px-4 text-center">Aksi</th>
+                <th className="py-3 px-4 text-center whitespace-nowrap w-12">No.</th>
+                <th className="py-3 px-4 whitespace-nowrap">No. Dokumen</th>
+                <th className="py-3 px-4 min-w-[200px]">Judul Dokumen</th>
+                <th className="py-3 px-4 whitespace-nowrap">Departemen</th>
+                <th className="py-3 px-4 whitespace-nowrap min-w-[130px]">Pembuat</th>
+                <th className="py-3 px-4 text-center whitespace-nowrap">Revisi</th>
+                <th className="py-3 px-4 text-center whitespace-nowrap">Status</th>
+                <th className="py-3 px-4 text-center whitespace-nowrap min-w-[110px]">Tgl. Efektif</th>
+                <th className="py-3 px-4 text-center whitespace-nowrap">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filteredDocs.map((doc, idx) => (
                 <tr key={doc.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
-                  <td className="py-3.5 px-4 text-center text-slate-400">{idx + 1}</td>
+                  <td className="py-3.5 px-4 text-center text-slate-400 whitespace-nowrap">{idx + 1}</td>
                   <td className="py-3.5 px-4 font-bold font-mono text-slate-900 dark:text-white whitespace-nowrap">
                     {doc.docNumber}
                   </td>
                   <td className="py-3.5 px-4 font-medium text-slate-800 dark:text-slate-200 max-w-[240px] truncate" title={doc.title}>
                     {doc.title}
                   </td>
-                  <td className="py-3.5 px-4 font-semibold text-slate-600 dark:text-slate-400">{doc.department}</td>
-                  <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400">{doc.creator}</td>
-                  <td className="py-3.5 px-4 text-center font-mono font-bold">{doc.revision}</td>
-                  <td className="py-3.5 px-4 text-center">
+                  <td className="py-3.5 px-4 font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap">{doc.department}</td>
+                  <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">{doc.creator}</td>
+                  <td className="py-3.5 px-4 text-center font-mono font-bold whitespace-nowrap">{doc.revision}</td>
+                  <td className="py-3.5 px-4 text-center whitespace-nowrap">
                     <Badge status={doc.status} size="sm" />
                   </td>
-                  <td className="py-3.5 px-4 text-center text-slate-700 dark:text-slate-300 font-mono text-[11px]">
+                  <td className="py-3.5 px-4 text-center text-slate-700 dark:text-slate-300 font-mono text-[11px] whitespace-nowrap">
                     {doc.effectiveDate || doc.createdDate}
                   </td>
-                  <td className="py-3.5 px-4 text-center">
+                  <td className="py-3.5 px-4 text-center whitespace-nowrap">
                     <div className="flex items-center justify-center gap-1.5">
                       <button
                         onClick={() => setViewingDocument(doc)}

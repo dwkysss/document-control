@@ -107,9 +107,93 @@ export function DocumentControlProvider({ children }) {
     return saved ? JSON.parse(saved) : initialVerifierTeams;
   });
 
+  // Helper untuk merekonstruksi jejak audit resmi dari data dokumen
+  const generateAuditLogsFromDocuments = (docsList = []) => {
+    const logs = [];
+    (docsList || []).forEach((doc, idx) => {
+      const creatorName = doc.creator || 'Staff Pemohon';
+      const creatorNik = doc.creatorNik || 'DJI032207';
+      const createdDate = doc.createdDate || '2026-09-20';
+      const docNum = doc.docNumber || '-';
+      const title = doc.title || '-';
+
+      // 1. Log Registrasi / Usulan Awal
+      logs.push({
+        id: `log-reg-${doc.id || idx}-1`,
+        timestamp: `${createdDate} 08:30:00`,
+        user: creatorName,
+        nik: creatorNik,
+        action: doc.status === 'DRAFT' ? 'SAVE_DRAFT' : 'SUBMIT_VERIFICATION',
+        docNumber: docNum,
+        docTitle: title,
+        details: doc.status === 'DRAFT'
+          ? `Dokumen baru disimpan sebagai DRAFT oleh ${creatorName}.`
+          : `Pengajuan dokumen baru ${doc.type || 'SOP'} (${doc.department || 'GEN'}) oleh ${creatorName}. Menunggu verifikasi format DCO.`
+      });
+
+      // 2. Log Approval jika AKTIF
+      if (doc.status === 'AKTIF') {
+        const approverName = doc.approvedBy || doc.targetApprover || doc.approverName || 'BABAN RACHMAT SUBAGJA';
+        const effectiveDate = doc.effectiveDate || createdDate;
+        logs.push({
+          id: `log-app-${doc.id || idx}-2`,
+          timestamp: `${effectiveDate} 14:15:00`,
+          user: approverName,
+          nik: approverName.includes('BABAN') ? 'DJI012548' : (approverName.includes('DENI') ? 'DJI092115' : 'DJI012548'),
+          action: 'APPROVE_DOCUMENT',
+          docNumber: docNum,
+          docTitle: title,
+          details: `Pengesahan resmi ISO 9001 oleh ${approverName}. Dokumen berstatus AKTIF (Controlled Copy).`
+        });
+      } else if (doc.status === 'DITOLAK') {
+        logs.push({
+          id: `log-rej-${doc.id || idx}-3`,
+          timestamp: `${createdDate} 16:45:00`,
+          user: 'BABAN RACHMAT SUBAGJA',
+          nik: 'DJI012548',
+          action: 'REJECT_DOCUMENT',
+          docNumber: docNum,
+          docTitle: title,
+          details: doc.rejectionReason || 'Naskah dikembalikan untuk penyesuaian klausul mutu dan format lampiran.'
+        });
+      } else if (doc.status === 'OBSOLETE') {
+        logs.push({
+          id: `log-obs-${doc.id || idx}-4`,
+          timestamp: `${createdDate} 11:20:00`,
+          user: 'SYAHLA NOVIYANA',
+          nik: 'DJI022550',
+          action: 'CANCEL_DOCUMENT',
+          docNumber: docNum,
+          docTitle: title,
+          details: 'Dokumen kadaluarsa resmi ditarik dari peredaran dan diubah menjadi OBSOLETE.'
+        });
+      }
+    });
+
+    return logs.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+  };
+
   const [auditLogs, setAuditLogs] = useState(() => {
     const saved = localStorage.getItem('dji_dms_auditlogs');
-    return saved ? JSON.parse(saved) : initialAuditLogs;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    // Jika auditLogs masih kosong tapi documents sudah ada di localStorage, auto-generate!
+    try {
+      const savedDocs = localStorage.getItem('dji_dms_documents');
+      if (savedDocs) {
+        const parsedDocs = JSON.parse(savedDocs);
+        if (Array.isArray(parsedDocs) && parsedDocs.length > 0) {
+          const generated = generateAuditLogsFromDocuments(parsedDocs);
+          localStorage.setItem('dji_dms_auditlogs', JSON.stringify(generated));
+          return generated;
+        }
+      }
+    } catch (e) {}
+    return initialAuditLogs;
   });
 
   const [systemSettings, setSystemSettings] = useState(() => {
@@ -270,6 +354,27 @@ export function DocumentControlProvider({ children }) {
     }
 
     // 3. Staff: Hanya melihat dokumen yang diajukan sendiri
+    const isOwner = (doc.creatorNik && doc.creatorNik.toUpperCase().trim() === userNik) ||
+                    (doc.creator && doc.creator.toUpperCase().trim() === userName);
+    return Boolean(isOwner);
+  };
+
+  // Scope akses berkas Draft Dokumen berdasarkan Kepemilikan & Role (ISO 9001:2015 Clause 7.5 Segregation)
+  const canUserViewDraftDoc = (doc) => {
+    if (!doc) return false;
+    if (!currentUser) return false;
+
+    const userRole = currentUser.role || 'staff';
+    if (userRole === 'viewer') return false;
+
+    // 1. Super Admin, Approver (MR), dan Document Control Officer (DCO) dapat memantau seluruh draft sistem
+    if (userRole === 'admin' || userRole === 'approver' || userRole === 'doc_control') {
+      return true;
+    }
+
+    // 2. Staff / Reviewer: HANYA dapat melihat draft miliknya sendiri (Personal Draft)
+    const userName = (currentUser.name || '').toUpperCase().trim();
+    const userNik = (currentUser.nik || '').toUpperCase().trim();
     const isOwner = (doc.creatorNik && doc.creatorNik.toUpperCase().trim() === userNik) ||
                     (doc.creator && doc.creator.toUpperCase().trim() === userName);
     return Boolean(isOwner);
@@ -730,6 +835,14 @@ export function DocumentControlProvider({ children }) {
     setAuditLogs(prev => [newLog, ...prev]);
   };
 
+  // Sinkronisasi Jejak Audit dari dokumen yang sudah ada
+  const syncAuditLogsFromDocuments = () => {
+    const generated = generateAuditLogsFromDocuments(documents);
+    setAuditLogs(generated);
+    localStorage.setItem('dji_dms_auditlogs', JSON.stringify(generated));
+    showToast(`Berhasil menyinkronkan ${generated.length} entri jejak audit dari dokumen!`, 'success');
+  };
+
   // Helper to add in-app notification
   const addNotification = (title, message, type = 'info', docId = null) => {
     const newNotif = {
@@ -791,8 +904,8 @@ export function DocumentControlProvider({ children }) {
       approverPosition: docData.approverPosition || null,
       notes: docData.notes || '',
       content: docData.content || `1. TUJUAN\nDokumen ${docData.title} dibuat untuk standardisasi operasional.\n\n2. RUANG LINGKUP\nBerlaku di lingkungan departemen ${docData.department}.\n\n3. PROSEDUR PELAKSANAAN\n3.1 Pelaksanaan standar operasional sesuai kaidah ISO 9001.`,
-      fileName: docData.fileName || `${docNumber}.pdf`,
-      fileSize: docData.fileSize || '350 KB',
+      fileName: docData.fileName || (docData.fileUrl ? `${docNumber}.pdf` : null),
+      fileSize: docData.fileSize || (docData.fileUrl ? '350 KB' : null),
       fileType: docData.fileType || null,
       fileUrl: docData.fileUrl || null,
       revisionHistory: docData.revisionHistory || [
@@ -1009,8 +1122,8 @@ export function DocumentControlProvider({ children }) {
       approverPosition: docData.approverPosition || null,
       notes: docData.notes || '',
       content: docData.content || `1. TUJUAN\nDokumen ${docData.title} dibuat untuk standardisasi operasional.\n\n2. RUANG LINGKUP\nBerlaku di lingkungan departemen ${docData.department}.\n\n3. PROSEDUR PELAKSANAAN\n3.1 Pelaksanaan standar operasional sesuai kaidah ISO 9001.`,
-      fileName: docData.fileName || `${docNumber}.pdf`,
-      fileSize: docData.fileSize || '520 KB',
+      fileName: docData.fileName || (docData.fileUrl ? `${docNumber}.pdf` : null),
+      fileSize: docData.fileSize || (docData.fileUrl ? '520 KB' : null),
       fileType: docData.fileType || null,
       fileUrl: docData.fileUrl || null,
       rejectionReason: isResubmission ? null : (docData.rejectionReason || null),
@@ -1485,7 +1598,14 @@ export function DocumentControlProvider({ children }) {
     const isDcoOrAdmin = currentUser?.role === 'doc_control' || currentUser?.role === 'admin' || currentUser?.role === 'approver';
     const isDirectPublish = Boolean(isDcoOrAdmin && revisionData.directPublish);
 
-    let docStatus = 'VERIFIKASI';
+    // Best Practice ISO 9001:2015 Clause 7.5:
+    // Pengajuan revisi oleh staff/pembuat dokumen masuk ke Tahap 1 (REVIEW Atasan Departemen).
+    // Jika diajukan sendiri oleh Kepala Departemen (Reviewer), otomatis lanjut ke Tahap 2 (VERIFIKASI DCO).
+    // Jika directPublish (tanda tangan basah fisik), langsung AKTIF.
+    let docStatus = 'REVIEW';
+    let reviewedBy = null;
+    let reviewedDate = null;
+    let reviewNotes = null;
     let verifiedBy = null;
     let verifiedDate = null;
     let verificationNotes = null;
@@ -1498,6 +1618,9 @@ export function DocumentControlProvider({ children }) {
       docStatus = 'DRAFT';
     } else if (isDirectPublish) {
       docStatus = 'AKTIF';
+      reviewedBy = revisionData.targetReviewer || 'Atasan Departemen';
+      reviewedDate = createdDate;
+      reviewNotes = 'Disahkan langsung melalui berkas fisik bertanda tangan basah.';
       verifiedBy = currentUser?.name || 'Document Control';
       verifiedDate = createdDate;
       verificationNotes = 'Disahkan langsung melalui registrasi revisi bertanda tangan fisik / arsip master.';
@@ -1505,7 +1628,13 @@ export function DocumentControlProvider({ children }) {
       approvedBy = revisionData.targetApprover || currentUser?.name || 'Authorized Approver';
       approvedDate = createdDate;
       approvalNotes = 'Diterbitkan langsung sebagai Dokumen Aktif bertanda tangan basah.';
-    } else if (isDcoOrAdmin) {
+    } else if (currentUser?.role === 'reviewer' && currentUser.department === originalDoc.department) {
+      // Diajukan langsung oleh Kepala Departemen terkait
+      docStatus = 'VERIFIKASI';
+      reviewedBy = currentUser.name;
+      reviewedDate = createdDate;
+      reviewNotes = 'Diajukan langsung oleh Kepala Departemen (Review substansi otomatis terpenuhi).';
+    } else if (isDcoOrAdmin && !revisionData.targetReviewer) {
       docStatus = 'APPROVAL';
       verifiedBy = currentUser?.name || 'Document Control';
       verifiedDate = createdDate;
@@ -1528,6 +1657,13 @@ export function DocumentControlProvider({ children }) {
       createdDate,
       createdTime,
       effectiveDate,
+      targetReviewer: revisionData.targetReviewer || originalDoc.targetReviewer || null,
+      reviewerNik: revisionData.reviewerNik || originalDoc.reviewerNik || null,
+      reviewerName: revisionData.reviewerName || originalDoc.reviewerName || null,
+      reviewerPosition: revisionData.reviewerPosition || originalDoc.reviewerPosition || null,
+      reviewedBy,
+      reviewedDate,
+      reviewNotes,
       verifiedBy,
       verifiedDate,
       verificationNotes,
@@ -1556,7 +1692,7 @@ export function DocumentControlProvider({ children }) {
           note: isDirectPublish
             ? `Penerbitan langsung revisi aktif bertanda tangan fisik oleh ${currentUser.name}`
             : isDcoOrAdmin
-            ? `Pengajuan Revisi ${nextRev} oleh DCO (format lolos otomatis). Menunggu pengesahan ${revisionData.targetApprover || 'Approver'}`
+            ? `Pengajuan Revisi ${nextRev} oleh DCO. Menunggu verifikasi/pengesahan.`
             : `Pengajuan Revisi ${nextRev}: ${revisionData.changeReason || 'Penyempurnaan klausul'}`
         }
       ]
@@ -2117,6 +2253,7 @@ export function DocumentControlProvider({ children }) {
         canViewObsolete,
         canViewAllDocuments,
         canUserViewPendingDoc,
+        canUserViewDraftDoc,
         cancelDocument,
         confirmDocumentPeriodicReview,
         reviewDocumentContent,
@@ -2161,6 +2298,7 @@ export function DocumentControlProvider({ children }) {
         resetDemoData,
         exportDatabaseJSON,
         importDatabaseJSON,
+        syncAuditLogsFromDocuments,
       }}
     >
       {children}
