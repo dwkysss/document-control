@@ -1187,6 +1187,10 @@ export function DocumentControlProvider({ children }) {
       (docData.creator && currentUser?.name && (docData.creator.trim().toLowerCase() !== currentUser.name.trim().toLowerCase()))
     );
 
+    const docTypeObj = (documentTypes || []).find(t => t.code === docData.type);
+    const docLevel = docTypeObj?.level || 2;
+    const isFastTrack = docLevel === 3 || docLevel === 4;
+
     if (isResubmission) {
       // Dokumen ini merupakan pengajuan ulang setelah perbaikan / revisi.
       // Kembalikan ke tahap terakhir asalnya sebelum diminta revisi:
@@ -1196,11 +1200,11 @@ export function DocumentControlProvider({ children }) {
       } else if (docData.revisionRequestedStage === 'FORMAT' || docData.revisionRequestedStage === 'VERIFIKASI') {
         targetStage = 'VERIFIKASI';
       } else if (docData.revisionRequestedStage === 'APPROVAL') {
-        targetStage = 'APPROVAL';
+        targetStage = isFastTrack ? 'VERIFIKASI' : 'APPROVAL';
       } else if (docData.previousStatus && ['REVIEW', 'VERIFIKASI', 'APPROVAL'].includes(docData.previousStatus)) {
         targetStage = docData.previousStatus;
       } else if (docData.verifiedBy) {
-        targetStage = 'APPROVAL';
+        targetStage = isFastTrack ? 'VERIFIKASI' : 'APPROVAL';
       } else if (docData.reviewedBy) {
         targetStage = 'VERIFIKASI';
       } else {
@@ -1248,27 +1252,65 @@ export function DocumentControlProvider({ children }) {
         approvalNotes = null;
       }
     } else if (isDifferentCreator) {
-      // Pendaftaran dokumen baru oleh staf: WAJIB mulai dari Tahap 1 (Review Atasan)
-      docStatus = 'REVIEW';
-      reviewedBy = null;
-      reviewedDate = null;
-      reviewNotes = null;
-      verifiedBy = null;
-      verifiedDate = null;
-      verificationNotes = null;
-      approvedBy = null;
-      approvedDate = null;
-      approvalNotes = null;
+      if (docLevel === 1) {
+        // Alur Dokumen Level 1 (Policy / Kebijakan Mutu):
+        // Sesuai ISO 9001: Masuk ke DCO terlebih dahulu untuk dirapikan formatnya (Tahap 2),
+        // sebelum ditelaah oleh MR (Tahap 3) dan disahkan GM (Tahap 4).
+        docStatus = 'VERIFIKASI';
+        reviewedBy = null;
+        reviewedDate = null;
+        reviewNotes = null;
+        verifiedBy = null;
+        verifiedDate = null;
+        verificationNotes = null;
+        approvedBy = null;
+        approvedDate = null;
+        approvalNotes = null;
+      } else {
+        // Pendaftaran dokumen baru Level 2/3/4 oleh staf: WAJIB mulai dari Tahap 1 (Review Atasan)
+        docStatus = 'REVIEW';
+        reviewedBy = null;
+        reviewedDate = null;
+        reviewNotes = null;
+        verifiedBy = null;
+        verifiedDate = null;
+        verificationNotes = null;
+        approvedBy = null;
+        approvedDate = null;
+        approvalNotes = null;
+      }
     } else if (isDcoOrAdmin && (!docData.creator || docData.creator === currentUser?.name)) {
-      // DCO / Admin mendaftarkan dokumen baru atas namanya sendiri:
-      // Otomatis lolos Tahap 1 (Review) & Tahap 2 (Format), langsung Tahap 3 (APPROVAL)
-      docStatus = 'APPROVAL';
-      reviewedBy = currentUser?.name || 'Reviewer (Bypass DCO)';
-      reviewedDate = createdDate;
-      reviewNotes = 'Diajukan langsung oleh Document Control.';
-      verifiedBy = currentUser?.name || 'Document Control';
-      verifiedDate = createdDate;
-      verificationNotes = 'Format dan tata naskah diverifikasi langsung oleh Document Control saat pendaftaran.';
+      if (docLevel === 1) {
+        // Dokumen Kebijakan Mutu Level 1 yang didaftarkan DCO:
+        // Format otomatis terverifikasi DCO, langsung diteruskan ke Review Mutu ISO oleh MR
+        docStatus = 'REVIEW';
+        reviewedBy = null;
+        reviewedDate = null;
+        reviewNotes = null;
+        verifiedBy = currentUser?.name || 'Document Control';
+        verifiedDate = createdDate;
+        verificationNotes = 'Format tata naskah kebijakan mutu diverifikasi langsung oleh Document Control saat pendaftaran.';
+      } else if (isFastTrack) {
+        // ISO Level 3/4 (IK/Formulir) yang didaftarkan DCO:
+        // Format baku sudah diverifikasi DCO, diarahkan ke Review teknis Atasan Departemen (Tahap 1).
+        // Begitu Atasan menyetujui materi teknis, berkas langsung terbit AKTIF!
+        docStatus = 'REVIEW';
+        reviewedBy = null;
+        reviewedDate = null;
+        reviewNotes = null;
+        verifiedBy = currentUser?.name || 'Document Control';
+        verifiedDate = createdDate;
+        verificationNotes = 'Format tata naskah diverifikasi langsung oleh Document Control saat pendaftaran.';
+      } else {
+        // ISO Level 2: Lolos Tahap 1 & Tahap 2, langsung Tahap 3 (APPROVAL GM/MR)
+        docStatus = 'APPROVAL';
+        reviewedBy = currentUser?.name || 'Reviewer (Bypass DCO)';
+        reviewedDate = createdDate;
+        reviewNotes = 'Diajukan langsung oleh Document Control.';
+        verifiedBy = currentUser?.name || 'Document Control';
+        verifiedDate = createdDate;
+        verificationNotes = 'Format dan tata naskah diverifikasi langsung oleh Document Control saat pendaftaran.';
+      }
     } else if (isReviewerUser && (!docData.creator || docData.creator === currentUser?.name)) {
       // Reviewer (Atasan / Kepala Dept) mendaftarkan dokumen baru atas namanya sendiri:
       // Otomatis lolos Tahap 1 (Review), langsung Tahap 2 (VERIFIKASI DCO)
@@ -1401,21 +1443,35 @@ export function DocumentControlProvider({ children }) {
 
     const today = new Date().toISOString().slice(0, 10);
     let targetDoc = null;
+    let becameActive = false;
 
     setDocuments(prevDocs => {
       const target = prevDocs.find(d => d.id === docId);
       if (!target) return prevDocs;
       targetDoc = target;
 
+      const docTypeObj = (documentTypes || []).find(t => t.code === target.type);
+      const docLevel = docTypeObj?.level || 2;
+      const isLevel1 = docLevel === 1;
+      const isFastTrack = docLevel === 3 || docLevel === 4;
+      // Jika dokumen didaftarkan DCO dan formatnya sudah diverifikasi, review Atasan ini menjadikannya langsung AKTIF
+      const canActivateNow = isFastTrack && Boolean(target.verifiedBy);
+      becameActive = canActivateNow;
+
+      const noteText = reviewNotes || 'Isi teknis dan kesesuaian alur kerja operasional telah diperiksa dan disetujui oleh Atasan/Reviewer.';
+
       const updatedDocs = prevDocs.map(doc => {
         if (doc.id === docId) {
-          const noteText = reviewNotes || 'Isi teknis dan kesesuaian alur kerja operasional telah diperiksa dan disetujui oleh Atasan/Reviewer.';
           return {
             ...doc,
-            status: 'VERIFIKASI',
+            status: canActivateNow ? 'AKTIF' : (isLevel1 ? 'APPROVAL' : 'VERIFIKASI'),
+            effectiveDate: canActivateNow ? (doc.effectiveDate || today) : doc.effectiveDate,
             reviewedBy: currentUser.name,
             reviewedDate: today,
             reviewNotes: noteText,
+            approvedBy: canActivateNow ? (doc.targetApprover || currentUser.name) : doc.approvedBy,
+            approvedDate: canActivateNow ? today : doc.approvedDate,
+            approvalNotes: canActivateNow ? `Disahkan langsung oleh Kepala Departemen (${currentUser.name}) - Fast-Track ISO Level ${docLevel}.` : doc.approvalNotes,
             notes: doc.notes ? `${doc.notes} | [Review Atasan Lolos: ${currentUser.name}]` : `[Review Atasan Lolos: ${currentUser.name}]`,
             revisionHistory: [
               ...(doc.revisionHistory || []),
@@ -1423,30 +1479,65 @@ export function DocumentControlProvider({ children }) {
                 revision: doc.revision,
                 date: today,
                 author: currentUser.name,
-                note: `Review teknis disetujui oleh ${currentUser.name} (${currentUser.position}). Diteruskan ke Document Control.`
+                note: canActivateNow
+                  ? `Review teknis disetujui oleh ${currentUser.name}. Dokumen Level ${docLevel} langsung diterbitkan AKTIF (Fast-Track).`
+                  : isLevel1
+                  ? `Telaah kesesuaian mutu ISO 9001 disetujui oleh MR (${currentUser.name}). Diteruskan ke Direktur Utama / GM (${doc.targetApprover || 'General Manager'}) untuk pengesahan akhir.`
+                  : `Review teknis disetujui oleh ${currentUser.name} (${currentUser.position}). Diteruskan ke Document Control.`
               }
             ]
           };
         }
+
+        // Auto-obsolete versi lama jika dokumen ini langsung aktif
+        if (
+          canActivateNow &&
+          doc.id !== docId &&
+          doc.type === target.type &&
+          doc.department === target.department &&
+          doc.seqNumber === target.seqNumber &&
+          doc.status === 'AKTIF'
+        ) {
+          return {
+            ...doc,
+            status: 'OBSOLETE',
+            supersededBy: target.docNumber,
+            obsoleteDate: today,
+            notes: `${doc.notes ? doc.notes + ' ' : ''}[Otomatis Obsolete - digantikan oleh ${target.docNumber}]`
+          };
+        }
+
         return doc;
       });
 
       if (isSupabaseConfigured && supabase) {
-        const updatedTarget = updatedDocs.find(d => d.id === docId);
-        if (updatedTarget) {
-          supabase.from('documents').upsert([toSnakeCaseDoc(updatedTarget)]).then(({ error }) => {
+        updatedDocs.forEach(d => {
+          supabase.from('documents').upsert([toSnakeCaseDoc(d)]).then(({ error }) => {
             if (error) console.warn('Supabase reviewDocumentContent error:', error);
           });
-        }
+        });
       }
 
       return updatedDocs;
     });
 
     if (targetDoc) {
-      addAuditLog('REVIEW_DOCUMENT', targetDoc.docNumber, targetDoc.title, `Review teknis disetujui oleh ${currentUser.name} (${currentUser.position}). Diteruskan ke Document Control.`);
-      addNotification('Review Atasan Disetujui', `${targetDoc.docNumber} lolos review teknis oleh ${currentUser.name}. Menunggu verifikasi format Document Control.`, 'info', targetDoc.id);
-      showToast(`Dokumen ${targetDoc.docNumber} lolos review Atasan dan diteruskan ke Document Control!`, 'success');
+      if (becameActive) {
+        addAuditLog('APPROVE_DOCUMENT_FASTTRACK', targetDoc.docNumber, targetDoc.title, `Review teknis disetujui oleh ${currentUser.name}. Dokumen Fast-Track resmi diterbitkan AKTIF.`);
+        addNotification('Dokumen Resmi Aktif', `${targetDoc.docNumber} telah resmi aktif setelah disetujui oleh Kepala Departemen (${currentUser.name}).`, 'success', targetDoc.id);
+        showToast(`Dokumen ${targetDoc.docNumber} resmi disahkan & DITERBITKAN AKTIF! Jalur Cepat ISO Level 3/4 terpenuhi.`, 'success');
+      } else {
+        const isLevel1 = (documentTypes || []).find(t => t.code === targetDoc.type)?.level === 1;
+        if (isLevel1) {
+          addAuditLog('REVIEW_POLICY_MR', targetDoc.docNumber, targetDoc.title, `Telaah mutu ISO disetujui oleh MR (${currentUser.name}). Diteruskan ke Direktur Utama / GM (${targetDoc.targetApprover || 'General Manager'}) untuk pengesahan akhir.`);
+          addNotification('Telaah Mutu Disetujui MR', `${targetDoc.docNumber} telah ditelaah dan disetujui oleh MR (${currentUser.name}). Siap disahkan oleh Direktur Utama / GM.`, 'info', targetDoc.id);
+          showToast(`Dokumen Kebijakan Mutu (${targetDoc.docNumber}) disetujui oleh MR dan diteruskan ke Direktur Utama / GM!`, 'success');
+        } else {
+          addAuditLog('REVIEW_DOCUMENT', targetDoc.docNumber, targetDoc.title, `Review teknis disetujui oleh ${currentUser.name} (${currentUser.position}). Diteruskan ke Document Control.`);
+          addNotification('Review Atasan Disetujui', `${targetDoc.docNumber} lolos review teknis oleh ${currentUser.name}. Menunggu verifikasi format Document Control.`, 'info', targetDoc.id);
+          showToast(`Dokumen ${targetDoc.docNumber} lolos review Atasan dan diteruskan ke Document Control!`, 'success');
+        }
+      }
       return true;
     }
     return false;
@@ -1454,8 +1545,8 @@ export function DocumentControlProvider({ children }) {
 
   /**
    * Tahap 2 (ISO 9001:2015): Verifikasi Format & Penomoran oleh DOCUMENT CONTROL (DCO)
-   * Memeriksa format baku ISO, penomoran, kelengkapan berkas,
-   * lalu meloloskan berkas ke tahap pengesahan Approver / MR (status: APPROVAL).
+   * - Level 1 (Policy) & Level 2 (SOP): Format diperiksa, diteruskan ke Tahap 3 (APPROVAL MR / GM).
+   * - Level 3 (Instruksi Kerja) & Level 4 (Formulir): Format diperiksa dan LANGSUNG DITERBITKAN AKTIF (Jalur Cepat ISO 9001:2015 Klausul 7.5).
    */
   const verifyDocumentFormat = (docId, notes = '') => {
     if (!canVerifyFormat) {
@@ -1465,21 +1556,34 @@ export function DocumentControlProvider({ children }) {
 
     const today = new Date().toISOString().slice(0, 10);
     let targetDoc = null;
+    let becameActive = false;
+    let targetLevel = 2;
 
     setDocuments(prevDocs => {
       const target = prevDocs.find(d => d.id === docId);
       if (!target) return prevDocs;
       targetDoc = target;
 
+      const docTypeObj = (documentTypes || []).find(t => t.code === target.type);
+      targetLevel = docTypeObj?.level || 2;
+      const isFastTrack = targetLevel === 3 || targetLevel === 4;
+      becameActive = isFastTrack;
+
+      const verifyNote = notes || 'Format dokumen, tata naskah, dan penomoran telah diverifikasi memenuhi standar ISO 9001.';
+
       const updatedDocs = prevDocs.map(doc => {
         if (doc.id === docId) {
-          const verifyNote = notes || 'Format dokumen, tata naskah, dan penomoran telah diverifikasi memenuhi standar ISO 9001.';
+          const isL1 = targetLevel === 1;
           return {
             ...doc,
-            status: 'APPROVAL',
+            status: isFastTrack ? 'AKTIF' : (isL1 ? 'REVIEW' : 'APPROVAL'),
+            effectiveDate: isFastTrack ? (doc.effectiveDate || today) : doc.effectiveDate,
             verifiedBy: currentUser.name,
             verifiedDate: today,
             verificationNotes: verifyNote,
+            approvedBy: isFastTrack ? (doc.targetApprover || doc.reviewedBy || currentUser.name) : doc.approvedBy,
+            approvedDate: isFastTrack ? today : doc.approvedDate,
+            approvalNotes: isFastTrack ? `Diterbitkan langsung sebagai Dokumen Aktif (Jalur Cepat ISO 9001 Level ${targetLevel} - Verifikasi DCO & Review Atasan).` : doc.approvalNotes,
             notes: doc.notes ? `${doc.notes} | [Format Lolos DCO: ${currentUser.name}]` : `[Format Lolos DCO: ${currentUser.name}]`,
             revisionHistory: [
               ...(doc.revisionHistory || []),
@@ -1487,32 +1591,65 @@ export function DocumentControlProvider({ children }) {
                 revision: doc.revision,
                 date: today,
                 author: currentUser.name,
-                note: `Format diverifikasi oleh ${currentUser.name} (DCO). Diteruskan ke ${doc.targetApprover || 'Pejabat Penyetuju'}.`
+                note: isFastTrack
+                  ? `Format diverifikasi oleh ${currentUser.name} (DCO) dan langsung diterbitkan AKTIF (Fast-Track ISO Level ${targetLevel}).`
+                  : isL1
+                  ? `Format tata naskah kebijakan mutu diverifikasi oleh ${currentUser.name} (DCO). Diteruskan ke MR (${doc.targetReviewer || 'Management Representative'}) untuk telaah mutu ISO.`
+                  : `Format diverifikasi oleh ${currentUser.name} (DCO). Diteruskan ke ${doc.targetApprover || 'Pejabat Penyetuju'}.`
               }
             ]
           };
         }
+
+        // Auto-obsolete versi lama jika dokumen ini langsung aktif
+        if (
+          isFastTrack &&
+          doc.id !== docId &&
+          doc.type === target.type &&
+          doc.department === target.department &&
+          doc.seqNumber === target.seqNumber &&
+          doc.status === 'AKTIF'
+        ) {
+          return {
+            ...doc,
+            status: 'OBSOLETE',
+            supersededBy: target.docNumber,
+            obsoleteDate: today,
+            notes: `${doc.notes ? doc.notes + ' ' : ''}[Otomatis Obsolete - digantikan oleh ${target.docNumber}]`
+          };
+        }
+
         return doc;
       });
 
       if (isSupabaseConfigured && supabase) {
-        const updatedTarget = updatedDocs.find(d => d.id === docId);
-        if (updatedTarget) {
-          supabase.from('documents').upsert([toSnakeCaseDoc(updatedTarget)]).then(({ error }) => {
+        updatedDocs.forEach(d => {
+          supabase.from('documents').upsert([toSnakeCaseDoc(d)]).then(({ error }) => {
             if (error) console.warn('Supabase verifyDocumentFormat error:', error);
           });
-        }
+        });
       }
 
       return updatedDocs;
     });
 
     if (targetDoc) {
-      addAuditLog('VERIFY_FORMAT', targetDoc.docNumber, targetDoc.title, `Format diverifikasi oleh ${currentUser.name} (DCO). Menunggu pengesahan ${targetDoc.targetApprover || 'Approver'}.`);
-      addNotification('Format Dokumen Terverifikasi', `${targetDoc.docNumber} telah diverifikasi oleh DCO dan menunggu pengesahan ${targetDoc.targetApprover || 'Approver'}.`, 'info', targetDoc.id);
-      showToast(`Format dokumen ${targetDoc.docNumber} berhasil diverifikasi! Diteruskan ke ${targetDoc.targetApprover || 'Pejabat Penyetuju'}.`, 'success');
+      if (becameActive) {
+        addAuditLog('VERIFY_AND_PUBLISH_FASTTRACK', targetDoc.docNumber, targetDoc.title, `Format diverifikasi oleh ${currentUser.name} (DCO). Dokumen Level ${targetLevel} langsung diterbitkan sebagai Dokumen Aktif (Fast-Track).`);
+        addNotification('Dokumen Resmi Aktif', `${targetDoc.docNumber} telah diverifikasi oleh DCO dan resmi diterbitkan AKTIF (Jalur Cepat Level ${targetLevel}).`, 'success', targetDoc.id);
+        showToast(`Dokumen Level ${targetLevel} (${targetDoc.docNumber}) berhasil diverifikasi & langsung DITERBITKAN AKTIF! Jalur cepat ISO terpenuhi.`, 'success');
+      } else if (targetLevel === 1) {
+        addAuditLog('VERIFY_FORMAT_POLICY', targetDoc.docNumber, targetDoc.title, `Format kebijakan mutu diverifikasi oleh ${currentUser.name} (DCO). Diteruskan ke MR (${targetDoc.targetReviewer || 'MR'}) untuk telaah mutu ISO.`);
+        addNotification('Format Kebijakan Mutu Terverifikasi', `${targetDoc.docNumber} telah diverifikasi format oleh DCO dan diteruskan ke MR untuk telaah mutu ISO.`, 'info', targetDoc.id);
+        showToast(`Format Dokumen Level 1 (${targetDoc.docNumber}) diverifikasi DCO! Diteruskan ke Management Representative (MR).`, 'success');
+      } else {
+        addAuditLog('VERIFY_FORMAT', targetDoc.docNumber, targetDoc.title, `Format diverifikasi oleh ${currentUser.name} (DCO). Menunggu pengesahan ${targetDoc.targetApprover || 'Approver'}.`);
+        addNotification('Format Dokumen Terverifikasi', `${targetDoc.docNumber} telah diverifikasi oleh DCO dan menunggu pengesahan ${targetDoc.targetApprover || 'Approver'}.`, 'info', targetDoc.id);
+        showToast(`Format dokumen ${targetDoc.docNumber} berhasil diverifikasi! Diteruskan ke ${targetDoc.targetApprover || 'Pejabat Penyetuju'}.`, 'success');
+      }
+      return true;
     }
-    return true;
+    return false;
   };
 
   /**
@@ -1756,11 +1893,16 @@ export function DocumentControlProvider({ children }) {
     });
 
     const isDcoOrAdmin = currentUser?.role === 'doc_control' || currentUser?.role === 'admin' || currentUser?.role === 'approver';
+    const docTypeObj = (documentTypes || []).find(t => t.code === originalDoc.type);
+    const docLevel = docTypeObj?.level || 2;
+    const isFastTrack = docLevel === 3 || docLevel === 4;
 
     // Best Practice ISO 9001:2015 Clause 7.5:
     // Pengajuan revisi oleh staff/pembuat dokumen masuk ke Tahap 1 (REVIEW Atasan Departemen).
     // Jika diajukan sendiri oleh Kepala Departemen (Reviewer), otomatis lanjut ke Tahap 2 (VERIFIKASI DCO).
-    // Jika diajukan oleh DCO, otomatis lolos verifikasi format dan langsung lanjut ke Tahap 3 (APPROVAL MR).
+    // Jika diajukan oleh DCO:
+    // - Level 1/2: langsung masuk ke Tahap 3 (APPROVAL MR / GM).
+    // - Level 3/4 (IK/Form): diarahkan ke Review teknis Atasan Dept (Tahap 1), begitu disetujui langsung Aktif.
     let docStatus = 'REVIEW';
     let reviewedBy = null;
     let reviewedDate = null;
@@ -1775,6 +1917,18 @@ export function DocumentControlProvider({ children }) {
 
     if (revisionData.isDraft) {
       docStatus = 'DRAFT';
+    } else if (docLevel === 1) {
+      // Kebijakan Mutu Level 1:
+      // Jika DCO mendaftarkan revisi: format sudah oke, langsung ke MR (REVIEW)
+      // Jika staf/pembuat lain: masuk ke DCO dulu untuk verifikasi format (VERIFIKASI)
+      if (isDcoOrAdmin) {
+        docStatus = 'REVIEW';
+        verifiedBy = currentUser?.name || 'Document Control';
+        verifiedDate = createdDate;
+        verificationNotes = 'Format revisi kebijakan mutu diverifikasi langsung oleh Document Control saat pendaftaran.';
+      } else {
+        docStatus = 'VERIFIKASI';
+      }
     } else if (currentUser?.role === 'reviewer' && currentUser.department === originalDoc.department) {
       // Diajukan langsung oleh Kepala Departemen terkait
       docStatus = 'VERIFIKASI';
@@ -1782,14 +1936,20 @@ export function DocumentControlProvider({ children }) {
       reviewedDate = createdDate;
       reviewNotes = 'Diajukan langsung oleh Kepala Departemen (Review substansi otomatis terpenuhi).';
     } else if (isDcoOrAdmin) {
-      // Diajukan oleh DCO / Admin: Langsung masuk ke Tahap 3 (APPROVAL MR)
-      docStatus = 'APPROVAL';
-      reviewedBy = revisionData.targetReviewer || currentUser?.name || 'Reviewer (DCO)';
-      reviewedDate = createdDate;
-      reviewNotes = 'Format dan tata naskah diverifikasi langsung oleh Document Control.';
-      verifiedBy = currentUser?.name || 'Document Control';
-      verifiedDate = createdDate;
-      verificationNotes = 'Format revisi diverifikasi langsung oleh Document Control saat pendaftaran.';
+      if (isFastTrack) {
+        docStatus = 'REVIEW';
+        verifiedBy = currentUser?.name || 'Document Control';
+        verifiedDate = createdDate;
+        verificationNotes = 'Format revisi diverifikasi langsung oleh Document Control saat pendaftaran.';
+      } else {
+        docStatus = 'APPROVAL';
+        reviewedBy = revisionData.targetReviewer || currentUser?.name || 'Reviewer (DCO)';
+        reviewedDate = createdDate;
+        reviewNotes = 'Format dan tata naskah diverifikasi langsung oleh Document Control.';
+        verifiedBy = currentUser?.name || 'Document Control';
+        verifiedDate = createdDate;
+        verificationNotes = 'Format revisi diverifikasi langsung oleh Document Control saat pendaftaran.';
+      }
     }
 
     const newRevisedDoc = {

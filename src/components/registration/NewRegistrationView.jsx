@@ -134,8 +134,40 @@ export default function NewRegistrationView() {
     return list;
   }, [departments, employees]);
 
-  // Smart routing: tentukan Atasan / Reviewer otomatis dari Kepala Departemen yang dipilih di Master Departemen
-  const getDefaultReviewerNik = (deptCode) => {
+  // 2. Filter authorized approvers: Khusus Management Representative (MR) & Direksi
+  const availableApprovers = React.useMemo(() => {
+    const list = (employees || []).filter(
+      e => e.status !== 'Nonaktif' && (
+        e.role === 'approver' ||
+        e.department === 'MGMT' ||
+        (e.position || '').toUpperCase().includes('GENERAL MANAGER') ||
+        (e.position || '').toUpperCase().includes('DIREKSI') ||
+        (e.position || '').toUpperCase().includes('MR')
+      )
+    );
+    if (list.length === 0 && employees?.length > 0) {
+      return employees.filter(e => e.status !== 'Nonaktif');
+    }
+    return list;
+  }, [employees]);
+
+  // Smart routing: tentukan Reviewer otomatis berdasarkan Level Dokumen ISO
+  // Level 1: Management Representative (MR) untuk telaah mutu ISO (setelah format diverifikasi DCO)
+  // Level 2, 3, 4: Kepala Departemen pemilik dokumen
+  const getDefaultReviewerNik = (deptCode, typeCode) => {
+    const docType = (documentTypes || []).find(t => t.code === (typeCode || selectedType));
+    const level = docType?.level || 2;
+
+    if (level === 1) {
+      // Level 1 (Policy): Telaah mutu ISO dilakukan oleh Management Representative (MR)
+      const mr = (employees || []).find(
+        e => (e.position || '').toUpperCase().includes('MR') ||
+          (e.position || '').toUpperCase().includes('MANAGEMENT REPRESENTATIVE') ||
+          e.role === 'approver'
+      );
+      if (mr) return mr.nik;
+    }
+
     const cleanDept = (deptCode || '').toUpperCase();
     const deptObj = (departments || []).find(d => d.code.toUpperCase() === cleanDept);
     const deptHeadName = (deptObj?.head || '').trim();
@@ -161,16 +193,18 @@ export default function NewRegistrationView() {
     return availableReviewers[0]?.nik || 'DJI022203';
   };
 
-  const [selectedReviewerNik, setSelectedReviewerNik] = useState(() => getDefaultReviewerNik(selectedDept));
+  const [selectedReviewerNik, setSelectedReviewerNik] = useState(() => getDefaultReviewerNik(selectedDept, selectedType));
 
   useEffect(() => {
-    const suggestedNik = getDefaultReviewerNik(selectedDept);
-    if (availableReviewers.some(r => r.nik === suggestedNik)) {
+    const suggestedNik = getDefaultReviewerNik(selectedDept, selectedType);
+    if (availableReviewers.some(r => r.nik === suggestedNik) || availableApprovers.some(a => a.nik === suggestedNik)) {
       setSelectedReviewerNik(suggestedNik);
     }
-  }, [selectedDept, availableReviewers]);
+  }, [selectedDept, selectedType, availableReviewers, availableApprovers]);
 
-  const activeReviewer = availableReviewers.find(r => r.nik === selectedReviewerNik) || availableReviewers[0] || {
+  const activeReviewer = availableReviewers.find(r => r.nik === selectedReviewerNik) ||
+    availableApprovers.find(a => a.nik === selectedReviewerNik) ||
+    availableReviewers[0] || {
     name: 'DEDE SUHENDA',
     nik: 'DJI022203',
     position: 'KEPALA BAGIAN PRODUKSI',
@@ -178,30 +212,40 @@ export default function NewRegistrationView() {
     role: 'reviewer'
   };
 
-  // 2. Filter authorized approvers: Khusus Management Representative (MR) & Direksi
-  const availableApprovers = React.useMemo(() => {
-    const list = (employees || []).filter(
-      e => e.status !== 'Nonaktif' && (
-        e.role === 'approver' ||
-        e.department === 'MGMT' ||
-        (e.position || '').toUpperCase().includes('GENERAL MANAGER') ||
-        (e.position || '').toUpperCase().includes('DIREKSI') ||
-        (e.position || '').toUpperCase().includes('MR')
-      )
-    );
-    if (list.length === 0 && employees?.length > 0) {
-      return employees.filter(e => e.status !== 'Nonaktif');
-    }
-    return list;
-  }, [employees]);
+  // Hierarki Mutu ISO 9001:2015 Clause 7.5:
+  // Level 1: General Manager / Direksi
+  // Level 2 & 5: Management Representative (MR)
+  // Level 3 & 4: Jalur Cepat (Fast-Track) — Cukup Kepala Departemen & Verifikasi DCO
+  const getDefaultApproverNik = (currentReviewerNik, typeCode) => {
+    const docType = (documentTypes || []).find(t => t.code === (typeCode || selectedType));
+    const level = docType?.level || 2;
 
-  // Pejabat Penyetuju (Approver) sesuai standar ISO 9001: Khusus Management Representative (MR) / GM
-  const getDefaultApproverNik = (currentReviewerNik) => {
+    if (level === 1) {
+      // Level 1: Prioritas General Manager / Direksi
+      const gm = availableApprovers.find(
+        a => a.department === 'MGMT' ||
+          (a.position || '').toUpperCase().includes('GENERAL MANAGER') ||
+          (a.position || '').toUpperCase().includes('DIREKSI')
+      );
+      if (gm) return gm.nik;
+    } else if (level === 2 || level === 5) {
+      // Level 2 (SOP) & Level 5 (EXT): Management Representative (MR)
+      const mr = availableApprovers.find(
+        a => (a.position || '').toUpperCase().includes('MR') || a.role === 'approver'
+      );
+      if (currentReviewerNik && mr && mr.nik === currentReviewerNik) {
+        const altApprover = availableApprovers.find(e => e.nik !== currentReviewerNik);
+        if (altApprover) return altApprover.nik;
+      }
+      if (mr) return mr.nik;
+    } else if (level === 3 || level === 4) {
+      // Level 3 (IK) & Level 4 (Formulir): Pengesahan teknis cukup Kepala Departemen bersangkutan
+      if (currentReviewerNik) return currentReviewerNik;
+    }
+
     const mr = availableApprovers.find(
       a => (a.position || '').toUpperCase().includes('MR') || a.role === 'approver'
     );
-    // Jika Atasan (Reviewer) dokumen adalah pejabat MR itu sendiri (misal Baban di HRGA),
-    // otomatis arahkan Pengesah (Approver) ke General Manager / Direksi agar ada pemisahan kewenangan (Four-Eyes Principle)
     if (currentReviewerNik && mr && mr.nik === currentReviewerNik) {
       const altApprover = availableApprovers.find(e => e.nik !== currentReviewerNik);
       if (altApprover) return altApprover.nik;
@@ -211,19 +255,21 @@ export default function NewRegistrationView() {
   };
 
   const [selectedApproverNik, setSelectedApproverNik] = useState(() =>
-    getDefaultApproverNik(getDefaultReviewerNik(selectedDept))
+    getDefaultApproverNik(getDefaultReviewerNik(selectedDept), selectedType)
   );
 
   // Sync smart approver default when selected department or document type changes
   useEffect(() => {
     const reviewerNik = getDefaultReviewerNik(selectedDept);
-    const suggestedApproverNik = getDefaultApproverNik(reviewerNik);
-    if (availableApprovers.some(a => a.nik === suggestedApproverNik)) {
+    const suggestedApproverNik = getDefaultApproverNik(reviewerNik, selectedType);
+    if (availableApprovers.some(a => a.nik === suggestedApproverNik) || availableReviewers.some(r => r.nik === suggestedApproverNik)) {
       setSelectedApproverNik(suggestedApproverNik);
     }
-  }, [selectedDept, selectedType, availableApprovers]);
+  }, [selectedDept, selectedType, availableApprovers, availableReviewers]);
 
-  const activeApprover = availableApprovers.find(a => a.nik === selectedApproverNik) || availableApprovers[0] || {
+  const activeApprover = availableApprovers.find(a => a.nik === selectedApproverNik) ||
+    availableReviewers.find(r => r.nik === selectedApproverNik) ||
+    availableApprovers[0] || {
     name: 'BABAN RACHMAT SUBAGJA',
     nik: 'DJI012548',
     position: 'MANAGER HRGA & MR (MANAGEMENT REPRESENTATIVE)',
@@ -232,6 +278,9 @@ export default function NewRegistrationView() {
   };
 
   const isDcoOrAdmin = currentUser?.role === 'doc_control' || currentUser?.role === 'admin';
+  const currentDocTypeObj = (documentTypes || []).find(t => t.code === selectedType) || { level: 2 };
+  const docLevel = currentDocTypeObj.level || 2;
+  const isFastTrack = docLevel === 3 || docLevel === 4;
   const [notes, setNotes] = useState('');
   const [fileAttachment, setFileAttachment] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -394,13 +443,12 @@ export default function NewRegistrationView() {
                 {currentUser?.companyCode && currentUser.companyCode !== 'ALL' ? (
                   <div className="p-3.5 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50/60 dark:bg-blue-950/40 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <span className={`px-2.5 py-1 rounded font-mono font-bold text-xs ${
-                        selectedCompany === 'UMI'
+                      <span className={`px-2.5 py-1 rounded font-mono font-bold text-xs ${selectedCompany === 'UMI'
                           ? 'bg-indigo-600 text-white'
                           : selectedCompany === 'IMK'
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-blue-600 text-white'
-                      }`}>
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-blue-600 text-white'
+                        }`}>
                         {selectedCompany}
                       </span>
                       <div>
@@ -425,20 +473,18 @@ export default function NewRegistrationView() {
                           key={c.id}
                           type="button"
                           onClick={() => setSelectedCompany(c.code)}
-                          className={`p-3 rounded-xl border text-left transition relative flex flex-col justify-between ${
-                            isSelected
+                          className={`p-3 rounded-xl border text-left transition relative flex flex-col justify-between ${isSelected
                               ? 'bg-blue-50/70 dark:bg-blue-950/40 border-blue-500 ring-2 ring-blue-500/30 shadow-sm'
                               : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
-                          }`}
+                            }`}
                         >
                           <div className="flex items-center justify-between w-full mb-1">
-                            <span className={`px-2 py-0.5 rounded font-mono font-bold text-xs ${
-                              c.code === 'DJI'
+                            <span className={`px-2 py-0.5 rounded font-mono font-bold text-xs ${c.code === 'DJI'
                                 ? 'bg-blue-600 text-white'
                                 : c.code === 'UMI'
-                                ? 'bg-indigo-600 text-white'
-                                : 'bg-emerald-600 text-white'
-                            }`}>
+                                  ? 'bg-indigo-600 text-white'
+                                  : 'bg-emerald-600 text-white'
+                              }`}>
                               {c.code}
                             </span>
                             {isSelected && (
@@ -472,6 +518,29 @@ export default function NewRegistrationView() {
                       </option>
                     ))}
                   </select>
+                  <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${docLevel === 1
+                        ? 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800'
+                        : docLevel === 2
+                          ? 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800'
+                          : docLevel === 3
+                            ? 'bg-cyan-100 text-cyan-800 border-cyan-200 dark:bg-cyan-950/60 dark:text-cyan-300 dark:border-cyan-800'
+                            : docLevel === 4
+                              ? 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
+                              : 'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
+                      }`}>
+                      ISO Level {docLevel}: {currentDocTypeObj.name || selectedType}
+                    </span>
+                    {isFastTrack ? (
+                      <span className="text-[10.5px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                        ⚡ Jalur Cepat: Verifikasi DCO & Review Atasan Dept
+                      </span>
+                    ) : (
+                      <span className="text-[10.5px] font-medium text-slate-500 dark:text-slate-400">
+                        🛡️ Pengesahan Akhir: {docLevel === 1 ? 'General Manager / Direksi' : 'Management Representative (MR)'}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div>
@@ -577,61 +646,17 @@ export default function NewRegistrationView() {
             </div>
 
             <div className="p-5 sm:p-6 space-y-5">
-              {/* Compact 4-Stage Approval Pipeline */}
-              <div className="p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                  {/* Step 1: Pembuat (Tahap Aktif Saat Ini) */}
-                  <div className="flex items-center gap-2 p-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800">
-                    <span className="w-5 h-5 rounded-full bg-blue-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0">
-                      1
-                    </span>
-                    <div className="min-w-0">
-                      <p className="font-bold text-blue-900 dark:text-blue-200 text-[11px] truncate">Pembuat</p>
-                      <p className="text-[9.5px] text-blue-600 dark:text-blue-400 font-medium truncate">Draft Usulan</p>
-                    </div>
-                  </div>
-
-                  {/* Step 2: Reviewer */}
-                  <div className="flex items-center gap-2 p-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                    <span className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-[10px] flex items-center justify-center shrink-0">
-                      2
-                    </span>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-slate-800 dark:text-slate-200 text-[11px] truncate">Reviewer</p>
-                      <p className="text-[9.5px] text-slate-500 dark:text-slate-400 truncate">Atasan Dept</p>
-                    </div>
-                  </div>
-
-                  {/* Step 3: Doc Control */}
-                  <div className="flex items-center gap-2 p-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                    <span className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-[10px] flex items-center justify-center shrink-0">
-                      3
-                    </span>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-slate-800 dark:text-slate-200 text-[11px] truncate">Doc Control</p>
-                      <p className="text-[9.5px] text-slate-500 dark:text-slate-400 truncate">Verifikasi No.</p>
-                    </div>
-                  </div>
-
-                  {/* Step 4: Approver MR */}
-                  <div className="flex items-center gap-2 p-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                    <span className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-[10px] flex items-center justify-center shrink-0">
-                      4
-                    </span>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-slate-800 dark:text-slate-200 text-[11px] truncate">Approver</p>
-                      <p className="text-[9.5px] text-slate-500 dark:text-slate-400 truncate">Pengesahan MR</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
 
               {/* Reviewer & Approver Selectors */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {/* 1. Reviewer */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1.5">
-                    Reviewer (Atasan Departemen) <span className="text-red-500">*</span>
+                    {docLevel === 1
+                      ? 'Penelaah Mutu ISO (Management Representative / MR)'
+                      : isFastTrack
+                        ? 'Pemeriksa Teknis (Kepala Departemen)'
+                        : 'Reviewer (Atasan Departemen)'} <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={selectedReviewerNik}
@@ -645,7 +670,7 @@ export default function NewRegistrationView() {
                     }}
                     className="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2.5 font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition shadow-sm"
                   >
-                    {availableReviewers.map((emp) => (
+                    {(docLevel === 1 ? availableApprovers : availableReviewers).map((emp) => (
                       <option key={emp.nik} value={emp.nik}>
                         {emp.name} — {emp.position} ({emp.department})
                       </option>
@@ -655,15 +680,28 @@ export default function NewRegistrationView() {
 
                 {/* 2. Approver */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1.5">
-                    Approver (Management Representative / MR) <span className="text-red-500">*</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-200">
+                      {docLevel === 1
+                        ? 'Pengesah (General Manager / Direksi)'
+                        : docLevel === 2
+                          ? 'Pengesah (Management Representative / MR)'
+                          : isFastTrack
+                            ? 'Pengesahan Teknis (Kepala Departemen)'
+                            : 'Pejabat Penyetuju'} <span className="text-red-500">*</span>
+                    </label>
+                    {isFastTrack && (
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/60 dark:text-emerald-300 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
+                        ⚡ Jalur Cepat L{docLevel}
+                      </span>
+                    )}
+                  </div>
                   <select
                     value={selectedApproverNik}
                     onChange={(e) => setSelectedApproverNik(e.target.value)}
                     className="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2.5 font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition shadow-sm"
                   >
-                    {availableApprovers.map((emp) => (
+                    {(isFastTrack ? availableReviewers : availableApprovers).map((emp) => (
                       <option key={emp.nik} value={emp.nik}>
                         {emp.name} — {emp.position} ({emp.department})
                       </option>
@@ -672,11 +710,11 @@ export default function NewRegistrationView() {
                 </div>
               </div>
 
-              {selectedReviewerNik === selectedApproverNik && (
+              {!isFastTrack && selectedReviewerNik === selectedApproverNik && (
                 <div className="p-2.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-lg flex items-start gap-2 text-xs text-amber-800 dark:text-amber-300">
                   <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
                   <p className="leading-relaxed">
-                    <strong className="font-semibold">Catatan Kepatuhan ISO:</strong> Reviewer dan Approver yang dipilih adalah pejabat yang sama (<strong>{activeReviewer?.name}</strong>). Untuk memenuhi prinsip <em>Four-Eyes</em> / pemisahan kewenangan, disarankan memilih General Manager atau Direksi sebagai pengesah.
+                    <strong className="font-semibold">Catatan Kepatuhan ISO:</strong> Reviewer dan Approver yang dipilih adalah pejabat yang sama (<strong>{activeReviewer?.name}</strong>). Untuk Level {docLevel}, disarankan memilih {docLevel === 1 ? 'Direksi' : 'General Manager atau MR'} sebagai pengesah.
                   </p>
                 </div>
               )}
@@ -824,11 +862,10 @@ export default function NewRegistrationView() {
                 <FileCheck className="w-4 h-4 text-emerald-400" />
                 RINGKASAN PENGAJUAN
               </h3>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase border ${
-                title.trim()
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase border ${title.trim()
                   ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30'
                   : 'bg-amber-500/20 text-amber-300 border-amber-400/30'
-              }`}>
+                }`}>
                 {title.trim() ? 'Siap Diajukan' : 'Belum Lengkap'}
               </span>
             </div>
@@ -863,14 +900,17 @@ export default function NewRegistrationView() {
                 </div>
               </div>
 
-              {/* 2. Alur Persetujuan Dokumen - 4 Tahap ISO */}
+              {/* 2. Alur Persetujuan Dokumen - Dinamis berdasarkan Level ISO */}
               <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">
                     Pihak yang Menyetujui
                   </span>
-                  <span className="text-[9.5px] font-semibold text-blue-600 dark:text-blue-400 font-mono">
-                    4 Tahap ISO
+                  <span className={`text-[9.5px] font-bold font-mono px-2 py-0.5 rounded ${isFastTrack
+                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                      : 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                    }`}>
+                    {isFastTrack ? '3 Tahap (Jalur Cepat)' : '4 Tahap ISO'}
                   </span>
                 </div>
 
@@ -888,50 +928,73 @@ export default function NewRegistrationView() {
                     </div>
                   </div>
 
-                  {/* Step 2: Reviewer */}
+                  {/* Step 2 */}
                   <div className="flex items-start gap-2">
                     <span className="w-4 h-4 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-[9px] flex items-center justify-center shrink-0 mt-0.5">
                       2
                     </span>
-                    <div className="min-w-0">
-                      <span className="text-[10px] text-slate-400 block">Diperiksa oleh (Atasan):</span>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[10px] text-slate-400 block">
+                        {docLevel === 1
+                          ? 'Diverifikasi Format (Doc Control):'
+                          : isFastTrack
+                            ? 'Telaah & Pengesahan Teknis (Atasan):'
+                            : 'Diperiksa oleh (Atasan):'}
+                      </span>
                       <span className="font-bold text-slate-800 dark:text-slate-200 text-xs block truncate">
-                        {activeReviewer?.name || '-'}
+                        {docLevel === 1 ? (selectedVerifierTeam || 'Document Control Team') : (activeReviewer?.name || '-')}
                       </span>
                     </div>
                   </div>
 
-                  {/* Step 3: Doc Control */}
+                  {/* Step 3 */}
                   <div className="flex items-start gap-2">
-                    <span className="w-4 h-4 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-[9px] flex items-center justify-center shrink-0 mt-0.5">
+                    <span className={`w-4 h-4 rounded-full text-white font-bold text-[9px] flex items-center justify-center shrink-0 mt-0.5 ${isFastTrack ? 'bg-emerald-600' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                      }`}>
                       3
                     </span>
                     <div className="min-w-0 flex-1">
-                      <span className="text-[10px] text-slate-400 block">Diverifikasi oleh (Doc Control):</span>
-                      <span className="font-bold text-slate-800 dark:text-slate-200 text-xs truncate">
-                        {selectedVerifierTeam || 'Document Control Team'}
+                      <span className="text-[10px] text-slate-400 block">
+                        {docLevel === 1
+                          ? 'Ditelaah Mutu ISO (MR):'
+                          : isFastTrack
+                            ? 'Verifikasi & Rilis Aktif (DCO):'
+                            : 'Diverifikasi oleh (Doc Control):'}
+                      </span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 text-xs truncate block">
+                        {docLevel === 1 ? (activeReviewer?.name || '-') : isFastTrack ? (selectedVerifierTeam || 'Document Control Team') : (selectedVerifierTeam || 'Document Control Team')}
                       </span>
                     </div>
                   </div>
 
-                  {/* Step 4: Approver */}
-                  <div className="flex items-start gap-2">
-                    <span className="w-4 h-4 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-[9px] flex items-center justify-center shrink-0 mt-0.5">
-                      4
-                    </span>
-                    <div className="min-w-0">
-                      <span className="text-[10px] text-slate-400 block">Disahkan oleh (MR / GM):</span>
-                      <span className="font-bold text-slate-800 dark:text-slate-200 text-xs block truncate">
-                        {activeApprover?.name || '-'}
+                  {/* Step 4: Approver (Khusus Level 1 & 2) */}
+                  {!isFastTrack && (
+                    <div className="flex items-start gap-2">
+                      <span className="w-4 h-4 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-[9px] flex items-center justify-center shrink-0 mt-0.5">
+                        4
                       </span>
+                      <div className="min-w-0">
+                        <span className="text-[10px] text-slate-400 block">
+                          Disahkan oleh ({docLevel === 1 ? 'Direktur Utama / GM' : 'MR'}):
+                        </span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 text-xs block truncate">
+                          {activeApprover?.name || '-'}
+                        </span>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
-                {selectedReviewerNik === selectedApproverNik && (
+                {!isFastTrack && selectedReviewerNik === selectedApproverNik && (
                   <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center gap-1.5 text-[10px] text-amber-600 dark:text-amber-400">
                     <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                     <span>Reviewer & Approver sama: {activeReviewer?.name}</span>
+                  </div>
+                )}
+
+                {isFastTrack && (
+                  <div className="pt-2 border-t border-emerald-200/80 dark:border-emerald-900/60 text-[10.5px] text-emerald-700 dark:text-emerald-400 flex items-center gap-1 font-medium">
+                    <span>⚡ Berkas Level {docLevel} langsung aktif setelah verifikasi DCO.</span>
                   </div>
                 )}
               </div>
