@@ -18,7 +18,7 @@ import {
   ChevronsLeft,
   ChevronsRight
 } from 'lucide-react';
-import Badge from '../common/Badge';
+import Badge, { CompanyBadge } from '../common/Badge';
 import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
 import { exportToExcel, exportToCSV, exportMasterRegisterPDF } from '../../utils/exportUtils';
@@ -28,6 +28,8 @@ export default function AllDocumentsView() {
     documents,
     departments,
     documentTypes,
+    companies,
+    selectedCompanyFilter,
     systemSettings,
     setViewingDocument,
     setSelectedDocForRevision,
@@ -58,13 +60,15 @@ export default function AllDocumentsView() {
       const matchesSearch = doc.docNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             doc.creator.toLowerCase().includes(searchTerm.toLowerCase());
+      const docCompany = (doc.companyCode || doc.docNumber?.split('-')[0] || 'DJI').toUpperCase();
+      const matchesCompany = selectedCompanyFilter === 'ALL' || docCompany === selectedCompanyFilter;
       const matchesDept = filterDept === 'ALL' || doc.department === filterDept;
       const matchesType = filterType === 'ALL' || doc.type === filterType;
       const matchesStatus = filterStatus === 'ALL' || doc.status === filterStatus;
 
-      return matchesSearch && matchesDept && matchesType && matchesStatus;
+      return matchesSearch && matchesCompany && matchesDept && matchesType && matchesStatus;
     });
-  }, [documents, searchTerm, filterDept, filterType, filterStatus]);
+  }, [documents, searchTerm, filterDept, filterType, filterStatus, selectedCompanyFilter]);
 
   // Reset ke halaman 1 saat filter atau pageSize berubah
   useEffect(() => {
@@ -251,7 +255,10 @@ export default function AllDocumentsView() {
                   <tr key={doc.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
                     <td className="py-3 px-3.5 text-center text-slate-400 font-medium">{startIndex + idx + 1}</td>
                     <td className="py-3 px-3.5 font-bold font-mono text-slate-900 dark:text-white whitespace-nowrap">
-                      {doc.docNumber}
+                      <div className="flex items-center gap-1.5">
+                        <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
+                        <span>{doc.docNumber}</span>
+                      </div>
                     </td>
                     <td className="py-3 px-3.5 font-medium text-slate-800 dark:text-slate-200 max-w-[200px] truncate" title={doc.title}>
                       {doc.title}

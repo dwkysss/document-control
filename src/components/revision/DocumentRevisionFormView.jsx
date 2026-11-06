@@ -48,7 +48,6 @@ export default function DocumentRevisionFormView() {
   const [revisedContent, setRevisedContent] = useState('');
   const [fileAttachment, setFileAttachment] = useState(null);
   const isDcoOrAdmin = currentUser?.role === 'doc_control' || currentUser?.role === 'admin' || currentUser?.role === 'approver';
-  const [directPublish, setDirectPublish] = useState(false);
 
   const currentDoc = documents.find(d => d.id === targetDocId);
 
@@ -241,7 +240,6 @@ export default function DocumentRevisionFormView() {
         approverPosition: activeApprover?.position || 'GENERAL MANAGER',
         content: revisedContent,
         isDraft,
-        directPublish: isDcoOrAdmin ? directPublish : false,
         fileName: fileAttachment ? fileAttachment.name : `${newDocNumber}.pdf`,
         fileSize: fileAttachment ? fileAttachment.size : null,
         fileType: fileAttachment ? fileAttachment.type : null,
@@ -252,9 +250,6 @@ export default function DocumentRevisionFormView() {
       if (isDraft) {
         setActiveMenu('reg-draft');
         setBreadcrumbs(['Dashboard', 'Registrasi Dokumen', 'Draft']);
-      } else if (isDcoOrAdmin && directPublish) {
-        setActiveMenu('ctrl-all');
-        setBreadcrumbs(['Dashboard', 'Master Dokumen', 'Semua Dokumen']);
       } else {
         setActiveMenu('reg-pending');
         setBreadcrumbs(['Dashboard', 'Registrasi Dokumen', 'Menunggu Verifikasi']);
@@ -537,57 +532,17 @@ export default function DocumentRevisionFormView() {
 
               {/* Mode DCO & Admin */}
               {isDcoOrAdmin && (
-                <div className={`p-4 rounded-xl border transition-all space-y-3 ${
-                  directPublish
-                    ? 'bg-emerald-50/70 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/60'
-                    : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700'
-                }`}>
+                <div className="p-3.5 bg-sky-50/70 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800 rounded-xl space-y-2">
                   <div className="flex items-start gap-2.5">
-                    <ShieldCheck className={`w-4 h-4 flex-shrink-0 mt-0.5 ${
-                      directPublish
-                        ? 'text-emerald-600 dark:text-emerald-400'
-                        : 'text-blue-600 dark:text-blue-400'
-                    }`} />
+                    <ShieldCheck className="w-4 h-4 text-sky-600 dark:text-sky-400 flex-shrink-0 mt-0.5" />
                     <div className="text-xs">
-                      <div className="flex items-center gap-2">
-                        <p className={`font-bold ${
-                          directPublish
-                            ? 'text-emerald-900 dark:text-emerald-200'
-                            : 'text-slate-900 dark:text-white'
-                        }`}>
-                          Mode Revisi Document Control
-                        </p>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
-                          directPublish
-                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
-                            : 'bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300 border-blue-200 dark:border-blue-700'
-                        }`}>
-                          {directPublish ? 'Langsung Terbit (Bypass)' : 'Alur Persetujuan'}
-                        </span>
-                      </div>
-                      <p className="text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                        Sebagai DCO/Admin, jika naskah revisi sudah diverifikasi dan disetujui fisik, pengajuan dapat langsung diterbitkan atau diproses melalui alur persetujuan.
+                      <p className="font-bold text-sky-900 dark:text-sky-200">
+                        Mode Pengajuan Revisi Document Control
+                      </p>
+                      <p className="text-sky-800 dark:text-sky-300 mt-0.5 leading-relaxed">
+                        Sebagai Document Control Officer (DCO), revisi yang Anda daftarkan otomatis diverifikasi tata naskahnya dan langsung diteruskan ke Management Representative / General Manager (<strong>{activeApprover?.name || 'Approver'}</strong>) untuk pengesahan resmi.
                       </p>
                     </div>
-                  </div>
-
-                  <div className="pt-2.5 border-t border-slate-200 dark:border-slate-700/80">
-                    <label className="flex items-start gap-2.5 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={directPublish}
-                        onChange={(e) => setDirectPublish(e.target.checked)}
-                        className="w-4 h-4 mt-0.5 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
-                      />
-                      <div>
-                        <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                          Revisi telah disahkan fisik / bertanda tangan basah
-                        </span>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-                          Centang opsi ini jika naskah revisi sudah ditandatangani basah oleh pejabat berwenang. Revisi baru akan langsung <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">AKTIF</strong> dan versi lama ({currentDoc.docNumber}) otomatis diubah menjadi <strong className="text-rose-600 dark:text-rose-400 font-semibold">OBSOLETE</strong>.
-                        </p>
-                      </div>
-                    </label>
                   </div>
                 </div>
               )}
@@ -605,23 +560,10 @@ export default function DocumentRevisionFormView() {
                 <button
                   type="button"
                   onClick={() => handleSubmitRevision(false)}
-                  className={`flex items-center gap-2 px-6 py-2.5 text-xs font-bold text-white rounded-lg transition shadow-sm hover:shadow cursor-pointer ${
-                    directPublish
-                      ? 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 shadow-emerald-600/20'
-                      : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-blue-600/20'
-                  }`}
+                  className="flex items-center gap-2 px-6 py-2.5 text-xs font-bold text-white rounded-lg transition shadow-sm hover:shadow cursor-pointer bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-blue-600/20"
                 >
-                  {directPublish ? (
-                    <>
-                      <ShieldCheck className="w-4 h-4" />
-                      Terbitkan Langsung Revisi (Aktif)
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4" />
-                      Ajukan Revisi Dokumen
-                    </>
-                  )}
+                  <Send className="w-4 h-4" />
+                  Ajukan Revisi Dokumen
                 </button>
               </div>
             </div>
@@ -669,7 +611,7 @@ export default function DocumentRevisionFormView() {
                 <span>Status Awal:</span>
                 <span className="font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1">
                   <Clock className="w-3 h-3 text-blue-500" />
-                  {directPublish ? 'Langsung Terbit (Aktif)' : 'Menunggu Review Atasan'}
+                  {isDcoOrAdmin ? 'Menunggu Pengesahan MR' : 'Menunggu Review Atasan'}
                 </span>
               </div>
 
@@ -777,16 +719,9 @@ export default function DocumentRevisionFormView() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <span className="text-[9.5px] text-slate-400 block">Diverifikasi oleh (Doc Control):</span>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-bold text-slate-800 dark:text-slate-200 text-xs truncate">
-                          {selectedVerifierTeam || 'Document Control Team'}
-                        </span>
-                        {directPublish && (
-                          <span className="text-[8.5px] px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold">
-                            Bypass Fisik
-                          </span>
-                        )}
-                      </div>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 text-xs truncate">
+                        {selectedVerifierTeam || 'Document Control Team'}
+                      </span>
                     </div>
                   </div>
 

@@ -49,3 +49,26 @@ export default function Badge({ status, size = 'md' }) {
     </span>
   );
 }
+
+export function CompanyBadge({ companyCode, size = 'sm' }) {
+  const code = (companyCode || 'DJI').toUpperCase();
+  const getStyle = () => {
+    switch (code) {
+      case 'DJI':
+        return 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800';
+      case 'UMI':
+        return 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-800';
+      case 'IMK':
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800';
+      default:
+        return 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700';
+    }
+  };
+
+  return (
+    <span className={`inline-flex items-center gap-1 font-mono font-bold rounded tracking-wider border px-1.5 py-0.5 text-[10px] ${getStyle()}`}>
+      <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70"></span>
+      {code}
+    </span>
+  );
+}

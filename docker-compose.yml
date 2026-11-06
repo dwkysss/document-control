@@ -1,0 +1,99 @@
+version: '3.8'
+
+# ==============================================================================
+# ISO 9001:2015 Document Control System - Multi-Company VPS Docker Compose
+# Standard Operating Procedure (SOP) compliant:
+# 1. User Isolation & 127.0.0.1 Loopback binding (Zero Port Collision)
+# 2. Internal Virtual Network (PostgreSQL port 5432 is NEVER exposed to internet)
+# 3. Shared Uploads Storage Volume (Zero HTTP overhead)
+# 4. Strict Log Rotation (max 3 files @ 10MB = 30MB)
+# ==============================================================================
+
+services:
+  # 1. PostgreSQL 16 Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: doccontrol-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-appuser}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-appsecurepassword}
+      POSTGRES_DB: ${DB_NAME:-doccontroldb}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-appuser} -d ${DB_NAME:-doccontroldb}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - doccontrol-net
+
+  # 2. Node.js & Express API Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: doccontrol-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 5001
+      DATABASE_URL: postgresql://${DB_USER:-appuser}:${DB_PASSWORD:-appsecurepassword}@postgres:5432/${DB_NAME:-doccontroldb}
+      UPLOAD_DIR: /app/public/uploads
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
+    ports:
+      # Bound to loopback 127.0.0.1 only (Zero port collision on public host)
+      - "127.0.0.1:${BACKEND_PORT:-5005}:5001"
+    volumes:
+      # Mount shared persistent uploads volume with Read/Write access
+      - ./uploads:/app/public/uploads
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - doccontrol-net
+
+  # 3. React/Vite Frontend with Nginx
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ""
+    container_name: doccontrol-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      # Bound to loopback 127.0.0.1 only
+      - "127.0.0.1:${APP_PORT:-3005}:80"
+    volumes:
+      # Mount shared persistent uploads volume with Read-Only (:ro) access
+      - ./uploads:/usr/share/nginx/html/uploads:ro
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - doccontrol-net
+
+volumes:
+  postgres_data:
+    name: doccontrol_postgres_data
+
+networks:
+  doccontrol-net:
+    name: doccontrol_network
+    driver: bridge

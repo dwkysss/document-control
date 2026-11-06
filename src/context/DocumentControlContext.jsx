@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import confetti from 'canvas-confetti';
 import {
+  initialCompanies,
   initialDepartments,
   initialDocumentTypes,
   initialEmployees,
@@ -18,7 +19,21 @@ export function DocumentControlProvider({ children }) {
   const [isLoadingCloud, setIsLoadingCloud] = useState(isSupabaseConfigured);
 
   // 1. Core State with LocalStorage Caching & Cloud Fallback
-  const [documents, setDocuments] = useState(() => {
+  const [companies, setCompanies] = useState(() => {
+    const saved = localStorage.getItem('dji_dms_companies');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return initialCompanies;
+  });
+
+  const [selectedCompanyFilter, setSelectedCompanyFilter] = useState('ALL');
+
+  // Master Raw Documents (Holding all records in cache / database)
+  const [rawDocuments, setRawDocuments] = useState(() => {
     const saved = localStorage.getItem('dji_dms_documents');
     return saved ? JSON.parse(saved) : initialDocuments;
   });
@@ -69,25 +84,23 @@ export function DocumentControlProvider({ children }) {
     return initialDocumentTypes;
   });
 
-  const [employees, setEmployees] = useState(() => {
+  // Master Raw Employees (Holding all personnel across all companies)
+  const [rawEmployees, setRawEmployees] = useState(() => {
     const saved = localStorage.getItem('dji_dms_employees');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         const dummyNiks = [
           '123456', '123457', '123458', '123459', '123460', '123461', '123462', 'DJI000001',
-          'DJI042211', 'DJI052212', 'DJI062213' // Mock NIKs to exclude
+          'DJI042211', 'DJI052212', 'DJI062213'
         ];
         let cleaned = parsed
           .filter(e => !dummyNiks.includes(String(e.nik || '').trim()))
-          .map(e => {
-            if (e.nik === 'DJI092115') return { ...e, department: 'MGMT', position: 'GENERAL MANAGER', role: 'reviewer' };
-            if (e.nik === 'DJI022203') return { ...e, role: 'reviewer', position: 'KEPALA BAGIAN PRODUKSI', department: 'PRODUKSI' };
-            if (e.nik === 'DJI012548') return { ...e, role: 'approver', position: 'MANAGER HRGA & MR', department: 'HRGA' };
-            if (e.nik === 'DJI022550') return { ...e, role: 'doc_control', position: 'DOCUMENT CONTROL OFFICER' };
-            if (e.nik === 'DJI102216') return { ...e, role: 'staff', position: 'STAFF ACCOUNTING FINANCE' };
-            return e;
-          });
+          .map(e => ({
+            ...e,
+            companyCode: e.companyCode || (e.nik?.startsWith('UMI') ? 'UMI' : e.nik?.startsWith('IMK') ? 'IMK' : (e.nik === '123463' ? 'ALL' : 'DJI')),
+            companyName: e.companyName || (e.companyCode === 'UMI' ? 'PT Ultimo Moda Indotex' : e.companyCode === 'IMK' ? 'PT IMK' : (e.companyCode === 'ALL' ? 'Holding (Multi-Company)' : 'PT Dentelle Jaya Infinitex'))
+          }));
 
         initialEmployees.forEach(initEmp => {
           if (!cleaned.some(e => String(e?.nik || '').trim() === String(initEmp.nik).trim())) {
@@ -116,6 +129,7 @@ export function DocumentControlProvider({ children }) {
       const createdDate = doc.createdDate || '2026-09-20';
       const docNum = doc.docNumber || '-';
       const title = doc.title || '-';
+      const docComp = doc.companyCode || (docNum.includes('-') ? docNum.split('-')[0] : (creatorNik.startsWith('UMI') ? 'UMI' : creatorNik.startsWith('IMK') ? 'IMK' : 'DJI'));
 
       // 1. Log Registrasi / Usulan Awal
       logs.push({
@@ -123,6 +137,7 @@ export function DocumentControlProvider({ children }) {
         timestamp: `${createdDate} 08:30:00`,
         user: creatorName,
         nik: creatorNik,
+        companyCode: docComp,
         action: doc.status === 'DRAFT' ? 'SAVE_DRAFT' : 'SUBMIT_VERIFICATION',
         docNumber: docNum,
         docTitle: title,
@@ -140,6 +155,7 @@ export function DocumentControlProvider({ children }) {
           timestamp: `${effectiveDate} 14:15:00`,
           user: approverName,
           nik: approverName.includes('BABAN') ? 'DJI012548' : (approverName.includes('DENI') ? 'DJI092115' : 'DJI012548'),
+          companyCode: docComp,
           action: 'APPROVE_DOCUMENT',
           docNumber: docNum,
           docTitle: title,
@@ -151,6 +167,7 @@ export function DocumentControlProvider({ children }) {
           timestamp: `${createdDate} 16:45:00`,
           user: 'BABAN RACHMAT SUBAGJA',
           nik: 'DJI012548',
+          companyCode: docComp,
           action: 'REJECT_DOCUMENT',
           docNumber: docNum,
           docTitle: title,
@@ -162,6 +179,7 @@ export function DocumentControlProvider({ children }) {
           timestamp: `${createdDate} 11:20:00`,
           user: 'SYAHLA NOVIYANA',
           nik: 'DJI022550',
+          companyCode: docComp,
           action: 'CANCEL_DOCUMENT',
           docNumber: docNum,
           docTitle: title,
@@ -173,7 +191,7 @@ export function DocumentControlProvider({ children }) {
     return logs.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
   };
 
-  const [auditLogs, setAuditLogs] = useState(() => {
+  const [rawAuditLogs, setRawAuditLogs] = useState(() => {
     const saved = localStorage.getItem('dji_dms_auditlogs');
     if (saved) {
       try {
@@ -216,12 +234,119 @@ export function DocumentControlProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       const saved = localStorage.getItem('dji_auth_user');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (!parsed.companyCode) {
+          parsed.companyCode = parsed.nik?.startsWith('UMI') ? 'UMI' : parsed.nik?.startsWith('IMK') ? 'IMK' : (parsed.nik === '123463' ? 'ALL' : 'DJI');
+        }
+        return parsed;
+      }
     } catch (e) {
       console.warn('Error reading saved session:', e);
     }
     return null; // Start logged out so user logs in with NIP
   });
+
+  // Strict Tenant Isolation: Whenever currentUser changes, enforce company scope
+  useEffect(() => {
+    if (currentUser?.companyCode && currentUser.companyCode !== 'ALL') {
+      setSelectedCompanyFilter(currentUser.companyCode);
+    }
+  }, [currentUser?.companyCode]);
+
+  // Scoped documents: Users of company A can NEVER see company B documents
+  const documents = useMemo(() => {
+    if (currentUser?.companyCode && currentUser.companyCode !== 'ALL') {
+      const userCompany = currentUser.companyCode.toUpperCase();
+      return rawDocuments.filter(d => {
+        const docCompany = (d.companyCode || d.docNumber?.split('-')[0] || 'DJI').toUpperCase();
+        return docCompany === userCompany;
+      });
+    }
+
+    if (selectedCompanyFilter !== 'ALL') {
+      const targetCompany = selectedCompanyFilter.toUpperCase();
+      return rawDocuments.filter(d => {
+        const docCompany = (d.companyCode || d.docNumber?.split('-')[0] || 'DJI').toUpperCase();
+        return docCompany === targetCompany;
+      });
+    }
+
+    return rawDocuments;
+  }, [rawDocuments, currentUser?.companyCode, selectedCompanyFilter]);
+
+  // Scoped employees: Users of company A only see company A employees (+ Holding Admin ALL)
+  const employees = useMemo(() => {
+    if (currentUser?.companyCode && currentUser.companyCode !== 'ALL') {
+      const userCompany = currentUser.companyCode.toUpperCase();
+      return rawEmployees.filter(e => {
+        const empCompany = (e.companyCode || 'DJI').toUpperCase();
+        return empCompany === userCompany || empCompany === 'ALL';
+      });
+    }
+
+    if (selectedCompanyFilter !== 'ALL') {
+      const targetCompany = selectedCompanyFilter.toUpperCase();
+      return rawEmployees.filter(e => {
+        const empCompany = (e.companyCode || 'DJI').toUpperCase();
+        return empCompany === targetCompany || empCompany === 'ALL';
+      });
+    }
+
+    return rawEmployees;
+  }, [rawEmployees, currentUser?.companyCode, selectedCompanyFilter]);
+
+  // State setters that update raw state and persist to localStorage
+  const setDocuments = (valOrFn) => {
+    setRawDocuments(prev => {
+      const updated = typeof valOrFn === 'function' ? valOrFn(prev) : valOrFn;
+      try {
+        localStorage.setItem('dji_dms_documents', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+  };
+
+  const setEmployees = (valOrFn) => {
+    setRawEmployees(prev => {
+      const updated = typeof valOrFn === 'function' ? valOrFn(prev) : valOrFn;
+      try {
+        localStorage.setItem('dji_dms_employees', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+  };
+
+  // Scoped audit logs: Users of company A only see audit logs of company A (+ Holding Admin ALL)
+  const auditLogs = useMemo(() => {
+    if (currentUser?.companyCode && currentUser.companyCode !== 'ALL') {
+      const userCompany = currentUser.companyCode.toUpperCase();
+      return rawAuditLogs.filter(log => {
+        const logComp = (log.companyCode || (log.docNumber?.split('-')[0]) || (log.nik?.startsWith('UMI') ? 'UMI' : log.nik?.startsWith('IMK') ? 'IMK' : 'DJI')).toUpperCase();
+        return logComp === userCompany;
+      });
+    }
+
+    if (selectedCompanyFilter !== 'ALL') {
+      const targetCompany = selectedCompanyFilter.toUpperCase();
+      return rawAuditLogs.filter(log => {
+        const logComp = (log.companyCode || (log.docNumber?.split('-')[0]) || (log.nik?.startsWith('UMI') ? 'UMI' : log.nik?.startsWith('IMK') ? 'IMK' : 'DJI')).toUpperCase();
+        return logComp === targetCompany;
+      });
+    }
+
+    return rawAuditLogs;
+  }, [rawAuditLogs, currentUser?.companyCode, selectedCompanyFilter]);
+
+  const setAuditLogs = (valOrFn) => {
+    setRawAuditLogs(prev => {
+      const updated = typeof valOrFn === 'function' ? valOrFn(prev) : valOrFn;
+      try {
+        localStorage.setItem('dji_dms_auditlogs', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+  };
 
   // Login handler by Email or NIP
   const login = (identifier, password = '') => {
@@ -231,7 +356,7 @@ export function DocumentControlProvider({ children }) {
       return { success: false, message: 'Identitas akun wajib diisi.' };
     }
 
-    const foundEmp = employees.find(
+    const foundEmp = rawEmployees.find(
       e => String(e.nik || '').trim().toLowerCase() === cleanId ||
            String(e.id || '').trim().toLowerCase() === cleanId ||
            String(e.email || '').trim().toLowerCase() === cleanId ||
@@ -249,6 +374,9 @@ export function DocumentControlProvider({ children }) {
     }
 
     setCurrentUser(foundEmp);
+    if (foundEmp.companyCode && foundEmp.companyCode !== 'ALL') {
+      setSelectedCompanyFilter(foundEmp.companyCode);
+    }
     try {
       localStorage.setItem('dji_auth_user', JSON.stringify(foundEmp));
     } catch (e) {
@@ -256,7 +384,7 @@ export function DocumentControlProvider({ children }) {
     }
 
     addAuditLog('USER_LOGIN', '-', '-', `Pengguna ${foundEmp.name} (${foundEmp.position} - ${foundEmp.role}) berhasil masuk ke sistem.`, foundEmp);
-    showToast(`Selamat datang, ${foundEmp.name}! Berhasil masuk sebagai ${foundEmp.position}.`, 'success');
+    showToast(`Selamat datang, ${foundEmp.name}! Berhasil masuk sebagai ${foundEmp.position} (${foundEmp.companyCode || 'DJI'}).`, 'success');
     return { success: true, user: foundEmp };
   };
 
@@ -266,6 +394,7 @@ export function DocumentControlProvider({ children }) {
       addAuditLog('USER_LOGOUT', '-', '-', `Pengguna ${currentUser.name} keluar dari sistem.`);
     }
     setCurrentUser(null);
+    setSelectedCompanyFilter('ALL');
     try {
       localStorage.removeItem('dji_auth_user');
     } catch (e) {
@@ -313,6 +442,13 @@ export function DocumentControlProvider({ children }) {
   const canUserViewPendingDoc = (doc) => {
     if (!doc) return false;
     if (!currentUser) return false;
+
+    // Strict multi-tenant isolation: Users cannot view pending documents of other companies
+    if (currentUser.companyCode && currentUser.companyCode !== 'ALL') {
+      const userCompany = currentUser.companyCode.toUpperCase();
+      const docCompany = (doc.companyCode || doc.docNumber?.split('-')[0] || 'DJI').toUpperCase();
+      if (docCompany !== userCompany) return false;
+    }
 
     const userRole = currentUser.role || 'staff';
     // 0. Viewer tidak memiliki akses ke antrean verifikasi
@@ -363,6 +499,13 @@ export function DocumentControlProvider({ children }) {
   const canUserViewDraftDoc = (doc) => {
     if (!doc) return false;
     if (!currentUser) return false;
+
+    // Strict multi-tenant isolation: Users cannot view draft documents of other companies
+    if (currentUser.companyCode && currentUser.companyCode !== 'ALL') {
+      const userCompany = currentUser.companyCode.toUpperCase();
+      const docCompany = (doc.companyCode || doc.docNumber?.split('-')[0] || 'DJI').toUpperCase();
+      if (docCompany !== userCompany) return false;
+    }
 
     const userRole = currentUser.role || 'staff';
     if (userRole === 'viewer') return false;
@@ -525,80 +668,96 @@ export function DocumentControlProvider({ children }) {
     return new Date().toTimeString().slice(0, 8);
   };
 
-  // Helper conversion for Supabase snake_case schema
-  const toSnakeCaseDoc = (d) => ({
-    id: d.id,
-    doc_number: d.docNumber,
-    title: d.title || 'DOKUMEN TANPA JUDUL',
-    type: d.type || 'SOP',
-    type_name: d.typeName || d.type || 'SOP',
-    department: d.department || 'HRGA',
-    creator: d.creator || 'Staff',
-    creator_nik: d.creatorNik || null,
-    creator_position: d.creatorPosition || null,
-    seq_number: d.seqNumber || '01',
-    revision: d.revision || '00',
-    status: d.status || 'DRAFT',
-    created_date: sanitizeDate(d.createdDate) || new Date().toISOString().slice(0, 10),
-    created_time: sanitizeTime(d.createdTime),
-    effective_date: sanitizeDate(d.effectiveDate),
-    verifier_team: d.targetApprover ? `${d.verifierTeam || 'Document Control Team'} [Approver: ${d.targetApprover}]` : (d.verifierTeam || 'Document Control Team'),
-    notes: d.notes || null,
-    content: d.content || null,
-    file_name: d.fileName || null,
-    file_size: d.fileSize || null,
-    file_url: d.fileUrl || null,
-    file_type: d.fileType || null,
-    superseded_by: d.supersededBy || null,
-    obsolete_date: sanitizeDate(d.obsoleteDate),
-    change_reason: d.changeReason || null,
-    change_description: d.changeDescription || null,
-    rejection_reason: d.rejectionReason || null,
-    rejected_by: d.rejectedBy || null,
-    rejected_date: d.rejectedDate || null,
-    approved_by: d.approvedBy || null,
-    approved_date: sanitizeDate(d.approvedDate),
-    revision_history: Array.isArray(d.revisionHistory) ? d.revisionHistory : [],
-    updated_at: new Date().toISOString()
-  });
+  // Helper conversion for database snake_case schema
+  const toSnakeCaseDoc = (d) => {
+    const inferredCompanyCode = d.companyCode || (d.docNumber ? d.docNumber.split('-')[0] : 'DJI');
+    const matchedCompany = companies.find(c => c.code === inferredCompanyCode);
+    const inferredCompanyName = d.companyName || matchedCompany?.name || (inferredCompanyCode === 'UMI' ? 'PT Ultimo Moda Indotex' : inferredCompanyCode === 'IMK' ? 'PT IMK' : 'PT Dentelle Jaya Infinitex');
 
-  const fromSnakeCaseDoc = (d) => ({
-    id: d.id,
-    docNumber: d.doc_number,
-    title: d.title,
-    type: d.type,
-    typeName: d.type_name,
-    department: d.department,
-    creator: d.creator,
-    creatorNik: d.creator_nik,
-    creatorPosition: d.creator_position,
-    seqNumber: d.seq_number,
-    revision: d.revision,
-    status: d.status,
-    createdDate: d.created_date,
-    createdTime: d.created_time,
-    effectiveDate: d.effective_date,
-    verifierTeam: d.verifier_team ? d.verifier_team.replace(/\s*\[Approver:[^\]]+\]/, '').trim() : 'Document Control Team',
-    targetApprover: d.target_approver || (d.verifier_team && d.verifier_team.includes('[Approver:') ? d.verifier_team.split('[Approver:')[1]?.replace(']', '').trim() : null),
-    notes: d.notes,
-    content: d.content,
-    fileName: d.file_name,
-    fileSize: d.file_size,
-    fileUrl: d.file_url,
-    fileType: d.file_type,
-    supersededBy: d.superseded_by,
-    obsoleteDate: d.obsolete_date,
-    changeReason: d.change_reason,
-    changeDescription: d.change_description,
-    rejectionReason: d.rejection_reason,
-    rejectedBy: d.rejected_by,
-    rejectedDate: d.rejected_date,
-    approvedBy: d.approved_by,
-    approvedDate: d.approved_date,
-    revisionHistory: d.revision_history || []
-  });
+    return {
+      id: d.id,
+      doc_number: d.docNumber,
+      company_code: inferredCompanyCode,
+      company_name: inferredCompanyName,
+      title: d.title || 'DOKUMEN TANPA JUDUL',
+      type: d.type || 'SOP',
+      type_name: d.typeName || d.type || 'SOP',
+      department: d.department || 'HRGA',
+      creator: d.creator || 'Staff',
+      creator_nik: d.creatorNik || null,
+      creator_position: d.creatorPosition || null,
+      seq_number: d.seqNumber || '01',
+      revision: d.revision || '00',
+      status: d.status || 'DRAFT',
+      created_date: sanitizeDate(d.createdDate) || new Date().toISOString().slice(0, 10),
+      created_time: sanitizeTime(d.createdTime),
+      effective_date: sanitizeDate(d.effectiveDate),
+      verifier_team: d.targetApprover ? `${d.verifierTeam || 'Document Control Team'} [Approver: ${d.targetApprover}]` : (d.verifierTeam || 'Document Control Team'),
+      notes: d.notes || null,
+      content: d.content || null,
+      file_name: d.fileName || null,
+      file_size: d.fileSize || null,
+      file_url: d.fileUrl || null,
+      file_type: d.fileType || null,
+      superseded_by: d.supersededBy || null,
+      obsolete_date: sanitizeDate(d.obsoleteDate),
+      change_reason: d.changeReason || null,
+      change_description: d.changeDescription || null,
+      rejection_reason: d.rejectionReason || null,
+      rejected_by: d.rejectedBy || null,
+      rejected_date: d.rejectedDate || null,
+      approved_by: d.approvedBy || null,
+      approved_date: sanitizeDate(d.approvedDate),
+      revision_history: Array.isArray(d.revisionHistory) ? d.revisionHistory : [],
+      updated_at: new Date().toISOString()
+    };
+  };
 
-  // 1.5 Fetch initial data from Supabase if configured
+  const fromSnakeCaseDoc = (d) => {
+    const inferredCompanyCode = d.company_code || (d.doc_number ? d.doc_number.split('-')[0] : 'DJI');
+    const matchedCompany = companies.find(c => c.code === inferredCompanyCode);
+    const inferredCompanyName = d.company_name || matchedCompany?.name || (inferredCompanyCode === 'UMI' ? 'PT Ultimo Moda Indotex' : inferredCompanyCode === 'IMK' ? 'PT IMK' : 'PT Dentelle Jaya Infinitex');
+
+    return {
+      id: d.id,
+      docNumber: d.doc_number,
+      companyCode: inferredCompanyCode,
+      companyName: inferredCompanyName,
+      title: d.title,
+      type: d.type,
+      typeName: d.type_name,
+      department: d.department,
+      creator: d.creator,
+      creatorNik: d.creator_nik,
+      creatorPosition: d.creator_position,
+      seqNumber: d.seq_number,
+      revision: d.revision,
+      status: d.status,
+      createdDate: d.created_date,
+      createdTime: d.created_time,
+      effectiveDate: d.effective_date,
+      verifierTeam: d.verifier_team ? d.verifier_team.replace(/\s*\[Approver:[^\]]+\]/, '').trim() : 'Document Control Team',
+      targetApprover: d.target_approver || (d.verifier_team && d.verifier_team.includes('[Approver:') ? d.verifier_team.split('[Approver:')[1]?.replace(']', '').trim() : null),
+      notes: d.notes,
+      content: d.content,
+      fileName: d.file_name,
+      fileSize: d.file_size,
+      fileUrl: d.file_url,
+      fileType: d.file_type,
+      supersededBy: d.superseded_by,
+      obsoleteDate: d.obsolete_date,
+      changeReason: d.change_reason,
+      changeDescription: d.change_description,
+      rejectionReason: d.rejection_reason,
+      rejectedBy: d.rejected_by,
+      rejectedDate: d.rejected_date,
+      approvedBy: d.approved_by,
+      approvedDate: d.approved_date,
+      revisionHistory: d.revision_history || []
+    };
+  };
+
+  // 1.5 Fetch initial data from self-hosted API (PostgreSQL)
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) {
       setIsLoadingCloud(false);
@@ -611,7 +770,7 @@ export function DocumentControlProvider({ children }) {
       setIsLoadingCloud(true);
       try {
         const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Supabase cloud fetch timeout (4s)')), 4000)
+          setTimeout(() => reject(new Error('API database fetch timeout (4s)')), 4000)
         );
 
         const fetchPromise = Promise.all([
@@ -621,7 +780,8 @@ export function DocumentControlProvider({ children }) {
           supabase.from('employees').select('*'),
           supabase.from('verifier_teams').select('*'),
           supabase.from('audit_logs').select('*').order('created_at', { ascending: false }),
-          supabase.from('system_settings').select('*').limit(1)
+          supabase.from('system_settings').select('*').limit(1),
+          supabase.from('companies').select('*')
         ]);
 
         const [
@@ -631,10 +791,16 @@ export function DocumentControlProvider({ children }) {
           { data: cloudEmps, error: empsErr },
           { data: cloudTeams, error: teamsErr },
           { data: cloudLogs, error: logsErr },
-          { data: cloudSettings, error: settingsErr }
+          { data: cloudSettings, error: settingsErr },
+          { data: cloudCompanies, error: companiesErr }
         ] = await Promise.race([fetchPromise, timeoutPromise]);
 
         if (!isMounted) return;
+
+        if (cloudCompanies && !companiesErr && cloudCompanies.length > 0) {
+          setCompanies(cloudCompanies);
+          localStorage.setItem('dji_dms_companies', JSON.stringify(cloudCompanies));
+        }
 
         if (cloudDocs && !docsErr) {
           setDocuments(cloudDocs.map(fromSnakeCaseDoc));
@@ -661,11 +827,12 @@ export function DocumentControlProvider({ children }) {
         }
         if (cloudTeams && !teamsErr) setVerifierTeams(cloudTeams);
         if (cloudLogs && !logsErr) {
-          setAuditLogs(cloudLogs.map(l => ({
+          setRawAuditLogs(cloudLogs.map(l => ({
             id: l.id,
             timestamp: l.timestamp,
             user: l.user_name,
             nik: l.nik,
+            companyCode: l.company_code || (l.doc_number?.split('-')[0]) || (l.nik?.startsWith('UMI') ? 'UMI' : l.nik?.startsWith('IMK') ? 'IMK' : 'DJI'),
             action: l.action,
             docNumber: l.doc_number,
             docTitle: l.doc_title,
@@ -690,7 +857,7 @@ export function DocumentControlProvider({ children }) {
           });
         }
       } catch (err) {
-        console.warn('Supabase cloud fetch warning, falling back to local cache:', err);
+        console.warn('Database fetch warning, falling back to local cache:', err);
       } finally {
         if (isMounted) setIsLoadingCloud(false);
       }
@@ -723,6 +890,10 @@ export function DocumentControlProvider({ children }) {
       }
     }
   }, [documents]);
+
+  useEffect(() => {
+    localStorage.setItem('dji_dms_companies', JSON.stringify(companies));
+  }, [companies]);
 
   useEffect(() => {
     localStorage.setItem('dji_dms_departments', JSON.stringify(departments));
@@ -803,8 +974,8 @@ export function DocumentControlProvider({ children }) {
   }, [verifierTeams]);
 
   useEffect(() => {
-    localStorage.setItem('dji_dms_auditlogs', JSON.stringify(auditLogs));
-  }, [auditLogs]);
+    localStorage.setItem('dji_dms_auditlogs', JSON.stringify(rawAuditLogs));
+  }, [rawAuditLogs]);
 
   useEffect(() => {
     localStorage.setItem('dji_dms_settings', JSON.stringify(systemSettings));
@@ -822,23 +993,43 @@ export function DocumentControlProvider({ children }) {
   const addAuditLog = (action, docNumber, docTitle, details, userOverride = null) => {
     const now = new Date();
     const activeUser = userOverride || currentUser || { name: 'Sistem', nik: '-' };
+    const userCompany = activeUser.companyCode || (activeUser.nik?.startsWith('UMI') ? 'UMI' : activeUser.nik?.startsWith('IMK') ? 'IMK' : 'DJI');
+    const docCompany = (docNumber && docNumber.includes('-') && docNumber !== '-') ? docNumber.split('-')[0] : userCompany;
+
     const newLog = {
       id: `log-${Date.now()}`,
       timestamp: `${now.toISOString().slice(0, 10)} ${now.toLocaleTimeString('id-ID')}`,
       user: activeUser.name || 'Sistem',
       nik: activeUser.nik || '-',
+      companyCode: docCompany || userCompany || 'DJI',
       action,
       docNumber,
       docTitle,
       details
     };
-    setAuditLogs(prev => [newLog, ...prev]);
+    setRawAuditLogs(prev => [newLog, ...prev]);
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.from('audit_logs').upsert([{
+        id: newLog.id,
+        timestamp: newLog.timestamp,
+        user_name: newLog.user,
+        nik: newLog.nik,
+        company_code: newLog.companyCode,
+        action: newLog.action,
+        doc_number: newLog.docNumber,
+        doc_title: newLog.docTitle,
+        details: newLog.details
+      }]).then(({ error }) => {
+        if (error) console.warn('Supabase addAuditLog warning:', error);
+      });
+    }
   };
 
   // Sinkronisasi Jejak Audit dari dokumen yang sudah ada
   const syncAuditLogsFromDocuments = () => {
-    const generated = generateAuditLogsFromDocuments(documents);
-    setAuditLogs(generated);
+    const generated = generateAuditLogsFromDocuments(rawDocuments);
+    setRawAuditLogs(generated);
     localStorage.setItem('dji_dms_auditlogs', JSON.stringify(generated));
     showToast(`Berhasil menyinkronkan ${generated.length} entri jejak audit dari dokumen!`, 'success');
   };
@@ -867,15 +1058,18 @@ export function DocumentControlProvider({ children }) {
     const createdDate = now.toISOString().slice(0, 10);
     const createdTime = now.toLocaleTimeString('id-ID');
 
+    const compCode = docData.companyCode || (docData.docNumber ? docData.docNumber.split('-')[0] : (systemSettings.companyCode || 'DJI'));
+    const compName = docData.companyName || companies.find(c => c.code === compCode)?.name || (systemSettings.companyName || 'PT DJI');
+
     // Tentukan sequence number
     let seqNumber = docData.seqNumber;
     if (!seqNumber || seqNumber === '( Otomatis oleh sistem )') {
-      seqNumber = getNextSequenceNumber(documents, docData.type, docData.department);
+      seqNumber = getNextSequenceNumber(documents, docData.type, docData.department, compCode);
     }
 
     const revision = docData.revision || '00';
-    const docNumber = formatDocumentNumber({
-      companyCode: systemSettings.companyCode,
+    const docNumber = docData.docNumber || formatDocumentNumber({
+      companyCode: compCode,
       docType: docData.type,
       department: docData.department,
       seqNumber,
@@ -885,6 +1079,8 @@ export function DocumentControlProvider({ children }) {
     const newDoc = {
       id: docData.id || `doc-${Date.now()}`,
       docNumber,
+      companyCode: compCode,
+      companyName: compName,
       title: docData.title,
       type: docData.type,
       typeName: documentTypes.find(t => t.code === docData.type)?.name || docData.type,
@@ -943,14 +1139,17 @@ export function DocumentControlProvider({ children }) {
     const createdDate = now.toISOString().slice(0, 10);
     const createdTime = now.toLocaleTimeString('id-ID');
 
+    const compCode = docData.companyCode || (docData.docNumber ? docData.docNumber.split('-')[0] : (systemSettings.companyCode || 'DJI'));
+    const compName = docData.companyName || companies.find(c => c.code === compCode)?.name || (systemSettings.companyName || 'PT DJI');
+
     let seqNumber = docData.seqNumber;
     if (!seqNumber || seqNumber === '( Otomatis oleh sistem )') {
-      seqNumber = getNextSequenceNumber(documents, docData.type, docData.department);
+      seqNumber = getNextSequenceNumber(documents, docData.type, docData.department, compCode);
     }
 
     const revision = docData.revision || '00';
-    const docNumber = formatDocumentNumber({
-      companyCode: systemSettings.companyCode,
+    const docNumber = docData.docNumber || formatDocumentNumber({
+      companyCode: compCode,
       docType: docData.type,
       department: docData.department,
       seqNumber,
@@ -959,7 +1158,6 @@ export function DocumentControlProvider({ children }) {
 
     const isDcoOrAdmin = currentUser?.role === 'doc_control' || currentUser?.role === 'admin' || currentUser?.role === 'approver';
     const isReviewerUser = currentUser?.role === 'reviewer';
-    const isDirectPublish = Boolean(isDcoOrAdmin && docData.directPublish);
 
     let docStatus = 'REVIEW'; // Default for Staff/User: Menunggu Review Atasan/Kepala Dept
     let reviewedBy = null;
@@ -989,16 +1187,7 @@ export function DocumentControlProvider({ children }) {
       (docData.creator && currentUser?.name && (docData.creator.trim().toLowerCase() !== currentUser.name.trim().toLowerCase()))
     );
 
-    if (isDirectPublish) {
-      docStatus = 'AKTIF';
-      verifiedBy = currentUser?.name || 'Document Control';
-      verifiedDate = createdDate;
-      verificationNotes = 'Disahkan langsung melalui registrasi berkas bertanda tangan fisik / arsip master.';
-      effectiveDate = docData.effectiveDate || createdDate;
-      approvedBy = docData.targetApprover || currentUser?.name || 'Authorized Approver';
-      approvedDate = createdDate;
-      approvalNotes = 'Diterbitkan langsung sebagai Dokumen Aktif bertanda tangan basah.';
-    } else if (isResubmission) {
+    if (isResubmission) {
       // Dokumen ini merupakan pengajuan ulang setelah perbaikan / revisi.
       // Kembalikan ke tahap terakhir asalnya sebelum diminta revisi:
       let targetStage = 'REVIEW';
@@ -1092,6 +1281,8 @@ export function DocumentControlProvider({ children }) {
     const newDoc = {
       id: docData.id || `doc-${Date.now()}`,
       docNumber,
+      companyCode: compCode,
+      companyName: compName,
       title: docData.title,
       type: docData.type,
       typeName: documentTypes.find(t => t.code === docData.type)?.name || docData.type,
@@ -1145,8 +1336,6 @@ export function DocumentControlProvider({ children }) {
                 : docStatus === 'VERIFIKASI'
                 ? `Pengajuan ulang berkas hasil perbaikan format oleh ${currentUser.name}. Menunggu Verifikasi Format Document Control.`
                 : `Pengajuan ulang berkas hasil revisi oleh ${currentUser.name}. Menunggu Review Atasan Departemen (${docData.department}).`)
-            : isDirectPublish
-            ? `Penerbitan langsung dokumen aktif bertanda tangan fisik oleh ${currentUser.name}`
             : (docStatus === 'APPROVAL')
             ? `Pendaftaran oleh DCO & verifikasi format otomatis. Menunggu pengesahan ${docData.targetApprover || 'Approver'}`
             : (docStatus === 'VERIFIKASI')
@@ -1156,38 +1345,9 @@ export function DocumentControlProvider({ children }) {
       ]
     };
 
-    setDocuments(prev => {
-      let updatedList = prev.filter(d => d.id !== newDoc.id);
+    setDocuments(prev => [newDoc, ...prev.filter(d => d.id !== newDoc.id)]);
 
-      if (isDirectPublish) {
-        // Auto-obsolete older active revisions of same type, department, seqNumber
-        updatedList = updatedList.map(doc => {
-          if (
-            doc.type === newDoc.type &&
-            doc.department === newDoc.department &&
-            doc.seqNumber === newDoc.seqNumber &&
-            doc.status === 'AKTIF'
-          ) {
-            return {
-              ...doc,
-              status: 'OBSOLETE',
-              supersededBy: newDoc.docNumber,
-              obsoleteDate: createdDate,
-              notes: `${doc.notes ? doc.notes + ' ' : ''}[Otomatis Obsolete - digantikan oleh ${newDoc.docNumber}]`
-            };
-          }
-          return doc;
-        });
-      }
-
-      return [newDoc, ...updatedList];
-    });
-
-    if (isDirectPublish) {
-      addAuditLog('DIRECT_PUBLISH', newDoc.docNumber, newDoc.title, `Diterbitkan langsung sebagai Dokumen Aktif oleh ${currentUser.name}`);
-      addNotification('Penerbitan Dokumen Aktif', `${newDoc.docNumber} - ${newDoc.title} telah diterbitkan aktif langsung ke Master Dokumen.`, 'success', newDoc.id);
-      showToast(`Dokumen ${newDoc.docNumber} berhasil diterbitkan langsung sebagai Dokumen Aktif!`, 'success');
-    } else if (docStatus === 'APPROVAL') {
+    if (docStatus === 'APPROVAL') {
       addAuditLog('SUBMIT_APPROVAL', newDoc.docNumber, newDoc.title, `Didaftarkan oleh DCO, format lolos otomatis. Menunggu pengesahan ${newDoc.targetApprover || 'Approver'}`);
       addNotification('Pengajuan Pengesahan Dokumen', `${newDoc.docNumber} - ${newDoc.title} siap disahkan oleh ${newDoc.targetApprover || 'Approver'}.`, 'warning', newDoc.id);
       showToast(`Dokumen ${newDoc.docNumber} berhasil diajukan! Format lolos otomatis dan langsung diteruskan ke ${newDoc.targetApprover || 'Pejabat Penyetuju'}.`, 'success');
@@ -1596,12 +1756,11 @@ export function DocumentControlProvider({ children }) {
     });
 
     const isDcoOrAdmin = currentUser?.role === 'doc_control' || currentUser?.role === 'admin' || currentUser?.role === 'approver';
-    const isDirectPublish = Boolean(isDcoOrAdmin && revisionData.directPublish);
 
     // Best Practice ISO 9001:2015 Clause 7.5:
     // Pengajuan revisi oleh staff/pembuat dokumen masuk ke Tahap 1 (REVIEW Atasan Departemen).
     // Jika diajukan sendiri oleh Kepala Departemen (Reviewer), otomatis lanjut ke Tahap 2 (VERIFIKASI DCO).
-    // Jika directPublish (tanda tangan basah fisik), langsung AKTIF.
+    // Jika diajukan oleh DCO, otomatis lolos verifikasi format dan langsung lanjut ke Tahap 3 (APPROVAL MR).
     let docStatus = 'REVIEW';
     let reviewedBy = null;
     let reviewedDate = null;
@@ -1616,26 +1775,18 @@ export function DocumentControlProvider({ children }) {
 
     if (revisionData.isDraft) {
       docStatus = 'DRAFT';
-    } else if (isDirectPublish) {
-      docStatus = 'AKTIF';
-      reviewedBy = revisionData.targetReviewer || 'Atasan Departemen';
-      reviewedDate = createdDate;
-      reviewNotes = 'Disahkan langsung melalui berkas fisik bertanda tangan basah.';
-      verifiedBy = currentUser?.name || 'Document Control';
-      verifiedDate = createdDate;
-      verificationNotes = 'Disahkan langsung melalui registrasi revisi bertanda tangan fisik / arsip master.';
-      effectiveDate = revisionData.effectiveDate || createdDate;
-      approvedBy = revisionData.targetApprover || currentUser?.name || 'Authorized Approver';
-      approvedDate = createdDate;
-      approvalNotes = 'Diterbitkan langsung sebagai Dokumen Aktif bertanda tangan basah.';
     } else if (currentUser?.role === 'reviewer' && currentUser.department === originalDoc.department) {
       // Diajukan langsung oleh Kepala Departemen terkait
       docStatus = 'VERIFIKASI';
       reviewedBy = currentUser.name;
       reviewedDate = createdDate;
       reviewNotes = 'Diajukan langsung oleh Kepala Departemen (Review substansi otomatis terpenuhi).';
-    } else if (isDcoOrAdmin && !revisionData.targetReviewer) {
+    } else if (isDcoOrAdmin) {
+      // Diajukan oleh DCO / Admin: Langsung masuk ke Tahap 3 (APPROVAL MR)
       docStatus = 'APPROVAL';
+      reviewedBy = revisionData.targetReviewer || currentUser?.name || 'Reviewer (DCO)';
+      reviewedDate = createdDate;
+      reviewNotes = 'Format dan tata naskah diverifikasi langsung oleh Document Control.';
       verifiedBy = currentUser?.name || 'Document Control';
       verifiedDate = createdDate;
       verificationNotes = 'Format revisi diverifikasi langsung oleh Document Control saat pendaftaran.';
@@ -1689,48 +1840,16 @@ export function DocumentControlProvider({ children }) {
           revision: nextRev,
           date: createdDate,
           author: currentUser.name,
-          note: isDirectPublish
-            ? `Penerbitan langsung revisi aktif bertanda tangan fisik oleh ${currentUser.name}`
-            : isDcoOrAdmin
-            ? `Pengajuan Revisi ${nextRev} oleh DCO. Menunggu verifikasi/pengesahan.`
+          note: isDcoOrAdmin
+            ? `Pengajuan Revisi ${nextRev} oleh DCO. Menunggu pengesahan ${newRevisedDoc?.targetApprover || 'Approver'}.`
             : `Pengajuan Revisi ${nextRev}: ${revisionData.changeReason || 'Penyempurnaan klausul'}`
         }
       ]
     };
 
-    setDocuments(prev => {
-      let updated = [newRevisedDoc, ...prev];
-      if (isDirectPublish) {
-        // Auto-obsolete older active revision of the same doc
-        updated = updated.map(doc => {
-          if (
-            doc.id === originalDoc.id || (
-              doc.type === newRevisedDoc.type &&
-              doc.department === newRevisedDoc.department &&
-              doc.seqNumber === newRevisedDoc.seqNumber &&
-              doc.id !== newRevisedDoc.id &&
-              doc.status === 'AKTIF'
-            )
-          ) {
-            return {
-              ...doc,
-              status: 'OBSOLETE',
-              supersededBy: newDocNumber,
-              obsoleteDate: createdDate,
-              notes: `${doc.notes ? doc.notes + ' ' : ''}[Otomatis Obsolete - digantikan oleh ${newDocNumber}]`
-            };
-          }
-          return doc;
-        });
-      }
-      return updated;
-    });
+    setDocuments(prev => [newRevisedDoc, ...prev]);
 
-    if (isDirectPublish) {
-      addAuditLog('DIRECT_PUBLISH_REVISION', newDocNumber, newRevisedDoc.title, `Revisi ${nextRev} diterbitkan langsung aktif oleh ${currentUser.name} (Menggantikan ${originalDoc.docNumber})`);
-      addNotification('Penerbitan Revisi Aktif', `${newDocNumber} telah diterbitkan aktif langsung ke Master Dokumen.`, 'success', newRevisedDoc.id);
-      showToast(`Revisi ${newDocNumber} berhasil diterbitkan langsung sebagai Dokumen Aktif!`, 'success');
-    } else if (isDcoOrAdmin && !revisionData.isDraft) {
+    if (isDcoOrAdmin && !revisionData.isDraft) {
       addAuditLog('CREATE_REVISION', newDocNumber, newRevisedDoc.title, `Pengajuan Revisi ${nextRev} oleh DCO. Menunggu pengesahan ${newRevisedDoc.targetApprover || 'Approver'}`);
       addNotification('Pengajuan Pengesahan Revisi', `Revisi ${newDocNumber} siap disahkan oleh ${newRevisedDoc.targetApprover || 'Approver'}.`, 'warning', newRevisedDoc.id);
       showToast(`Pengajuan revisi ${newDocNumber} berhasil! Format lolos otomatis dan langsung diteruskan ke ${newRevisedDoc.targetApprover || 'Approver'}.`, 'success');
@@ -1899,10 +2018,70 @@ export function DocumentControlProvider({ children }) {
     return true;
   };
 
-  // 4. Master Data CRUD Handlers with Supabase Sync
+  // 4. Master Data CRUD Handlers with Database Sync & Audit Trail
+  const addCompany = (comp) => {
+    const newComp = {
+      ...comp,
+      id: comp.id || `comp-${Date.now()}`,
+      color: comp.color || 'blue',
+      badgeColor: comp.badgeColor || 'bg-blue-100 text-blue-800 border-blue-200'
+    };
+    setCompanies(prev => [...prev, newComp]);
+    addAuditLog('CREATE_COMPANY', newComp.code, newComp.name, `Menambahkan perusahaan baru: ${newComp.name} (${newComp.code})`);
+    showToast(`Perusahaan ${newComp.name} (${newComp.code}) berhasil ditambahkan!`, 'success');
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.from('companies').upsert([{
+        id: newComp.id,
+        code: newComp.code,
+        name: newComp.name,
+        tagline: newComp.tagline || null,
+        color: newComp.color || 'blue',
+        badge_color: newComp.badgeColor || null,
+        active: true
+      }]).then(({ error }) => {
+        if (error) console.warn('Database addCompany error:', error);
+      });
+    }
+  };
+
+  const updateCompany = (id, updatedData) => {
+    const prevComp = companies.find(c => c.id === id);
+    setCompanies(prev => prev.map(c => c.id === id ? { ...c, ...updatedData } : c));
+    addAuditLog('UPDATE_COMPANY', updatedData.code || prevComp?.code || id, updatedData.name || prevComp?.name || 'Perusahaan', `Memperbarui data perusahaan: ${updatedData.name || prevComp?.name} (${updatedData.code || prevComp?.code})`);
+    showToast('Data perusahaan berhasil diperbarui!', 'success');
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.from('companies').upsert([{
+        id,
+        code: updatedData.code,
+        name: updatedData.name,
+        tagline: updatedData.tagline || null,
+        color: updatedData.color,
+        badge_color: updatedData.badgeColor
+      }]).then(({ error }) => {
+        if (error) console.warn('Database updateCompany error:', error);
+      });
+    }
+  };
+
+  const deleteCompany = (id) => {
+    const comp = companies.find(c => c.id === id);
+    setCompanies(prev => prev.filter(c => c.id !== id));
+    addAuditLog('DELETE_COMPANY', comp?.code || id, comp?.name || 'Perusahaan', `Menghapus data perusahaan: ${comp?.name || id} (${comp?.code || '-'})`);
+    showToast('Perusahaan berhasil dihapus!', 'info');
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.from('companies').delete().eq('id', id).then(({ error }) => {
+        if (error) console.warn('Database deleteCompany error:', error);
+      });
+    }
+  };
+
   const addDepartment = (dept) => {
     const newDept = { ...dept, id: `dept-${Date.now()}` };
     setDepartments(prev => [...prev, newDept]);
+    addAuditLog('CREATE_DEPARTMENT', newDept.code, newDept.name, `Menambahkan departemen baru: ${newDept.name} (${newDept.code}), Kepala: ${newDept.head || '-'}`);
 
     if (isSupabaseConfigured && supabase) {
       supabase.from('departments').upsert([{
@@ -1919,7 +2098,9 @@ export function DocumentControlProvider({ children }) {
   };
 
   const updateDepartment = (id, updatedData) => {
+    const prevDept = departments.find(d => d.id === id);
     setDepartments(prev => prev.map(d => d.id === id ? { ...d, ...updatedData } : d));
+    addAuditLog('UPDATE_DEPARTMENT', updatedData.code || prevDept?.code || id, updatedData.name || prevDept?.name || 'Departemen', `Memperbarui departemen: ${updatedData.name || prevDept?.name} (${updatedData.code || prevDept?.code}), Kepala: ${updatedData.head || '-'}`);
 
     if (isSupabaseConfigured && supabase) {
       supabase.from('departments').update({
@@ -1935,7 +2116,9 @@ export function DocumentControlProvider({ children }) {
   };
 
   const deleteDepartment = (id) => {
+    const dept = departments.find(d => d.id === id);
     setDepartments(prev => prev.filter(d => d.id !== id));
+    addAuditLog('DELETE_DEPARTMENT', dept?.code || id, dept?.name || 'Departemen', `Menghapus departemen: ${dept?.name || id} (${dept?.code || '-'})`);
 
     if (isSupabaseConfigured && supabase) {
       supabase.from('departments').delete().eq('id', id).then(({ error }) => {
@@ -1949,6 +2132,7 @@ export function DocumentControlProvider({ children }) {
   const addDocumentType = (type) => {
     const newType = { ...type, id: `type-${Date.now()}` };
     setDocumentTypes(prev => [...prev, newType]);
+    addAuditLog('CREATE_DOCUMENT_TYPE', newType.code, newType.name, `Menambahkan jenis dokumen baru: ${newType.name} (${newType.code}), Level: ${newType.level || 2}`);
 
     if (isSupabaseConfigured && supabase) {
       supabase.from('document_types').upsert([{
@@ -1967,7 +2151,9 @@ export function DocumentControlProvider({ children }) {
   };
 
   const updateDocumentType = (id, updatedData) => {
+    const prevType = documentTypes.find(t => t.id === id);
     setDocumentTypes(prev => prev.map(t => t.id === id ? { ...t, ...updatedData } : t));
+    addAuditLog('UPDATE_DOCUMENT_TYPE', updatedData.code || prevType?.code || id, updatedData.name || prevType?.name || 'Jenis Dokumen', `Memperbarui jenis dokumen: ${updatedData.name || prevType?.name} (${updatedData.code || prevType?.code})`);
 
     if (isSupabaseConfigured && supabase) {
       supabase.from('document_types').update({
@@ -1985,7 +2171,9 @@ export function DocumentControlProvider({ children }) {
   };
 
   const deleteDocumentType = (id) => {
+    const dt = documentTypes.find(t => t.id === id);
     setDocumentTypes(prev => prev.filter(t => t.id !== id));
+    addAuditLog('DELETE_DOCUMENT_TYPE', dt?.code || id, dt?.name || 'Jenis Dokumen', `Menghapus jenis dokumen: ${dt?.name || id} (${dt?.code || '-'})`);
 
     if (isSupabaseConfigured && supabase) {
       supabase.from('document_types').delete().eq('id', id).then(({ error }) => {
@@ -1999,6 +2187,7 @@ export function DocumentControlProvider({ children }) {
   const addEmployee = (emp) => {
     const newEmp = { ...emp, id: `emp-${Date.now()}` };
     setEmployees(prev => [...prev, newEmp]);
+    addAuditLog('CREATE_EMPLOYEE', newEmp.nik, newEmp.name, `Menambahkan karyawan baru: ${newEmp.name} (NIK: ${newEmp.nik}, Dept: ${newEmp.department}, Jabatan: ${newEmp.position}, Role: ${newEmp.role})`);
 
     if (isSupabaseConfigured && supabase) {
       supabase.from('employees').upsert([{
@@ -2019,7 +2208,9 @@ export function DocumentControlProvider({ children }) {
   };
 
   const updateEmployee = (id, updatedData) => {
+    const prevEmp = employees.find(e => e.id === id);
     setEmployees(prev => prev.map(e => e.id === id ? { ...e, ...updatedData } : e));
+    addAuditLog('UPDATE_EMPLOYEE', updatedData.nik || prevEmp?.nik || id, updatedData.name || prevEmp?.name || 'Karyawan', `Memperbarui data karyawan: ${updatedData.name || prevEmp?.name} (NIK: ${updatedData.nik || prevEmp?.nik}, Dept: ${updatedData.department || '-'}, Role: ${updatedData.role || '-'})`);
 
     if (isSupabaseConfigured && supabase) {
       supabase.from('employees').update({
@@ -2039,7 +2230,9 @@ export function DocumentControlProvider({ children }) {
   };
 
   const deleteEmployee = (id) => {
+    const emp = employees.find(e => e.id === id);
     setEmployees(prev => prev.filter(e => e.id !== id));
+    addAuditLog('DELETE_EMPLOYEE', emp?.nik || id, emp?.name || 'Karyawan', `Menghapus karyawan: ${emp?.name || id} (NIK: ${emp?.nik || '-'})`);
 
     if (isSupabaseConfigured && supabase) {
       supabase.from('employees').delete().eq('id', id).then(({ error }) => {
@@ -2053,6 +2246,7 @@ export function DocumentControlProvider({ children }) {
   const addVerifierTeam = (team) => {
     const newTeam = { ...team, id: `team-${Date.now()}` };
     setVerifierTeams(prev => [...prev, newTeam]);
+    addAuditLog('CREATE_VERIFIER_TEAM', newTeam.name, newTeam.name, `Menambahkan tim verifikator baru: ${newTeam.name}, Ketua: ${newTeam.leader || '-'}`);
 
     if (isSupabaseConfigured && supabase) {
       supabase.from('verifier_teams').upsert([{
@@ -2070,7 +2264,9 @@ export function DocumentControlProvider({ children }) {
   };
 
   const updateVerifierTeam = (id, updatedData) => {
+    const prevTeam = verifierTeams.find(t => t.id === id);
     setVerifierTeams(prev => prev.map(t => t.id === id ? { ...t, ...updatedData } : t));
+    addAuditLog('UPDATE_VERIFIER_TEAM', updatedData.name || prevTeam?.name || id, updatedData.name || prevTeam?.name || 'Tim Verifikator', `Memperbarui tim verifikator: ${updatedData.name || prevTeam?.name}, Ketua: ${updatedData.leader || '-'}`);
 
     if (isSupabaseConfigured && supabase) {
       supabase.from('verifier_teams').update({
@@ -2087,7 +2283,9 @@ export function DocumentControlProvider({ children }) {
   };
 
   const deleteVerifierTeam = (id) => {
+    const team = verifierTeams.find(t => t.id === id);
     setVerifierTeams(prev => prev.filter(t => t.id !== id));
+    addAuditLog('DELETE_VERIFIER_TEAM', team?.name || id, team?.name || 'Tim Verifikator', `Menghapus tim verifikator: ${team?.name || id}`);
 
     if (isSupabaseConfigured && supabase) {
       supabase.from('verifier_teams').delete().eq('id', id).then(({ error }) => {
@@ -2096,6 +2294,31 @@ export function DocumentControlProvider({ children }) {
     }
 
     showToast('Tim Verifikator berhasil dihapus.', 'info');
+  };
+
+  const updateSystemSettings = (newSettings) => {
+    setSystemSettings(newSettings);
+    addAuditLog('UPDATE_SETTINGS', 'SYSTEM', newSettings.systemName || 'Settings', `Memperbarui konfigurasi sistem (${newSettings.isoStandard || 'ISO 9001:2015'})`);
+
+    if (isSupabaseConfigured && supabase) {
+      supabase.from('system_settings').upsert([{
+        id: 'default',
+        company_name: newSettings.companyName,
+        company_code: newSettings.companyCode,
+        system_name: newSettings.systemName,
+        iso_standard: newSettings.isoStandard,
+        numbering_format: newSettings.numberingFormat,
+        default_verifier_team: newSettings.defaultVerifierTeam,
+        watermark_controlled_text: newSettings.watermarkControlledText,
+        watermark_obsolete_text: newSettings.watermarkObsoleteText,
+        watermark_draft_text: newSettings.watermarkDraftText,
+        enable_qr_stamp: newSettings.enableQRStamp,
+        enable_audit_auto_log: newSettings.enableAuditAutoLog,
+        periodic_review_months: newSettings.periodicReviewMonths
+      }]).then(({ error }) => {
+        if (error) console.warn('Supabase update system_settings warning:', error);
+      });
+    }
   };
 
   // 5. Database & Settings Handlers
@@ -2216,12 +2439,30 @@ export function DocumentControlProvider({ children }) {
   return (
     <DocumentControlContext.Provider
       value={{
+        companies,
+        setCompanies,
+        selectedCompanyFilter,
+        setSelectedCompanyFilter,
+        isCompanyLocked: Boolean(currentUser?.companyCode && currentUser.companyCode !== 'ALL'),
+        userCompanyCode: currentUser?.companyCode || null,
+        addCompany,
+        updateCompany,
+        deleteCompany,
         documents,
+        setDocuments,
+        rawDocuments,
+        allDocuments: rawDocuments,
         departments,
         documentTypes,
         employees,
+        setEmployees,
+        rawEmployees,
+        allEmployees: rawEmployees,
         verifierTeams,
         auditLogs,
+        setAuditLogs,
+        rawAuditLogs,
+        allAuditLogs: rawAuditLogs,
         systemSettings,
         setSystemSettings,
         currentUser,
@@ -2280,6 +2521,9 @@ export function DocumentControlProvider({ children }) {
         submitForVerification,
         createDocumentRevision,
         deleteDocument,
+        addCompany,
+        updateCompany,
+        deleteCompany,
         addDepartment,
         updateDepartment,
         deleteDepartment,
@@ -2292,6 +2536,7 @@ export function DocumentControlProvider({ children }) {
         addVerifierTeam,
         updateVerifierTeam,
         deleteVerifierTeam,
+        updateSystemSettings,
         attachFileToDocument,
         isCloudConnected: isSupabaseConfigured,
         isLoadingCloud,

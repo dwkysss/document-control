@@ -12,7 +12,7 @@ import {
   RotateCcw,
   Search
 } from 'lucide-react';
-import Badge from '../common/Badge';
+import Badge, { CompanyBadge } from '../common/Badge';
 import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
 
@@ -20,6 +20,7 @@ export default function PendingVerificationView() {
   const {
     documents,
     departments,
+    selectedCompanyFilter,
     canUserViewPendingDoc,
     reviewDocumentContent,
     verifyDocumentFormat,
@@ -74,6 +75,10 @@ export default function PendingVerificationView() {
     : pendingDocs.filter(d => d.status === activeTab);
 
   const filteredDocs = displayedDocs.filter(d => {
+    if (selectedCompanyFilter !== 'ALL') {
+      const docComp = (d.companyCode || d.docNumber?.split('-')[0] || 'DJI').toUpperCase();
+      if (docComp !== selectedCompanyFilter) return false;
+    }
     if (filterDept !== 'ALL' && (d.department || '').toUpperCase() !== filterDept.toUpperCase()) {
       return false;
     }
@@ -390,6 +395,7 @@ export default function PendingVerificationView() {
                       {/* 2. No Dokumen */}
                       <td className="py-3.5 px-4 whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
+                          <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
                           <button
                             type="button"
                             onClick={() => setViewingDocument(doc)}

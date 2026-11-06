@@ -16,7 +16,14 @@ dist
 
 # SQL Schemas & Database Dumps
 *.sql
-supabase_schema.sql
+!backend/schema.sql
+!backend/backup_latest.sql
+backups/
+
+# Storage & Uploads
+uploads/
+backend/public/uploads/
+!backend/public/uploads/.gitkeep
 
 # Editor directories and files
 .vscode/*

@@ -15,7 +15,7 @@ import {
   Clock,
   Save
 } from 'lucide-react';
-import Badge from '../common/Badge';
+import Badge, { CompanyBadge } from '../common/Badge';
 import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
 import { uploadDocumentFile } from '../../lib/supabaseClient';
@@ -24,6 +24,7 @@ export default function DraftListView() {
   const {
     documents,
     departments,
+    selectedCompanyFilter,
     deleteDocument,
     submitForVerification,
     saveDraft,
@@ -89,7 +90,10 @@ export default function DraftListView() {
                           (doc.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                           (doc.creator || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesDept = selectedDept === 'ALL' || doc.department === selectedDept;
-    return matchesSearch && matchesDept;
+    const docComp = (doc.companyCode || doc.docNumber?.split('-')[0] || 'DJI').toUpperCase();
+    const matchesCompany = selectedCompanyFilter === 'ALL' || docComp === selectedCompanyFilter;
+
+    return matchesSearch && matchesDept && matchesCompany;
   });
 
   const handleOpenEditModal = (doc) => {
@@ -414,9 +418,12 @@ export default function DraftListView() {
 
                       {/* 2. Identitas Dokumen (Nomor + Tag Tipe & Dept) */}
                       <td className="py-3.5 px-4 align-top whitespace-nowrap min-w-[210px]">
-                        <span className="font-bold font-mono text-slate-900 dark:text-white block tracking-wide select-all text-xs whitespace-nowrap">
-                          {doc.docNumber}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
+                          <span className="font-bold font-mono text-slate-900 dark:text-white tracking-wide select-all text-xs">
+                            {doc.docNumber}
+                          </span>
+                        </div>
                         <div className="flex items-center gap-1.5 mt-1.5 whitespace-nowrap">
                           <span className="px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold text-[9.5px] border border-blue-200/60 dark:border-blue-800/60 shrink-0">
                             {doc.type}

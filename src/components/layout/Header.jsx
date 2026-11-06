@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Menu, Bell, Search, UserCheck, ChevronDown, Check, Shield, FileText, CheckCircle2, AlertCircle, RefreshCw, X, Eye, LogOut } from 'lucide-react';
+import { Menu, Bell, Search, UserCheck, ChevronDown, Check, Shield, FileText, CheckCircle2, AlertCircle, RefreshCw, X, Eye, LogOut, Building2, Lock } from 'lucide-react';
 import { useDocumentControl } from '../../context/DocumentControlContext';
 import Badge from '../common/Badge';
 
@@ -21,6 +21,12 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
     activeMenu,
     setActiveMenu,
     setViewingDocument,
+    companies,
+    selectedCompanyFilter,
+    setSelectedCompanyFilter,
+    isCompanyLocked,
+    userCompanyCode,
+    allEmployees,
     documents,
     searchQuery,
     setSearchQuery,
@@ -150,8 +156,71 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
 
         {/* Right Side: Global Search, Notification Center, User Profile */}
         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+          {/* Multi-Company Scope Filter Pill */}
+          {isCompanyLocked ? (
+            <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100/90 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 text-xs shadow-2xs">
+              <Building2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+              <span className="font-extrabold text-[11px] text-slate-800 dark:text-slate-100">
+                {currentUser?.companyName || currentUser?.companyCode}
+              </span>
+              <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-bold ${
+                currentUser?.companyCode === 'UMI'
+                  ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300'
+                  : currentUser?.companyCode === 'IMK'
+                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                  : 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+              }`}>
+                {currentUser?.companyCode}
+              </span>
+              <span className="text-[10px] text-slate-400 font-medium flex items-center gap-0.5 ml-1 border-l border-slate-200 dark:border-slate-700 pl-2">
+                <Lock className="w-2.5 h-2.5 text-amber-500" /> Terkunci
+              </span>
+            </div>
+          ) : (
+            <div className="hidden lg:flex items-center bg-slate-100/90 dark:bg-slate-800/90 p-0.5 rounded-xl border border-slate-200/80 dark:border-slate-700/80 text-xs shadow-2xs">
+              <button
+                type="button"
+                onClick={() => setSelectedCompanyFilter('ALL')}
+                className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition ${
+                  selectedCompanyFilter === 'ALL'
+                    ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-2xs'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                Semua (3 PT)
+              </button>
+              {(companies || []).map((comp) => {
+                const isActive = selectedCompanyFilter === comp.code;
+                return (
+                  <button
+                    key={comp.id}
+                    type="button"
+                    onClick={() => setSelectedCompanyFilter(comp.code)}
+                    className={`px-2 py-1 rounded-lg font-bold text-[11px] transition flex items-center gap-1 ${
+                      isActive
+                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
+                        : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                    }`}
+                    title={comp.name}
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        comp.code === 'DJI'
+                          ? 'bg-blue-500'
+                          : comp.code === 'UMI'
+                          ? 'bg-indigo-500'
+                          : 'bg-emerald-500'
+                      }`}
+                    />
+                    {comp.code}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           {/* Quick Search dropdown */}
-          <div className="relative hidden md:block w-64 lg:w-72" ref={searchRef}>
+          <div className="relative hidden md:block w-52 lg:w-64" ref={searchRef}>
             <input
               type="text"
               placeholder="Cari no. dokumen / judul..."
@@ -378,36 +447,57 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
                 {/* Quick Account Switcher for Testing/Demo */}
                 <div className="px-3 py-2">
                   <div className="text-[10px] uppercase font-bold text-slate-400 px-2 py-1 tracking-wider flex items-center justify-between">
-                    <span>Ganti Akun Demo (Uji Role):</span>
+                    <span>Ganti Akun Demo (Uji Isolasi PT):</span>
                     <span className="text-[9px] text-blue-600 font-semibold">1-Klik</span>
                   </div>
-                  <div className="space-y-1 mt-1 max-h-44 overflow-y-auto pr-1 scrollbar-thin">
-                    {employees.map(emp => (
-                      <button
-                        key={emp.id}
-                        onClick={() => {
-                          setCurrentUser(emp);
-                          try {
-                            localStorage.setItem('dji_auth_user', JSON.stringify(emp));
-                          } catch (e) {
-                            // ignore
-                          }
-                          setShowUserMenu(false);
-                          showToast(`Berhasil beralih profil ke ${emp.name} (${emp.position})`, 'info');
-                        }}
-                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition ${
-                          currentUser.id === emp.id
-                            ? 'bg-blue-50 text-blue-700 font-bold dark:bg-blue-950 dark:text-blue-300'
-                            : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
-                        }`}
-                      >
-                        <div className="text-left truncate">
-                          <div className="truncate">{emp.name}</div>
-                          <div className="text-[10px] text-slate-400 font-normal">NIP: {emp.nik} • {emp.position}</div>
-                        </div>
-                        {currentUser.id === emp.id && <Check className="w-4 h-4 text-blue-600 flex-shrink-0" />}
-                      </button>
-                    ))}
+                  <div className="space-y-1 mt-1 max-h-52 overflow-y-auto pr-1 scrollbar-thin">
+                    {(allEmployees || employees).map(emp => {
+                      const empComp = emp.companyCode || (emp.nik?.startsWith('UMI') ? 'UMI' : emp.nik?.startsWith('IMK') ? 'IMK' : (emp.nik === '123463' ? 'ALL' : 'DJI'));
+                      const badgeClass = empComp === 'UMI'
+                        ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300'
+                        : empComp === 'IMK'
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                        : empComp === 'ALL'
+                        ? 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300'
+                        : 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300';
+
+                      return (
+                        <button
+                          key={emp.id}
+                          onClick={() => {
+                            setCurrentUser(emp);
+                            if (empComp && empComp !== 'ALL') {
+                              setSelectedCompanyFilter(empComp);
+                            }
+                            try {
+                              localStorage.setItem('dji_auth_user', JSON.stringify(emp));
+                            } catch (e) {
+                              // ignore
+                            }
+                            setShowUserMenu(false);
+                            showToast(`Beralih ke ${emp.name} [${empComp}] (${emp.position})`, 'info');
+                          }}
+                          className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition ${
+                            currentUser.id === emp.id
+                              ? 'bg-blue-50 text-blue-700 font-bold dark:bg-blue-950 dark:text-blue-300'
+                              : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                          }`}
+                        >
+                          <div className="text-left truncate flex-1 pr-2">
+                            <div className="flex items-center gap-1.5 truncate">
+                              <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-bold ${badgeClass}`}>
+                                {empComp}
+                              </span>
+                              <span className="truncate">{emp.name}</span>
+                            </div>
+                            <div className="text-[10px] text-slate-400 font-normal truncate mt-0.5">
+                              NIP: {emp.nik} • {emp.position}
+                            </div>
+                          </div>
+                          {currentUser.id === emp.id && <Check className="w-4 h-4 text-blue-600 flex-shrink-0" />}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 

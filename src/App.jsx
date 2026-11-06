@@ -17,6 +17,7 @@ import ObsoleteDocumentsView from './components/control/ObsoleteDocumentsView';
 import RevisionHistoryView from './components/control/RevisionHistoryView';
 import DocumentRevisionFormView from './components/revision/DocumentRevisionFormView';
 import EmployeeMasterView from './components/master/EmployeeMasterView';
+import CompanyMasterView from './components/master/CompanyMasterView';
 import DepartmentMasterView from './components/master/DepartmentMasterView';
 import DocumentTypeMasterView from './components/master/DocumentTypeMasterView';
 import RoleMasterView from './components/master/RoleMasterView';
@@ -130,6 +131,8 @@ function MainAppContent() {
         return <RevisionHistoryView />;
       case 'rev-new':
         return <DocumentRevisionFormView />;
+      case 'master-company':
+        return <CompanyMasterView />;
       case 'master-emp':
         return <EmployeeMasterView />;
       case 'master-dept':

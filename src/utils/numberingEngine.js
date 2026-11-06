@@ -4,14 +4,20 @@
  * Contoh: DJI-IK-HRGA-01-00
  */
 
-export function getNextSequenceNumber(documents = [], docType = '', department = '') {
+export function getNextSequenceNumber(documents = [], docType = '', department = '', companyCode = 'DJI') {
   if (!docType || !department) return '01';
 
-  // Cari semua dokumen yang memiliki kombinasi Jenis Dokumen dan Departemen yang sama
-  const matchingDocs = documents.filter(
-    doc => doc.type?.toUpperCase() === docType.toUpperCase() && 
-           doc.department?.toUpperCase() === department.toUpperCase()
-  );
+  const cleanComp = (companyCode || 'DJI').toUpperCase().trim();
+  const cleanType = (docType || '').toUpperCase().trim();
+  const cleanDept = (department || '').toUpperCase().trim();
+
+  // Cari semua dokumen yang memiliki kombinasi Perusahaan, Jenis Dokumen dan Departemen yang sama
+  const matchingDocs = documents.filter(doc => {
+    const docComp = (doc.companyCode || doc.docNumber?.split('-')[0] || 'DJI').toUpperCase().trim();
+    const docTypeMatch = (doc.type || '').toUpperCase().trim() === cleanType;
+    const docDeptMatch = (doc.department || '').toUpperCase().trim() === cleanDept;
+    return docComp === cleanComp && docTypeMatch && docDeptMatch;
+  });
 
   if (matchingDocs.length === 0) {
     return '01';

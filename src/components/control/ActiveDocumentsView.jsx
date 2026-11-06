@@ -26,7 +26,7 @@ import {
   ChevronsLeft,
   ChevronsRight
 } from 'lucide-react';
-import Badge from '../common/Badge';
+import Badge, { CompanyBadge } from '../common/Badge';
 import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
 
@@ -83,6 +83,7 @@ export default function ActiveDocumentsView() {
     documents,
     departments = [],
     documentTypes = [],
+    selectedCompanyFilter,
     currentUser,
     canRequestRevision,
     canReviewContent,
@@ -183,6 +184,12 @@ export default function ActiveDocumentsView() {
   // Logika Filter & Sorting Dokumen
   const filtered = useMemo(() => {
     let result = activeDocs.filter(d => {
+      // 0. Filter Perusahaan (Multi-Company)
+      if (selectedCompanyFilter !== 'ALL') {
+        const docComp = (d.companyCode || d.docNumber?.split('-')[0] || 'DJI').toUpperCase();
+        if (docComp !== selectedCompanyFilter) return false;
+      }
+
       // 1. Search term match
       if (searchTerm.trim()) {
         const q = searchTerm.toLowerCase();
@@ -250,7 +257,7 @@ export default function ActiveDocumentsView() {
     });
 
     return result;
-  }, [activeDocs, searchTerm, filterMode, filterDept, filterType, sortBy, userDept, reviewIntervalMonths]);
+  }, [activeDocs, searchTerm, filterMode, filterDept, filterType, sortBy, userDept, reviewIntervalMonths, selectedCompanyFilter]);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -627,7 +634,10 @@ export default function ActiveDocumentsView() {
                     <tr key={doc.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
                       <td className="py-3.5 px-4 text-center text-slate-400">{startIndex + idx + 1}</td>
                       <td className="py-3.5 px-4 font-bold font-mono text-slate-900 dark:text-white whitespace-nowrap">
-                        {doc.docNumber}
+                        <div className="flex items-center gap-1.5">
+                          <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
+                          <span>{doc.docNumber}</span>
+                        </div>
                       </td>
                       <td className="py-3.5 px-4 font-medium text-slate-800 dark:text-slate-200 max-w-[220px] truncate" title={doc.title}>
                         {doc.title}

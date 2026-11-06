@@ -20,7 +20,7 @@ import {
   Clock
 } from 'lucide-react';
 import Modal from './Modal';
-import Badge from './Badge';
+import Badge, { CompanyBadge } from './Badge';
 import { generateDocumentQRCode } from '../../utils/qrGenerator';
 import { exportControlledDocumentPDF } from '../../utils/exportUtils';
 import { stampOfficialLetterheadOnPDF, downloadBlobAsFile } from '../../utils/pdfStamper';
@@ -303,7 +303,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
       isOpen={isOpen}
       onClose={onClose}
       title="Pratinjau Dokumen Terkendali (Controlled Document Viewer)"
-      subtitle={`No. Dokumen: ${doc.docNumber} | Standar Mutu ISO 9001:2015 Klausul 7.5`}
+      subtitle={`${doc.companyName || (doc.docNumber?.startsWith('UMI') ? 'PT Ultimo Moda Indotex' : doc.docNumber?.startsWith('IMK') ? 'PT IMK' : 'PT Dentelle Jaya Infinitex')} | No. Dokumen: ${doc.docNumber} | ISO 9001:2015 Klausul 7.5`}
       maxWidth="max-w-6xl"
     >
       {/* Hidden File Input for quick attachment */}
@@ -319,6 +319,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 mb-4 border-b border-slate-200 dark:border-slate-800 no-print">
         {/* Identitas Ringkas & Status */}
         <div className="flex items-center gap-2 flex-wrap">
+          <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} size="md" />
           <Badge status={doc.status} size="lg" />
           {isActive && (
             <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">

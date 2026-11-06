@@ -6,6 +6,7 @@ export default function SystemSettingsView() {
   const {
     systemSettings,
     setSystemSettings,
+    updateSystemSettings,
     resetDemoData,
     exportDatabaseJSON,
     importDatabaseJSON,
@@ -26,7 +27,11 @@ export default function SystemSettingsView() {
       showToast('Akses ditolak! Hanya System Administrator yang dapat mengubah konfigurasi sistem.', 'danger');
       return;
     }
-    setSystemSettings(formData);
+    if (updateSystemSettings) {
+      updateSystemSettings(formData);
+    } else {
+      setSystemSettings(formData);
+    }
     showToast('Pengaturan sistem berhasil disimpan!', 'success');
   };
 

@@ -52,8 +52,18 @@ export default function RevisionAuditReportView() {
   const filteredLogs = useMemo(() => {
     return auditLogs.filter((log) => {
       // Filter Tindakan
-      if (filterAction !== 'ALL' && log.action !== filterAction) {
-        return false;
+      if (filterAction !== 'ALL') {
+        if (filterAction === 'MASTER_DATA') {
+          const isMaster = log.action.includes('COMPANY') ||
+            log.action.includes('DEPARTMENT') ||
+            log.action.includes('DOCUMENT_TYPE') ||
+            log.action.includes('EMPLOYEE') ||
+            log.action.includes('VERIFIER_TEAM') ||
+            log.action.includes('SETTINGS');
+          if (!isMaster) return false;
+        } else if (log.action !== filterAction) {
+          return false;
+        }
       }
 
       // Filter Pencarian Teks
@@ -154,6 +164,36 @@ export default function RevisionAuditReportView() {
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-300 dark:border-slate-700">
             <FileText className="w-3 h-3 text-slate-500" />
             SIMPAN DRAF
+          </span>
+        );
+      case 'CREATE_COMPANY':
+      case 'UPDATE_COMPANY':
+      case 'DELETE_COMPANY':
+      case 'CREATE_DEPARTMENT':
+      case 'UPDATE_DEPARTMENT':
+      case 'DELETE_DEPARTMENT':
+      case 'CREATE_DOCUMENT_TYPE':
+      case 'UPDATE_DOCUMENT_TYPE':
+      case 'DELETE_DOCUMENT_TYPE':
+      case 'CREATE_EMPLOYEE':
+      case 'UPDATE_EMPLOYEE':
+      case 'DELETE_EMPLOYEE':
+      case 'CREATE_VERIFIER_TEAM':
+      case 'UPDATE_VERIFIER_TEAM':
+      case 'DELETE_VERIFIER_TEAM':
+      case 'UPDATE_SETTINGS':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-800">
+            <ShieldCheck className="w-3 h-3 text-indigo-600" />
+            {action.replace(/_/g, ' ')}
+          </span>
+        );
+      case 'USER_LOGIN':
+      case 'USER_LOGOUT':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-100 text-cyan-800 dark:bg-cyan-950/60 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-800">
+            <RotateCcw className="w-3 h-3 text-cyan-600" />
+            {action.replace(/_/g, ' ')}
           </span>
         );
       default:
@@ -258,6 +298,8 @@ export default function RevisionAuditReportView() {
               <option value="CREATE_REVISION">Pengajuan Revisi (REVISION)</option>
               <option value="CANCEL_DOCUMENT">Penarikan Dokumen (OBSOLETE)</option>
               <option value="SAVE_DRAFT">Penyimpanan Draf (DRAFT)</option>
+              <option value="MASTER_DATA">Perubahan Data Master</option>
+              <option value="USER_LOGIN">Aktivitas Login</option>
             </select>
           </div>
 

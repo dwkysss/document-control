@@ -5,7 +5,7 @@ import { useDocumentControl } from '../../context/DocumentControlContext';
 import { initialEmployees } from '../../data/initialData';
 
 export default function EmployeeMasterView() {
-  const { employees, departments, addEmployee, updateEmployee, deleteEmployee, isAdmin, showToast } = useDocumentControl();
+  const { employees, departments, companies, currentUser, addEmployee, updateEmployee, deleteEmployee, isAdmin, showToast } = useDocumentControl();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
@@ -13,6 +13,9 @@ export default function EmployeeMasterView() {
   // Form State
   const [nik, setNik] = useState('');
   const [name, setName] = useState('');
+  const [companyCode, setCompanyCode] = useState(() => (
+    currentUser?.companyCode && currentUser.companyCode !== 'ALL' ? currentUser.companyCode : 'DJI'
+  ));
   const [department, setDepartment] = useState('HRGA');
   const [position, setPosition] = useState('');
   const [email, setEmail] = useState('');
@@ -37,6 +40,7 @@ export default function EmployeeMasterView() {
     setEditingEmployee(null);
     setNik('');
     setName('');
+    setCompanyCode(currentUser?.companyCode && currentUser.companyCode !== 'ALL' ? currentUser.companyCode : 'DJI');
     setDepartment('HRGA');
     setPosition('');
     setEmail('');
@@ -49,6 +53,7 @@ export default function EmployeeMasterView() {
     setEditingEmployee(emp);
     setNik(emp.nik);
     setName(emp.name);
+    setCompanyCode(emp.companyCode || (emp.nik?.startsWith('UMI') ? 'UMI' : emp.nik?.startsWith('IMK') ? 'IMK' : (emp.nik === '123463' ? 'ALL' : 'DJI')));
     setDepartment(emp.department);
     setPosition(emp.position);
     setEmail(emp.email || '');
@@ -78,12 +83,17 @@ export default function EmployeeMasterView() {
       return;
     }
 
+    const matchedCompany = (companies || []).find(c => c.code === companyCode);
+    const companyName = matchedCompany?.name || (companyCode === 'ALL' ? 'Holding (Multi-Company)' : companyCode === 'UMI' ? 'PT Ultimo Moda Indotex' : companyCode === 'IMK' ? 'PT IMK' : 'PT Dentelle Jaya Infinitex');
+
     const payload = {
       nik: cleanNik,
       name: cleanName,
+      companyCode,
+      companyName,
       department,
       position: cleanPosition,
-      email: email.trim() || `${cleanName.toLowerCase().replace(/\s+/g, '.')}@dji-indonesia.com`,
+      email: email.trim() || `${cleanName.toLowerCase().replace(/\s+/g, '.')}@${companyCode === 'UMI' ? 'ultimo-moda.com' : companyCode === 'IMK' ? 'imk-textile.com' : 'dji-indonesia.com'}`,
       role,
       status
     };
@@ -147,6 +157,7 @@ export default function EmployeeMasterView() {
               <tr className="bg-[#102a4e] text-white uppercase text-[10px] tracking-wider">
                 <th className="py-3 px-4 text-center">No.</th>
                 <th className="py-3 px-4">NIK</th>
+                <th className="py-3 px-4 text-center">Perusahaan</th>
                 <th className="py-3 px-4">Nama Karyawan</th>
                 <th className="py-3 px-4">Departemen</th>
                 <th className="py-3 px-4">Jabatan</th>
@@ -157,10 +168,25 @@ export default function EmployeeMasterView() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {filteredEmployees.map((emp, idx) => (
+              {filteredEmployees.map((emp, idx) => {
+                const empComp = emp.companyCode || (emp.nik?.startsWith('UMI') ? 'UMI' : emp.nik?.startsWith('IMK') ? 'IMK' : (emp.nik === '123463' ? 'ALL' : 'DJI'));
+                return (
                 <tr key={emp?.id || emp?.nik || idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
                   <td className="py-3.5 px-4 text-center text-slate-400">{idx + 1}</td>
                   <td className="py-3.5 px-4 font-mono font-bold text-slate-900 dark:text-white">{String(emp?.nik || '')}</td>
+                  <td className="py-3.5 px-4 text-center">
+                    <span className={`px-2 py-0.5 rounded font-mono font-bold text-[10px] ${
+                      empComp === 'UMI'
+                        ? 'bg-indigo-100 text-indigo-800 border border-indigo-200 dark:bg-indigo-950 dark:text-indigo-300'
+                        : empComp === 'IMK'
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300'
+                        : empComp === 'ALL'
+                        ? 'bg-purple-100 text-purple-800 border border-purple-200 dark:bg-purple-950 dark:text-purple-300'
+                        : 'bg-blue-100 text-blue-800 border border-blue-200 dark:bg-blue-950 dark:text-blue-300'
+                    }`}>
+                      {empComp}
+                    </span>
+                  </td>
                   <td className="py-3.5 px-4 font-bold text-slate-800 dark:text-slate-200">{String(emp?.name || '')}</td>
                   <td className="py-3.5 px-4 font-semibold text-slate-600 dark:text-slate-400">{String(emp?.department || '')}</td>
                   <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400">{String(emp?.position || '')}</td>
@@ -230,7 +256,8 @@ export default function EmployeeMasterView() {
                     )}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -245,7 +272,7 @@ export default function EmployeeMasterView() {
           maxWidth="max-w-lg"
         >
           <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">NIK *</label>
                 <input
@@ -253,16 +280,32 @@ export default function EmployeeMasterView() {
                   required
                   value={nik}
                   onChange={(e) => setNik(e.target.value)}
-                  className="w-full p-2.5 border rounded-lg dark:bg-slate-800 font-mono"
+                  className="w-full p-2.5 border rounded-lg dark:bg-slate-800 font-mono text-xs"
                   placeholder="DJI012548"
                 />
+              </div>
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Perusahaan *</label>
+                <select
+                  value={companyCode}
+                  onChange={(e) => setCompanyCode(e.target.value)}
+                  disabled={currentUser?.companyCode && currentUser.companyCode !== 'ALL'}
+                  className="w-full p-2.5 border rounded-lg dark:bg-slate-800 font-medium text-xs disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {(companies || []).map((c) => (
+                    <option key={c.id} value={c.code}>{c.code} - {c.name}</option>
+                  ))}
+                  {(!currentUser?.companyCode || currentUser.companyCode === 'ALL') && (
+                    <option value="ALL">ALL - Holding</option>
+                  )}
+                </select>
               </div>
               <div>
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">Departemen *</label>
                 <select
                   value={department}
                   onChange={(e) => setDepartment(e.target.value)}
-                  className="w-full p-2.5 border rounded-lg dark:bg-slate-800 font-medium"
+                  className="w-full p-2.5 border rounded-lg dark:bg-slate-800 font-medium text-xs"
                 >
                   {safeDepartments.map(d => (
                     <option key={d?.id || d?.code} value={d?.code}>{d?.code} - {d?.name}</option>

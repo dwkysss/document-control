@@ -15,7 +15,8 @@ import {
   FileCheck,
   ChevronRight,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  Building2
 } from 'lucide-react';
 import Badge from '../common/Badge';
 import { useDocumentControl } from '../../context/DocumentControlContext';
@@ -25,6 +26,7 @@ import { uploadDocumentFile } from '../../lib/supabaseClient';
 
 export default function NewRegistrationView() {
   const {
+    companies,
     departments,
     documentTypes,
     employees,
@@ -40,6 +42,18 @@ export default function NewRegistrationView() {
   } = useDocumentControl();
 
   // Form State
+  const [selectedCompany, setSelectedCompany] = useState(() => (
+    currentUser?.companyCode && currentUser.companyCode !== 'ALL'
+      ? currentUser.companyCode
+      : (companies?.[0]?.code || 'DJI')
+  ));
+
+  useEffect(() => {
+    if (currentUser?.companyCode && currentUser.companyCode !== 'ALL') {
+      setSelectedCompany(currentUser.companyCode);
+    }
+  }, [currentUser?.companyCode]);
+
   const [selectedType, setSelectedType] = useState('IK');
   const [selectedDept, setSelectedDept] = useState(() => currentUser?.department || 'PRODUKSI');
 
@@ -218,17 +232,21 @@ export default function NewRegistrationView() {
   };
 
   const isDcoOrAdmin = currentUser?.role === 'doc_control' || currentUser?.role === 'admin';
-  const [directPublish, setDirectPublish] = useState(false);
   const [notes, setNotes] = useState('');
   const [fileAttachment, setFileAttachment] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Live Auto-calculated Sequence Number
-  const nextSeq = getNextSequenceNumber(documents, selectedType, selectedDept);
+  // Live Auto-calculated Sequence Number based on selected Company, Type, and Department
+  const nextSeq = getNextSequenceNumber(documents, selectedType, selectedDept, selectedCompany);
   const nextRev = '00';
 
+  const selectedCompanyObj = companies.find(c => c.code === selectedCompany) || {
+    code: selectedCompany,
+    name: selectedCompany === 'UMI' ? 'PT Ultimo Moda Indotex' : selectedCompany === 'IMK' ? 'PT IMK' : 'PT Dentelle Jaya Infinitex'
+  };
+
   const previewDocNumber = formatDocumentNumber({
-    companyCode: systemSettings.companyCode || 'DJI',
+    companyCode: selectedCompany,
     docType: selectedType,
     department: selectedDept,
     seqNumber: nextSeq,
@@ -261,6 +279,8 @@ export default function NewRegistrationView() {
     }
 
     saveDraft({
+      companyCode: selectedCompany,
+      companyName: selectedCompanyObj.name,
       title: title.toUpperCase().trim(),
       type: selectedType,
       department: selectedDept,
@@ -308,6 +328,8 @@ export default function NewRegistrationView() {
     }
 
     submitForVerification({
+      companyCode: selectedCompany,
+      companyName: selectedCompanyObj.name,
       title: title.toUpperCase().trim(),
       type: selectedType,
       department: selectedDept,
@@ -327,7 +349,6 @@ export default function NewRegistrationView() {
       approverPosition: activeApprover.position,
       notes: notes,
       createdDate,
-      directPublish: isDcoOrAdmin ? directPublish : false,
       fileName: fileInfo.fileName,
       fileSize: fileInfo.fileSize,
       fileType: fileInfo.fileType,
@@ -359,6 +380,81 @@ export default function NewRegistrationView() {
 
             {/* Active Form Inputs */}
             <div className="p-5 sm:p-6 space-y-5">
+              {/* Row 0: Pilihan Perusahaan Tujuan (Multi-Company) */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                    <Building2 className="w-4 h-4 text-blue-600" />
+                    Pilih Perusahaan Pemilik Dokumen <span className="text-red-500">*</span>
+                  </label>
+                  <span className="text-[11px] font-medium text-slate-500">
+                    Prefix nomor dokumen disesuaikan otomatis
+                  </span>
+                </div>
+                {currentUser?.companyCode && currentUser.companyCode !== 'ALL' ? (
+                  <div className="p-3.5 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50/60 dark:bg-blue-950/40 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className={`px-2.5 py-1 rounded font-mono font-bold text-xs ${
+                        selectedCompany === 'UMI'
+                          ? 'bg-indigo-600 text-white'
+                          : selectedCompany === 'IMK'
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-blue-600 text-white'
+                      }`}>
+                        {selectedCompany}
+                      </span>
+                      <div>
+                        <div className="font-bold text-xs text-slate-900 dark:text-white">
+                          {selectedCompanyObj.name}
+                        </div>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                          Dokumen diterbitkan di bawah unit usaha resmi ini (Akses akun Anda terikat ke {selectedCompany}).
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-[10px] px-2.5 py-1 rounded-md font-bold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center gap-1 shadow-2xs">
+                      <Lock className="w-3 h-3 text-amber-500" /> Terkunci Otomatis
+                    </span>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {(companies || []).map((c) => {
+                      const isSelected = selectedCompany === c.code;
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => setSelectedCompany(c.code)}
+                          className={`p-3 rounded-xl border text-left transition relative flex flex-col justify-between ${
+                            isSelected
+                              ? 'bg-blue-50/70 dark:bg-blue-950/40 border-blue-500 ring-2 ring-blue-500/30 shadow-sm'
+                              : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between w-full mb-1">
+                            <span className={`px-2 py-0.5 rounded font-mono font-bold text-xs ${
+                              c.code === 'DJI'
+                                ? 'bg-blue-600 text-white'
+                                : c.code === 'UMI'
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-emerald-600 text-white'
+                            }`}>
+                              {c.code}
+                            </span>
+                            {isSelected && (
+                              <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                            )}
+                          </div>
+                          <div className="font-bold text-xs text-slate-900 dark:text-white line-clamp-1">
+                            {c.name}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
               {/* Row 1: Jenis Dokumen & Departemen */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
@@ -652,9 +748,9 @@ export default function NewRegistrationView() {
                 </div>
               </div>
 
-              {/* Opsi Khusus DCO & Admin: Direct Publish Dokumen Fisik / Info Bypass */}
+              {/* Info Khusus DCO & Admin: Verifikasi Otomatis Terusan ke MR */}
               {isDcoOrAdmin && (
-                <div className="p-3.5 bg-sky-50/70 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800 rounded-xl space-y-2.5">
+                <div className="p-3.5 bg-sky-50/70 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800 rounded-xl space-y-2">
                   <div className="flex items-start gap-2.5">
                     <Info className="w-4 h-4 text-sky-600 dark:text-sky-400 flex-shrink-0 mt-0.5" />
                     <div className="text-xs">
@@ -665,25 +761,6 @@ export default function NewRegistrationView() {
                         Sebagai Document Control Officer (DCO), berkas yang Anda daftarkan otomatis lolos verifikasi format dan langsung diteruskan ke Management Representative (<strong>{activeApprover?.name || 'MR'}</strong>) untuk pengesahan resmi.
                       </p>
                     </div>
-                  </div>
-
-                  <div className="pt-2 border-t border-sky-200/60 dark:border-sky-800/60">
-                    <label className="flex items-start gap-2.5 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={directPublish}
-                        onChange={(e) => setDirectPublish(e.target.checked)}
-                        className="w-4 h-4 mt-0.5 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
-                      />
-                      <div>
-                        <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                          Dokumen telah disahkan secara fisik / bertanda tangan basah
-                        </span>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-                          Centang opsi ini jika berkas merupakan arsip dokumen yang sudah ditandatangani basah di atas kertas oleh pejabat berwenang. Dokumen akan langsung diterbitkan dengan status <strong>AKTIF</strong> tanpa perlu menunggu tanda tangan digital ulang.
-                        </p>
-                      </div>
-                    </label>
                   </div>
                 </div>
               )}
@@ -701,22 +778,11 @@ export default function NewRegistrationView() {
                 <button
                   type="button"
                   onClick={handleSubmitVerification}
-                  className={`flex items-center gap-2 px-6 py-2.5 text-xs font-bold text-white rounded-lg transition shadow-sm hover:shadow cursor-pointer ${directPublish
-                      ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'
-                      : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-blue-600/20'
-                    }`}
+                  disabled={isSubmitting}
+                  className="flex items-center gap-2 px-6 py-2.5 text-xs font-bold text-white rounded-lg transition shadow-sm hover:shadow cursor-pointer bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-blue-600/20"
                 >
-                  {directPublish ? (
-                    <>
-                      <ShieldCheck className="w-4 h-4" />
-                      Terbitkan Dokumen
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4" />
-                      Ajukan Dokumen
-                    </>
-                  )}
+                  <Send className="w-4 h-4" />
+                  Ajukan Dokumen
                 </button>
               </div>
             </div>
@@ -842,16 +908,9 @@ export default function NewRegistrationView() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <span className="text-[10px] text-slate-400 block">Diverifikasi oleh (Doc Control):</span>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-bold text-slate-800 dark:text-slate-200 text-xs truncate">
-                          {selectedVerifierTeam || 'Document Control Team'}
-                        </span>
-                        {directPublish && (
-                          <span className="text-[8.5px] px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold">
-                            Bypass Fisik
-                          </span>
-                        )}
-                      </div>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 text-xs truncate">
+                        {selectedVerifierTeam || 'Document Control Team'}
+                      </span>
                     </div>
                   </div>
 

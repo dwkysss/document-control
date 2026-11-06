@@ -3,7 +3,7 @@ import { Mail, Eye, EyeOff, X, Info, CheckCircle2, ArrowRight } from 'lucide-rea
 import { useDocumentControl } from '../../context/DocumentControlContext';
 
 export default function LoginView() {
-  const { login, employees, systemSettings, showToast } = useDocumentControl();
+  const { login, allEmployees, employees, systemSettings, showToast } = useDocumentControl();
   const [identifier, setIdentifier] = useState('dwiky.sumarlin@dji-indonesia.com');
   const [password, setPassword] = useState('password123');
   const [showPassword, setShowPassword] = useState(false);
@@ -14,23 +14,30 @@ export default function LoginView() {
 
   // Fallback list of PT DJI actual registered employees
   const fallbackRealEmployees = [
-    { nik: 'DJI092115', name: 'DENI RAMDAN', department: 'MGMT', position: 'GENERAL MANAGER', email: 'deni.ramdan@dji-indonesia.com', role: 'approver' },
-    { nik: 'DJI022203', name: 'DEDE SUHENDA', department: 'PRODUKSI', position: 'KEPALA BAGIAN PRODUKSI', email: 'dede.suhenda@dji-indonesia.com', role: 'reviewer' },
-    { nik: 'DJI012548', name: 'BABAN RACHMAT SUBAGJA', department: 'HRGA', position: 'MANAGER HRGA & MR', email: 'baban.rachmat.subagja@dji-indonesia.com', role: 'approver' },
-    { nik: '123463', name: 'Dwiky Sumarlin', department: 'IT', position: 'Lead Systems Engineer', email: 'dwiky.sumarlin@dji-indonesia.com', role: 'admin' },
-    { nik: 'DJI022550', name: 'SYAHLA NOVIYANA', department: 'FAT', position: 'DOCUMENT CONTROL OFFICER', email: 'syahla.noviyana@dji-indonesia.com', role: 'doc_control' },
-    { nik: 'DJI102216', name: 'ZARRAH ALI MARIFAH', department: 'FAT', position: 'STAFF ACCOUNTING FINANCE', email: 'zarrah.ali.marifah@dji-indonesia.com', role: 'staff' },
-    { nik: 'DJI032207', name: 'SITI NURDIANTI', department: 'PRODUKSI', position: 'STAFF PPIC', email: 'siti.nurdianti@dji-indonesia.com', role: 'staff' },
-    { nik: 'DJI012202', name: 'ASIVA SITI FAUJIAH', department: 'PRODUKSI', position: 'STAFF ADM PRODUKSI', email: 'asiva.siti.faujiah@dji-indonesia.com', role: 'staff' },
-    { nik: 'DJI042211', name: 'AHMAD FAUZI', department: 'PRODUKSI', position: 'OPERATOR PRODUKSI', email: 'ahmad.fauzi@dji-indonesia.com', role: 'viewer' },
-    { nik: 'DJI052219', name: 'NURUL HIDAYAH', department: 'FAT', position: 'OPERATOR ADM KEUANGAN', email: 'nurul.hidayah@dji-indonesia.com', role: 'viewer' },
+    { nik: 'DJI092115', name: 'DENI RAMDAN', companyCode: 'DJI', department: 'MGMT', position: 'GENERAL MANAGER', email: 'deni.ramdan@dji-indonesia.com', role: 'approver' },
+    { nik: 'DJI022203', name: 'DEDE SUHENDA', companyCode: 'DJI', department: 'PRODUKSI', position: 'KEPALA BAGIAN PRODUKSI', email: 'dede.suhenda@dji-indonesia.com', role: 'reviewer' },
+    { nik: 'DJI012548', name: 'BABAN RACHMAT SUBAGJA', companyCode: 'DJI', department: 'HRGA', position: 'MANAGER HRGA & MR', email: 'baban.rachmat.subagja@dji-indonesia.com', role: 'approver' },
+    { nik: '123463', name: 'Dwiky Sumarlin', companyCode: 'ALL', department: 'IT', position: 'Lead Systems Engineer', email: 'dwiky.sumarlin@dji-indonesia.com', role: 'admin' },
+    { nik: 'DJI022550', name: 'SYAHLA NOVIYANA', companyCode: 'DJI', department: 'FAT', position: 'DOCUMENT CONTROL OFFICER', email: 'syahla.noviyana@dji-indonesia.com', role: 'doc_control' },
+    { nik: 'DJI102216', name: 'ZARRAH ALI MARIFAH', companyCode: 'DJI', department: 'FAT', position: 'STAFF ACCOUNTING FINANCE', email: 'zarrah.ali.marifah@dji-indonesia.com', role: 'staff' },
+    { nik: 'DJI032207', name: 'SITI NURDIANTI', companyCode: 'DJI', department: 'PRODUKSI', position: 'STAFF PPIC', email: 'siti.nurdianti@dji-indonesia.com', role: 'staff' },
+    { nik: 'DJI012202', name: 'ASIVA SITI FAUJIAH', companyCode: 'DJI', department: 'PRODUKSI', position: 'STAFF ADM PRODUKSI', email: 'asiva.siti.faujiah@dji-indonesia.com', role: 'staff' },
+    { nik: 'DJI042211', name: 'AHMAD FAUZI', companyCode: 'DJI', department: 'PRODUKSI', position: 'OPERATOR PRODUKSI', email: 'ahmad.fauzi@dji-indonesia.com', role: 'viewer' },
+    { nik: 'DJI052219', name: 'NURUL HIDAYAH', companyCode: 'DJI', department: 'FAT', position: 'OPERATOR ADM KEUANGAN', email: 'nurul.hidayah@dji-indonesia.com', role: 'viewer' },
+    // UMI
+    { nik: 'UMI01001', name: 'RATNA SARI', companyCode: 'UMI', department: 'HRGA', position: 'MANAGER HRGA & MR (UMI)', email: 'ratna.sari@ultimo-moda.com', role: 'approver' },
+    { nik: 'UMI02002', name: 'HENDRA PRASETYA', companyCode: 'UMI', department: 'FAT', position: 'DOCUMENT CONTROL OFFICER (UMI)', email: 'hendra.prasetya@ultimo-moda.com', role: 'doc_control' },
+    { nik: 'UMI03003', name: 'MAYA ANGGRAENI', companyCode: 'UMI', department: 'PRODUKSI', position: 'STAFF PRODUKSI & QC (UMI)', email: 'maya.anggraeni@ultimo-moda.com', role: 'staff' },
+    // IMK
+    { nik: 'IMK01001', name: 'BAMBANG WIJAYA', companyCode: 'IMK', department: 'HRGA', position: 'MANAGER HRGA & MR (IMK)', email: 'bambang.wijaya@imk-textile.com', role: 'approver' },
+    { nik: 'IMK02002', name: 'TIARA KUSUMA', companyCode: 'IMK', department: 'FAT', position: 'DOCUMENT CONTROL OFFICER (IMK)', email: 'tiara.kusuma@imk-textile.com', role: 'doc_control' },
+    { nik: 'IMK03003', name: 'RIZKY PRATAMA', companyCode: 'IMK', department: 'PRODUKSI', position: 'STAFF PRODUKSI & KNITTING (IMK)', email: 'rizky.pratama@imk-textile.com', role: 'staff' }
   ];
 
   // Exclude legacy dummy demo NIKs to ensure only 100% real accounts are shown
   const dummyNiks = ['123456', '123457', '123458', '123459', '123460', '123461', '123462'];
-  const realEmployees = (employees && employees.length > 0)
-    ? employees.filter(e => e.status !== 'Nonaktif' && !dummyNiks.includes(String(e.nik || '').trim()))
-    : fallbackRealEmployees;
+  const employeeSource = allEmployees && allEmployees.length > 0 ? allEmployees : (employees && employees.length > 0 ? employees : fallbackRealEmployees);
+  const realEmployees = employeeSource.filter(e => e.status !== 'Nonaktif' && !dummyNiks.includes(String(e.nik || '').trim()));
 
   const quickLoginList = realEmployees.length > 0 ? realEmployees : fallbackRealEmployees;
 
@@ -326,9 +333,14 @@ export default function LoginView() {
                         className="p-1.5 rounded-lg bg-white border border-slate-200 hover:border-blue-500 hover:shadow-xs text-left transition group cursor-pointer focus:outline-none"
                       >
                         <div className="flex items-center justify-between gap-1 mb-0.5">
-                          <span className={`text-[8px] font-bold px-1 rounded border ${getRoleBadge(acc.role)}`}>
-                            {getRoleLabel(acc.role)}
-                          </span>
+                          <div className="flex items-center gap-1">
+                            <span className={`text-[8px] font-bold px-1 rounded border ${getRoleBadge(acc.role)}`}>
+                              {getRoleLabel(acc.role)}
+                            </span>
+                            <span className="text-[8px] font-bold px-1 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                              {acc.companyCode || (acc.nik?.startsWith('UMI') ? 'UMI' : acc.nik?.startsWith('IMK') ? 'IMK' : (acc.nik === '123463' ? 'ALL' : 'DJI'))}
+                            </span>
+                          </div>
                           <span className="font-mono text-[8.5px] font-semibold text-slate-400 group-hover:text-blue-600 transition truncate">
                             {acc.nik}
                           </span>
