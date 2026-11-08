@@ -33,15 +33,28 @@ import { useDocumentControl } from '../../context/DocumentControlContext';
 /**
  * Utilitas untuk menghitung status jatuh tempo peninjauan berkala ISO 9001 (Langkah 8)
  */
-function getPeriodicReviewInfo(doc, reviewIntervalMonths = 12) {
+function getPeriodicReviewInfo(doc, reviewIntervalMonths = 12, documentTypes = [], systemSettings = {}) {
   const baseDateStr = doc.lastReviewedDate || doc.effectiveDate || doc.approvedDate || doc.createdDate;
   if (!baseDateStr) {
     return { status: 'NORMAL', label: 'Terkendali', dueDateStr: '-', daysRemaining: 999, badgeColor: 'bg-slate-100 text-slate-700' };
   }
 
+  // ISO 9001 Clause 7.5: Level 1 & 2 = 12 bulan, Level 3 & 4 = 24 bulan
+  const typeCode = (doc.type || '').toUpperCase();
+  const typeObj = (documentTypes || []).find(t => (t.code || '').toUpperCase() === typeCode);
+  const docLevel = typeObj?.level || (
+    typeCode.includes('POL') ? 1 :
+    typeCode.includes('SOP') ? 2 :
+    (typeCode.includes('IK') || typeCode.includes('WI')) ? 3 :
+    (typeCode.includes('FORM') || typeCode.includes('MEM')) ? 4 : 2
+  );
+  const effectiveInterval = docLevel >= 3
+    ? (systemSettings?.periodicReviewMonthsLevel34 || 24)
+    : (systemSettings?.periodicReviewMonths || reviewIntervalMonths || 12);
+
   const baseDate = new Date(baseDateStr);
   const dueDate = new Date(baseDate);
-  dueDate.setMonth(dueDate.getMonth() + reviewIntervalMonths);
+  dueDate.setMonth(dueDate.getMonth() + effectiveInterval);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -123,15 +136,15 @@ export default function ActiveDocumentsView() {
 
   // Hitung dokumen yang mendekati / lewat jatuh tempo review berkala
   const reviewDueDocs = useMemo(() => activeDocs.filter(d => {
-    const info = getPeriodicReviewInfo(d, reviewIntervalMonths);
+    const info = getPeriodicReviewInfo(d, reviewIntervalMonths, documentTypes, systemSettings);
     return info.status === 'OVERDUE' || info.status === 'DUE_SOON';
-  }), [activeDocs, reviewIntervalMonths]);
+  }), [activeDocs, reviewIntervalMonths, documentTypes, systemSettings]);
 
   // Hitung dokumen normal / terkendali
   const normalDocs = useMemo(() => activeDocs.filter(d => {
-    const info = getPeriodicReviewInfo(d, reviewIntervalMonths);
+    const info = getPeriodicReviewInfo(d, reviewIntervalMonths, documentTypes, systemSettings);
     return info.status === 'NORMAL';
-  }), [activeDocs, reviewIntervalMonths]);
+  }), [activeDocs, reviewIntervalMonths, documentTypes, systemSettings]);
 
   // Dokumen departemen user login
   const myDeptDocs = useMemo(() => {
@@ -207,10 +220,10 @@ export default function ActiveDocumentsView() {
       if (filterMode === 'MY_DEPT') {
         if ((d.department || '').toUpperCase() !== userDept.toUpperCase()) return false;
       } else if (filterMode === 'DUE') {
-        const info = getPeriodicReviewInfo(d, reviewIntervalMonths);
+        const info = getPeriodicReviewInfo(d, reviewIntervalMonths, documentTypes, systemSettings);
         if (info.status !== 'OVERDUE' && info.status !== 'DUE_SOON') return false;
       } else if (filterMode === 'NORMAL') {
-        const info = getPeriodicReviewInfo(d, reviewIntervalMonths);
+        const info = getPeriodicReviewInfo(d, reviewIntervalMonths, documentTypes, systemSettings);
         if (info.status !== 'NORMAL') return false;
       }
 
@@ -629,7 +642,7 @@ export default function ActiveDocumentsView() {
                 </tr>
               ) : (
                 paginatedDocs.map((doc, idx) => {
-                  const reviewInfo = getPeriodicReviewInfo(doc, reviewIntervalMonths);
+                  const reviewInfo = getPeriodicReviewInfo(doc, reviewIntervalMonths, documentTypes, systemSettings);
                   return (
                     <tr key={doc.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
                       <td className="py-3.5 px-4 text-center text-slate-400">{startIndex + idx + 1}</td>

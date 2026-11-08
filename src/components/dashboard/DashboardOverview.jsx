@@ -28,15 +28,27 @@ export default function DashboardOverview() {
   const obsoleteDocs = documents.filter(d => d.status === 'OBSOLETE').length;
   const rejectedDocs = documents.filter(d => d.status === 'DITOLAK').length;
 
-  // Periodic review check (Langkah 8 & 9 ISO 9001 Clause 7.5)
-  const reviewIntervalMonths = systemSettings.periodicReviewMonths || 12;
+  // Periodic review check (ISO 9001 Clause 7.5.3: Level 1 & 2 = 12 bulan, Level 3 & 4 = 24 bulan)
   const reviewDueDocs = documents.filter(d => {
     if (d.status !== 'AKTIF') return false;
     const baseDateStr = d.lastReviewedDate || d.effectiveDate || d.approvedDate || d.createdDate;
     if (!baseDateStr) return false;
+
+    const typeCode = (d.type || '').toUpperCase();
+    const typeObj = (documentTypes || []).find(t => (t.code || '').toUpperCase() === typeCode);
+    const docLevel = typeObj?.level || (
+      typeCode.includes('POL') ? 1 :
+      typeCode.includes('SOP') ? 2 :
+      (typeCode.includes('IK') || typeCode.includes('WI')) ? 3 :
+      (typeCode.includes('FORM') || typeCode.includes('MEM')) ? 4 : 2
+    );
+    const intervalMonths = docLevel >= 3
+      ? (systemSettings.periodicReviewMonthsLevel34 || 24)
+      : (systemSettings.periodicReviewMonths || 12);
+
     const baseDate = new Date(baseDateStr);
     const dueDate = new Date(baseDate);
-    dueDate.setMonth(dueDate.getMonth() + reviewIntervalMonths);
+    dueDate.setMonth(dueDate.getMonth() + intervalMonths);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     dueDate.setHours(0, 0, 0, 0);
