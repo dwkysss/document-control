@@ -259,11 +259,10 @@ export default function DashboardAnalytics({
                 <button
                   type="button"
                   onClick={() => setHierarchyMode('pyramid')}
-                  className={`px-2 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${
-                    hierarchyMode === 'pyramid'
+                  className={`px-2 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${hierarchyMode === 'pyramid'
                       ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 font-bold shadow-xs'
                       : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-                  }`}
+                    }`}
                   title="Piramida Mutu ISO 4 Tingkat"
                 >
                   <Layers className="w-3 h-3" />
@@ -272,11 +271,10 @@ export default function DashboardAnalytics({
                 <button
                   type="button"
                   onClick={() => setHierarchyMode('chart')}
-                  className={`px-2 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${
-                    hierarchyMode === 'chart'
+                  className={`px-2 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${hierarchyMode === 'chart'
                       ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 font-bold shadow-xs'
                       : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-                  }`}
+                    }`}
                   title="Grafik Donat Dokumen"
                 >
                   <PieChart className="w-3 h-3" />
@@ -405,21 +403,19 @@ export default function DashboardAnalytics({
               <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 text-xs">
                 <button
                   onClick={() => setViewMode('chart')}
-                  className={`px-2 py-1 rounded-md text-[11px] font-semibold transition ${
-                    viewMode === 'chart'
+                  className={`px-2 py-1 rounded-md text-[11px] font-semibold transition ${viewMode === 'chart'
                       ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-xs'
                       : 'text-slate-500 hover:text-slate-900'
-                  }`}
+                    }`}
                 >
                   Grafik
                 </button>
                 <button
                   onClick={() => setViewMode('table')}
-                  className={`px-2 py-1 rounded-md text-[11px] font-semibold transition ${
-                    viewMode === 'table'
+                  className={`px-2 py-1 rounded-md text-[11px] font-semibold transition ${viewMode === 'table'
                       ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-xs'
                       : 'text-slate-500 hover:text-slate-900'
-                  }`}
+                    }`}
                 >
                   Tabel
                 </button>
