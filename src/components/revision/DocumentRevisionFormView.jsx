@@ -276,10 +276,10 @@ export default function DocumentRevisionFormView() {
         reviewerNik: activeReviewer?.nik,
         reviewerName: activeReviewer?.name,
         reviewerPosition: activeReviewer?.position,
-        targetApprover: activeApprover?.name || 'DENI RAMDAN',
-        approverNik: activeApprover?.nik || 'DJI092115',
-        approverName: activeApprover?.name || 'DENI RAMDAN',
-        approverPosition: activeApprover?.position || 'GENERAL MANAGER',
+        targetApprover: isFastTrack ? activeReviewer?.name : (activeApprover?.name || 'DENI RAMDAN'),
+        approverNik: isFastTrack ? activeReviewer?.nik : (activeApprover?.nik || 'DJI092115'),
+        approverName: isFastTrack ? activeReviewer?.name : (activeApprover?.name || 'DENI RAMDAN'),
+        approverPosition: isFastTrack ? activeReviewer?.position : (activeApprover?.position || 'GENERAL MANAGER'),
         content: revisedContent,
         isDraft,
         fileName: fileAttachment ? fileAttachment.name : `${newDocNumber}.pdf`,
@@ -528,72 +528,99 @@ export default function DocumentRevisionFormView() {
               </div>
 
               {/* Reviewer & Approver Selectors */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
+              {isFastTrack ? (
+                /* Fast-Track (Level 3 & 4): 1 Kolom Tunggal Kepala Departemen */
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-200">
-                      {docLevel === 1
-                        ? 'Penelaah Mutu ISO (MR)'
-                        : isFastTrack
-                        ? 'Pemeriksa Teknis (Kepala Departemen)'
-                        : 'Reviewer (Atasan Departemen)'} <span className="text-red-500">*</span>
+                      Kepala Departemen (Pemeriksa & Penyetuju Teknis) <span className="text-red-500">*</span>
                     </label>
-                    <span className="text-[10px] text-slate-400">
-                      {docLevel === 1 ? 'Management Rep' : `Dept. ${currentDoc.department}`}
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/60 dark:text-emerald-300 px-2.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
+                      ⚡ Jalur Cepat Level {docLevel}
                     </span>
                   </div>
                   <select
                     value={selectedReviewerNik}
                     onChange={(e) => {
-                      const newReviewerNik = e.target.value;
-                      setSelectedReviewerNik(newReviewerNik);
-                      if (selectedApproverNik === newReviewerNik) {
-                        const alt = availableApprovers.find(a => a.nik !== newReviewerNik);
-                        if (alt) setSelectedApproverNik(alt.nik);
-                      }
+                      const newNik = e.target.value;
+                      setSelectedReviewerNik(newNik);
+                      setSelectedApproverNik(newNik);
                     }}
-                    className="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2.5 font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-xs"
+                    className="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2.5 font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition shadow-xs"
                   >
-                    {(docLevel === 1 ? availableApprovers : availableReviewers).map((emp) => (
+                    {availableReviewers.map((emp) => (
                       <option key={emp.nik} value={emp.nik}>
                         {emp.name} — {emp.position} ({emp.department})
                       </option>
                     ))}
                   </select>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    💡 <strong>Jalur Cepat ISO:</strong> Revisi dokumen Level {docLevel} cukup disetujui Kepala Departemen bersangkutan, lalu diverifikasi formatnya oleh DCO dan langsung resmi terbit aktif.
+                  </p>
                 </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-200">
-                      {docLevel === 1
-                        ? 'Pengesah (General Manager / Direksi)'
-                        : docLevel === 2
-                        ? 'Pengesah (Management Representative / MR)'
-                        : isFastTrack
-                        ? 'Pengesahan Teknis (Kepala Departemen)'
-                        : 'Pejabat Penyetuju'} <span className="text-red-500">*</span>
-                    </label>
-                    {isFastTrack && (
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/60 dark:text-emerald-300 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
-                        ⚡ Jalur Cepat L{docLevel}
+              ) : (
+                /* Standard (Level 1 & 2): 2 Kolom Berdampingan */
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-200">
+                        {docLevel === 1
+                          ? 'Penelaah Mutu ISO (MR)'
+                          : 'Reviewer (Atasan Departemen)'} <span className="text-red-500">*</span>
+                      </label>
+                      <span className="text-[10px] text-slate-400">
+                        {docLevel === 1 ? 'Management Rep' : `Dept. ${currentDoc.department}`}
                       </span>
-                    )}
+                    </div>
+                    <select
+                      value={selectedReviewerNik}
+                      onChange={(e) => {
+                        const newReviewerNik = e.target.value;
+                        setSelectedReviewerNik(newReviewerNik);
+                        if (selectedApproverNik === newReviewerNik) {
+                          const alt = availableApprovers.find(a => a.nik !== newReviewerNik);
+                          if (alt) setSelectedApproverNik(alt.nik);
+                        }
+                      }}
+                      className="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2.5 font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-xs"
+                    >
+                      {(docLevel === 1 ? availableApprovers : availableReviewers).map((emp) => (
+                        <option key={emp.nik} value={emp.nik}>
+                          {emp.name} — {emp.position} ({emp.department})
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                  <select
-                    value={selectedApproverNik}
-                    onChange={(e) => setSelectedApproverNik(e.target.value)}
-                    className="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2.5 font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-xs"
-                  >
-                    {(isFastTrack ? availableReviewers : availableApprovers).map((emp) => (
-                      <option key={emp.nik} value={emp.nik}>
-                        {emp.name} — {emp.position} ({emp.department})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
 
-              {selectedReviewerNik === selectedApproverNik && (
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-200">
+                        {docLevel === 1
+                          ? 'Pengesah (General Manager / Direksi)'
+                          : docLevel === 2
+                          ? 'Pengesah (Management Representative / MR)'
+                          : 'Pejabat Penyetuju'} <span className="text-red-500">*</span>
+                      </label>
+                      <span className="text-[10px] text-slate-400">
+                        Otoritas Tertinggi
+                      </span>
+                    </div>
+                    <select
+                      value={selectedApproverNik}
+                      onChange={(e) => setSelectedApproverNik(e.target.value)}
+                      className="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2.5 font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-xs"
+                    >
+                      {availableApprovers.map((emp) => (
+                        <option key={emp.nik} value={emp.nik}>
+                          {emp.name} — {emp.position} ({emp.department})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {!isFastTrack && selectedReviewerNik === selectedApproverNik && (
                 <div className="p-2.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-lg flex items-start gap-2 text-xs text-amber-800 dark:text-amber-300">
                   <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
                   <p className="leading-relaxed">
