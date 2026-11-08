@@ -620,7 +620,7 @@ export default function NewRegistrationView() {
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-200">
                     Judul Dokumen Resmi <span className="text-red-500">*</span>
                   </label>
-                  <span className="text-[10px] text-slate-400 font-mono">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
                     {title.length}/200 karakter
                   </span>
                 </div>
@@ -651,55 +651,82 @@ export default function NewRegistrationView() {
 
               {/* Lampiran Berkas Dokumen (Upload PDF / Word / Excel) */}
               <div className="pt-1">
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1.5">
-                  Lampiran Berkas Resmi (PDF / Word / Excel)
-                </label>
-                <div className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-4 bg-slate-50/60 dark:bg-slate-800/40 text-center hover:bg-blue-50/30 transition cursor-pointer relative">
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx,.xls,.xlsx,.csv"
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        setFileAttachment(e.target.files[0]);
-                      }
-                    }}
-                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                  />
-                  <div className="flex flex-col items-center justify-center gap-1.5 pointer-events-none">
-                    <UploadCloud className="w-6 h-6 text-blue-600" />
-                    {fileAttachment ? (
-                      <div className="text-xs flex items-center justify-center gap-2 flex-wrap">
-                        <span className="font-bold text-emerald-600">Berkas Terlampir:</span>
-                        <span className="font-medium text-slate-800 dark:text-slate-200">{fileAttachment.name}</span>
-                        <span className="text-[10px] text-slate-400">({(fileAttachment.size / 1024).toFixed(0)} KB)</span>
-                        {/\.(xlsx?|csv)$/i.test(fileAttachment.name) && (
-                          <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold text-[10px]">
-                            EXCEL / SPREADSHEET
-                          </span>
-                        )}
-                        {/\.(docx?)$/i.test(fileAttachment.name) && (
-                          <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 font-bold text-[10px]">
-                            WORD (.DOCX)
-                          </span>
-                        )}
-                        {/\.pdf$/i.test(fileAttachment.name) && (
-                          <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 font-bold text-[10px]">
-                            PDF
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <>
-                        <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                          Klik untuk memilih berkas atau seret file PDF / Word / Excel ke sini
-                        </p>
-                        <p className="text-[10px] text-slate-400">
-                          Format yang didukung: PDF, DOCX, XLSX, XLS, CSV (Maks. 25 MB)
-                        </p>
-                      </>
-                    )}
-                  </div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-200">
+                    Lampiran Berkas Resmi (PDF / Word / Excel)
+                  </label>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                    Opsional (Maks. 25 MB)
+                  </span>
                 </div>
+
+                {fileAttachment ? (
+                  <div className="flex items-center justify-between p-3 rounded-xl border border-emerald-200 bg-emerald-50/70 dark:bg-emerald-950/30 dark:border-emerald-800">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0">
+                        <FileText className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                          {fileAttachment.name}
+                        </p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                            {(fileAttachment.size / 1024).toFixed(0)} KB
+                          </span>
+                          {/\.(xlsx?|csv)$/i.test(fileAttachment.name) && (
+                            <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 font-bold text-[9px]">
+                              EXCEL
+                            </span>
+                          )}
+                          {/\.(docx?)$/i.test(fileAttachment.name) && (
+                            <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 font-bold text-[9px]">
+                              WORD
+                            </span>
+                          )}
+                          {/\.pdf$/i.test(fileAttachment.name) && (
+                            <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200 font-bold text-[9px]">
+                              PDF
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setFileAttachment(null)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-white dark:hover:bg-slate-800 transition cursor-pointer shrink-0"
+                      title="Batalkan berkas ini"
+                      aria-label="Hapus berkas lampiran"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-4 bg-slate-50/60 dark:bg-slate-800/40 text-center hover:bg-blue-50/40 hover:border-blue-400 dark:hover:border-blue-500 transition cursor-pointer relative focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.csv"
+                      aria-label="Pilih atau seret berkas dokumen resmi"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          setFileAttachment(e.target.files[0]);
+                        }
+                      }}
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                    />
+                    <div className="flex flex-col items-center justify-center gap-1.5 pointer-events-none">
+                      <UploadCloud className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                      <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                        Klik untuk memilih berkas atau seret file PDF / Word / Excel ke sini
+                      </p>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                        Format yang didukung: PDF, DOCX, XLSX, XLS, CSV (Maks. 25 MB)
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Opsi Penyesuaian Pejabat Manual (Collapsible / Default Tertutup) */}
@@ -707,7 +734,7 @@ export default function NewRegistrationView() {
                 <button
                   type="button"
                   onClick={() => setShowCustomApprover(!showCustomApprover)}
-                  className="text-[11px] font-semibold text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 flex items-center gap-1.5 transition cursor-pointer"
+                  className="w-full sm:w-auto min-h-[44px] px-3.5 py-2.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-blue-700 bg-slate-100/90 hover:bg-blue-50/80 dark:text-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 flex items-center justify-between sm:justify-start gap-2 transition cursor-pointer shadow-xs"
                 >
                   <span>{showCustomApprover ? '▲ Sembunyikan Penyesuaian Pejabat' : '⚙️ Sesuaikan Pejabat Penyetuju (Khusus Pengganti / Cuti)'}</span>
                 </button>
@@ -736,7 +763,7 @@ export default function NewRegistrationView() {
                         >
                           {availableReviewers.map((emp) => (
                             <option key={emp.nik} value={emp.nik}>
-                              {emp.name} — {emp.position} ({emp.department})
+                              {emp.name} - {emp.position} ({emp.department})
                             </option>
                           ))}
                         </select>
@@ -765,7 +792,7 @@ export default function NewRegistrationView() {
                           >
                             {(docLevel === 1 ? availableApprovers : availableReviewers).map((emp) => (
                               <option key={emp.nik} value={emp.nik}>
-                                {emp.name} — {emp.position} ({emp.department})
+                                {emp.name} - {emp.position} ({emp.department})
                               </option>
                             ))}
                           </select>
@@ -785,7 +812,7 @@ export default function NewRegistrationView() {
                           >
                             {availableApprovers.map((emp) => (
                               <option key={emp.nik} value={emp.nik}>
-                                {emp.name} — {emp.position} ({emp.department})
+                                {emp.name} - {emp.position} ({emp.department})
                               </option>
                             ))}
                           </select>
@@ -922,7 +949,7 @@ export default function NewRegistrationView() {
               {/* 2. Alur Persetujuan Dokumen - Dinamis berdasarkan Level ISO */}
               <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">
+                  <span className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block tracking-wider">
                     Pihak yang Menyetujui
                   </span>
                   <span className={`text-[9.5px] font-bold font-mono px-2 py-0.5 rounded ${isFastTrack
@@ -940,7 +967,7 @@ export default function NewRegistrationView() {
                       1
                     </span>
                     <div className="min-w-0">
-                      <span className="text-[10px] text-slate-400 block">Dibuat oleh (Pemohon):</span>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Dibuat oleh (Pemohon):</span>
                       <span className="font-bold text-slate-800 dark:text-slate-200 text-xs block truncate">
                         {activeCreator.name}
                       </span>
@@ -953,7 +980,7 @@ export default function NewRegistrationView() {
                       2
                     </span>
                     <div className="min-w-0 flex-1">
-                      <span className="text-[10px] text-slate-400 block">
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 block">
                         {docLevel === 1
                           ? 'Diverifikasi Format (Doc Control):'
                           : isFastTrack
@@ -973,7 +1000,7 @@ export default function NewRegistrationView() {
                       3
                     </span>
                     <div className="min-w-0 flex-1">
-                      <span className="text-[10px] text-slate-400 block">
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 block">
                         {docLevel === 1
                           ? 'Ditelaah Mutu ISO (MR):'
                           : isFastTrack
@@ -993,7 +1020,7 @@ export default function NewRegistrationView() {
                         4
                       </span>
                       <div className="min-w-0">
-                        <span className="text-[10px] text-slate-400 block">
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 block">
                           Disahkan oleh ({docLevel === 1 ? 'Direktur Utama / GM' : 'MR'}):
                         </span>
                         <span className="font-bold text-slate-800 dark:text-slate-200 text-xs block truncate">
@@ -1021,7 +1048,7 @@ export default function NewRegistrationView() {
               {/* 3. Berkas Lampiran */}
               <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between gap-2">
                 <div>
-                  <span className="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">
+                  <span className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block tracking-wider">
                     File Lampiran
                   </span>
                   <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate block max-w-[190px]">
