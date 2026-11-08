@@ -32,3 +32,4 @@ Used consistently across Document Registration, Revision, Active Documents, and 
 * Font: Clean geometric sans-serif (Inter/system-ui).
 * Monospace font reserved strictly for Document Numbers, Sequence Codes, and Version Indicators.
 * Normal text contrast must strictly maintain $\ge 4.5:1$ against adjacent surfaces. `text-slate-500` or darker is required on white backgrounds (avoiding `text-slate-400` in light mode).
+

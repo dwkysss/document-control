@@ -16,7 +16,10 @@ import {
   ChevronRight,
   ShieldCheck,
   AlertCircle,
-  Building2
+  Building2,
+  Copy,
+  Check,
+  ArrowRight
 } from 'lucide-react';
 import Badge from '../common/Badge';
 import { useDocumentControl } from '../../context/DocumentControlContext';
@@ -285,6 +288,13 @@ export default function NewRegistrationView() {
   const [fileAttachment, setFileAttachment] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCustomApprover, setShowCustomApprover] = useState(false);
+  const [copiedNumber, setCopiedNumber] = useState(false);
+
+  const handleCopyNumber = () => {
+    navigator.clipboard.writeText(previewDocNumber);
+    setCopiedNumber(true);
+    setTimeout(() => setCopiedNumber(false), 2000);
+  };
 
   // Live Auto-calculated Sequence Number based on selected Company, Type, and Department
   const nextSeq = getNextSequenceNumber(documents, selectedType, selectedDept, selectedCompany);
@@ -415,15 +425,20 @@ export default function NewRegistrationView() {
         <div className="xl:col-span-8 space-y-6">
 
           {/* Card: INFORMASI DOKUMEN */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 overflow-hidden">
-            {/* Header: Bersih & Minimalis */}
-            <div className="bg-[#102a4e] text-white px-5 py-3.5 flex items-center justify-between">
-              <h2 className="text-sm font-bold tracking-wider uppercase flex items-center gap-2">
-                <FileText className="w-4 h-4 text-sky-400" />
-                INFORMASI DOKUMEN
-              </h2>
-              <span className="text-xs font-mono font-semibold text-sky-200 bg-sky-500/20 border border-sky-400/30 px-2.5 py-0.5 rounded">
-                {previewDocNumber}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-card border border-slate-200 dark:border-slate-800 overflow-hidden">
+            {/* Header: Bersih & Profesional */}
+            <div className="bg-[#102a4e] text-white px-5 sm:px-6 py-4 flex items-center justify-between border-b border-slate-800/40">
+              <div>
+                <h2 className="text-sm font-bold tracking-wider uppercase flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-sky-400" />
+                  INFORMASI REGISTRASI DOKUMEN
+                </h2>
+                <p className="text-[11px] text-slate-300 mt-0.5">
+                  Standar Pengendalian Informasi Terdokumentasi ISO 9001:2015 Klausul 7.5
+                </p>
+              </div>
+              <span className="hidden sm:inline-flex text-xs font-mono font-semibold text-sky-200 bg-sky-500/20 border border-sky-400/30 px-3 py-1 rounded-lg">
+                Rev 00
               </span>
             </div>
 
@@ -850,109 +865,126 @@ export default function NewRegistrationView() {
               )}
 
               {/* Action Buttons */}
-              <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
-                  onClick={handleSaveDraft}
-                  className="flex items-center gap-2 px-5 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 border border-slate-300 dark:border-slate-700 rounded-lg transition shadow-xs cursor-pointer"
+                  onClick={() => {
+                    setTitle('');
+                    setNotes('');
+                    setFileAttachment(null);
+                  }}
+                  className="px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition cursor-pointer"
                 >
-                  <Save className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-                  Simpan Draft
+                  Reset Form
                 </button>
-                <button
-                  type="button"
-                  onClick={handleSubmitVerification}
-                  disabled={isSubmitting}
-                  className="flex items-center gap-2 px-6 py-2.5 text-xs font-bold text-white rounded-lg transition shadow-sm hover:shadow cursor-pointer bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-blue-600/20"
-                >
-                  <Send className="w-4 h-4" />
-                  Ajukan Dokumen
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleSaveDraft}
+                    className="flex items-center gap-1.5 px-5 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 border border-slate-300 dark:border-slate-700 rounded-lg transition shadow-xs cursor-pointer"
+                  >
+                    <Save className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                    Simpan Draft
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSubmitVerification}
+                    disabled={isSubmitting}
+                    className="flex items-center gap-2 px-6 py-2.5 text-xs font-bold text-white rounded-lg transition shadow-sm hover:shadow cursor-pointer bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-blue-600/20"
+                  >
+                    <Send className="w-4 h-4" />
+                    Ajukan Registrasi Dokumen
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
         </div>
 
-        {/* Right 4-Cols: Live Number Preview, Rules Sistem, Revision Flow */}
-        <div className="xl:col-span-4 space-y-6">
-
-          {/* Card 1: PREVIEW NOMOR DOKUMEN */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 overflow-hidden">
-            <div className="bg-[#102a4e] text-white px-5 py-3 flex items-center justify-between">
-              <h3 className="text-xs font-bold tracking-wider uppercase flex items-center gap-2">
-                <FileText className="w-4 h-4 text-sky-400" />
-                PREVIEW NOMOR DOKUMEN
-              </h3>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/30 uppercase">
-                Otomatis
-              </span>
-            </div>
-
-            <div className="p-5 text-center space-y-2">
-              <div className="py-3 px-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-                <span className="text-xl sm:text-2xl font-mono font-extrabold text-blue-600 dark:text-blue-400 tracking-wider block select-all">
-                  {previewDocNumber}
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Dihasilkan otomatis sesuai jenis dokumen, departemen, dan nomor urut.
-              </p>
-            </div>
-          </div>
-
-          {/* Card 2: RINGKASAN PENGAJUAN (Intuitive Submission Summary) */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 overflow-hidden">
-            <div className="bg-[#102a4e] text-white px-5 py-3 flex items-center justify-between">
+        {/* Right 4-Cols: Sleek Unified Approval Timeline & Live Summary Panel */}
+        <div className="xl:col-span-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-card border border-slate-200 dark:border-slate-800 overflow-hidden sticky top-6">
+            
+            {/* Header Ringkasan */}
+            <div className="bg-[#102a4e] text-white px-5 py-3.5 flex items-center justify-between border-b border-slate-800/40">
               <h3 className="text-xs font-bold tracking-wider uppercase flex items-center gap-2">
                 <FileCheck className="w-4 h-4 text-emerald-400" />
                 RINGKASAN PENGAJUAN
               </h3>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase border ${title.trim()
-                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30'
-                  : 'bg-amber-500/20 text-amber-300 border-amber-400/30'
+              <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase border ${title.trim()
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40'
+                  : 'bg-amber-500/20 text-amber-300 border-amber-400/40'
                 }`}>
                 {title.trim() ? 'Siap Diajukan' : 'Belum Lengkap'}
               </span>
             </div>
 
-            <div className="p-4 sm:p-5 space-y-3.5 text-xs">
-              {/* 1. Kategori & Judul Dokumen */}
-              <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-2">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-bold text-[10px]">
-                    {selectedType}
+            <div className="p-5 space-y-4 text-xs">
+
+              {/* Block 1: Nomor Dokumen Generator */}
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    Nomor Dokumen Terbit
                   </span>
-                  <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">
-                    {documentTypes.find(t => t.code === selectedType)?.name || selectedType}
-                  </span>
-                  <span className="text-slate-300 dark:text-slate-600">•</span>
-                  <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                    Dept: <strong className="text-slate-700 dark:text-slate-300 font-semibold">{selectedDept}</strong>
+                  <button
+                    type="button"
+                    onClick={handleCopyNumber}
+                    className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-semibold cursor-pointer"
+                    title="Salin nomor dokumen"
+                  >
+                    {copiedNumber ? (
+                      <>
+                        <Check className="w-3 h-3 text-emerald-600" />
+                        <span className="text-emerald-600">Tersalin!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3" />
+                        <span>Salin</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <div className="py-2.5 px-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 text-center">
+                  <span className="text-base sm:text-lg font-mono font-black text-blue-600 dark:text-blue-400 tracking-wider block select-all">
+                    {previewDocNumber}
                   </span>
                 </div>
 
-                <div className="pt-1.5 border-t border-slate-200/70 dark:border-slate-700/70">
-                  {title.trim() ? (
-                    <p className="font-bold text-xs text-slate-900 dark:text-white leading-relaxed">
-                      "{title.toUpperCase()}"
-                    </p>
-                  ) : (
-                    <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1.5 py-0.5">
-                      <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-500" />
-                      Judul dokumen belum diisi pada form
-                    </p>
-                  )}
+                <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 pt-0.5">
+                  <span>Unit: <strong className="text-slate-700 dark:text-slate-300">{selectedCompany}</strong></span>
+                  <span>Tipe: <strong className="text-slate-700 dark:text-slate-300">{selectedType}</strong></span>
+                  <span>Dept: <strong className="text-slate-700 dark:text-slate-300">{selectedDept}</strong></span>
                 </div>
               </div>
 
-              {/* 2. Alur Persetujuan Dokumen - Dinamis berdasarkan Level ISO */}
-              <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-2.5">
+              {/* Block 2: Judul Dokumen Preview */}
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/80 space-y-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
+                  Judul Dokumen
+                </span>
+                {title.trim() ? (
+                  <p className="font-bold text-xs text-slate-900 dark:text-white leading-relaxed">
+                    "{title.toUpperCase()}"
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1.5 py-0.5">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-500" />
+                    Judul dokumen belum diisi pada form
+                  </p>
+                )}
+              </div>
+
+              {/* Block 3: Vertical Approval Timeline Spine */}
+              <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block tracking-wider">
-                    Pihak yang Menyetujui
+                  <span className="text-[10.5px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200">
+                    Alur Persetujuan ISO
                   </span>
-                  <span className={`text-[9.5px] font-bold font-mono px-2 py-0.5 rounded ${isFastTrack
+                  <span className={`text-[9.5px] font-bold font-mono px-2 py-0.5 rounded-full ${isFastTrack
                       ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
                       : 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
                     }`}>
@@ -960,99 +992,97 @@ export default function NewRegistrationView() {
                   </span>
                 </div>
 
-                <div className="space-y-2">
-                  {/* Step 1: Pembuat */}
-                  <div className="flex items-start gap-2">
-                    <span className="w-4 h-4 rounded-full bg-blue-600 text-white font-bold text-[9px] flex items-center justify-center shrink-0 mt-0.5">
+                <div className="relative pl-6 space-y-4 py-1">
+                  {/* Vertical Connecting Track Line */}
+                  <div className="absolute left-2.5 top-2.5 bottom-2.5 w-0.5 bg-slate-200 dark:bg-slate-700" />
+
+                  {/* Node 1: Pemohon */}
+                  <div className="relative flex items-start gap-2.5">
+                    <span className="absolute -left-6 w-5 h-5 rounded-full bg-blue-600 text-white font-bold text-[10px] flex items-center justify-center ring-4 ring-white dark:ring-slate-900 shrink-0">
                       1
                     </span>
                     <div className="min-w-0">
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Dibuat oleh (Pemohon):</span>
-                      <span className="font-bold text-slate-800 dark:text-slate-200 text-xs block truncate">
+                      <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                        Dibuat oleh (Pemohon)
+                      </p>
+                      <p className="font-bold text-slate-900 dark:text-white text-xs truncate">
                         {activeCreator.name}
-                      </span>
+                      </p>
                     </div>
                   </div>
 
-                  {/* Step 2 */}
-                  <div className="flex items-start gap-2">
-                    <span className="w-4 h-4 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-[9px] flex items-center justify-center shrink-0 mt-0.5">
+                  {/* Node 2: Pemeriksa Teknis */}
+                  <div className="relative flex items-start gap-2.5">
+                    <span className="absolute -left-6 w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-[10px] flex items-center justify-center ring-4 ring-white dark:ring-slate-900 shrink-0">
                       2
                     </span>
                     <div className="min-w-0 flex-1">
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 block">
+                      <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
                         {docLevel === 1
-                          ? 'Diverifikasi Format (Doc Control):'
+                          ? 'Verifikasi Format (Doc Control)'
                           : isFastTrack
-                            ? 'Telaah & Pengesahan Teknis (Atasan):'
-                            : 'Diperiksa oleh (Atasan):'}
-                      </span>
-                      <span className="font-bold text-slate-800 dark:text-slate-200 text-xs block truncate">
+                            ? 'Telaah & Pengesahan Teknis (Atasan Dept)'
+                            : 'Diperiksa oleh (Atasan Dept)'}
+                      </p>
+                      <p className="font-bold text-slate-900 dark:text-white text-xs truncate">
                         {docLevel === 1 ? (selectedVerifierTeam || 'Document Control Team') : (activeReviewer?.name || '-')}
-                      </span>
+                      </p>
                     </div>
                   </div>
 
-                  {/* Step 3 */}
-                  <div className="flex items-start gap-2">
-                    <span className={`w-4 h-4 rounded-full text-white font-bold text-[9px] flex items-center justify-center shrink-0 mt-0.5 ${isFastTrack ? 'bg-emerald-600' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                  {/* Node 3: Verifikasi Tata Naskah / MR */}
+                  <div className="relative flex items-start gap-2.5">
+                    <span className={`absolute -left-6 w-5 h-5 rounded-full text-white font-bold text-[10px] flex items-center justify-center ring-4 ring-white dark:ring-slate-900 shrink-0 ${isFastTrack ? 'bg-emerald-600' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
                       }`}>
                       3
                     </span>
                     <div className="min-w-0 flex-1">
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 block">
+                      <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
                         {docLevel === 1
-                          ? 'Ditelaah Mutu ISO (MR):'
+                          ? 'Telaah Mutu ISO (MR)'
                           : isFastTrack
-                            ? 'Verifikasi & Rilis Aktif (DCO):'
-                            : 'Diverifikasi oleh (Doc Control):'}
-                      </span>
-                      <span className="font-bold text-slate-800 dark:text-slate-200 text-xs truncate block">
+                            ? 'Verifikasi & Rilis Aktif (DCO)'
+                            : 'Verifikasi Tata Naskah (Doc Control)'}
+                      </p>
+                      <p className="font-bold text-slate-900 dark:text-white text-xs truncate">
                         {docLevel === 1 ? (activeReviewer?.name || '-') : isFastTrack ? (selectedVerifierTeam || 'Document Control Team') : (selectedVerifierTeam || 'Document Control Team')}
-                      </span>
+                      </p>
                     </div>
                   </div>
 
-                  {/* Step 4: Approver (Khusus Level 1 & 2) */}
+                  {/* Node 4: Pengesahan Akhir (Hanya Level 1 & 2) */}
                   {!isFastTrack && (
-                    <div className="flex items-start gap-2">
-                      <span className="w-4 h-4 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-[9px] flex items-center justify-center shrink-0 mt-0.5">
+                    <div className="relative flex items-start gap-2.5">
+                      <span className="absolute -left-6 w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-[10px] flex items-center justify-center ring-4 ring-white dark:ring-slate-900 shrink-0">
                         4
                       </span>
                       <div className="min-w-0">
-                        <span className="text-[10px] text-slate-500 dark:text-slate-400 block">
-                          Disahkan oleh ({docLevel === 1 ? 'Direktur Utama / GM' : 'MR'}):
-                        </span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200 text-xs block truncate">
+                        <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                          Pengesahan Akhir ({docLevel === 1 ? 'Direktur Utama / GM' : 'Management Representative'})
+                        </p>
+                        <p className="font-bold text-slate-900 dark:text-white text-xs truncate">
                           {activeApprover?.name || '-'}
-                        </span>
+                        </p>
                       </div>
                     </div>
                   )}
                 </div>
 
-                {!isFastTrack && selectedReviewerNik === selectedApproverNik && (
-                  <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center gap-1.5 text-[10px] text-amber-600 dark:text-amber-400">
-                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                    <span>Reviewer & Approver sama: {activeReviewer?.name}</span>
-                  </div>
-                )}
-
                 {isFastTrack && (
-                  <div className="pt-2 border-t border-emerald-200/80 dark:border-emerald-900/60 text-[10.5px] text-emerald-700 dark:text-emerald-400 flex items-center gap-1 font-medium">
-                    <span>⚡ Berkas Level {docLevel} langsung aktif setelah verifikasi DCO.</span>
+                  <div className="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-[10.5px] text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5 font-medium">
+                    <span>⚡ Berkas Level {docLevel} langsung aktif resmi setelah verifikasi DCO.</span>
                   </div>
                 )}
               </div>
 
-              {/* 3. Berkas Lampiran */}
-              <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between gap-2">
-                <div>
+              {/* Block 4: Berkas Lampiran Info */}
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between gap-2">
+                <div className="min-w-0">
                   <span className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block tracking-wider">
                     File Lampiran
                   </span>
                   <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate block max-w-[190px]">
-                    {fileAttachment ? fileAttachment.name : 'Tidak ada berkas terlampir'}
+                    {fileAttachment ? fileAttachment.name : 'Tidak ada berkas'}
                   </span>
                 </div>
                 {fileAttachment ? (
@@ -1065,9 +1095,9 @@ export default function NewRegistrationView() {
                   </span>
                 )}
               </div>
+
             </div>
           </div>
-
         </div>
 
       </div>
