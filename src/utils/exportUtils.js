@@ -81,7 +81,12 @@ export function exportToCSV(data, fileName = 'Master_Document_Register') {
  */
 export function exportMasterRegisterPDF(documents, systemSettings = {}) {
   const doc = new jsPDF('landscape', 'pt', 'a4');
-  const company = systemSettings.companyName || 'PT DJI';
+  const compCode = (docData.companyCode || docData.docNumber?.split('-')[0] || 'DJI').toUpperCase();
+  const company = docData.companyName || (
+    compCode === 'UMI' ? 'PT ULTIMO MODA INDOTEX' :
+    compCode === 'IMK' ? 'PT IMK' :
+    (systemSettings.companyName || 'PT DENTELLE JAYA INFINITEX')
+  );
   const currentDate = new Date().toLocaleDateString('id-ID', {
     day: 'numeric',
     month: 'long',
@@ -180,7 +185,12 @@ export function exportMasterRegisterPDF(documents, systemSettings = {}) {
  */
 export function exportControlledDocumentPDF(docData, systemSettings = {}, qrDataUrl = null) {
   const doc = new jsPDF('portrait', 'pt', 'a4');
-  const company = systemSettings.companyName || 'PT DJI';
+  const compCode = (docData.companyCode || docData.docNumber?.split('-')[0] || 'DJI').toUpperCase();
+  const company = docData.companyName || (
+    compCode === 'UMI' ? 'PT ULTIMO MODA INDOTEX' :
+    compCode === 'IMK' ? 'PT IMK' :
+    (systemSettings.companyName || 'PT DENTELLE JAYA INFINITEX')
+  );
   const width = doc.internal.pageSize.width;
   const height = doc.internal.pageSize.height;
 

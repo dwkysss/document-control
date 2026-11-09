@@ -59,7 +59,7 @@ export default function ControlTowerHeader({
             {getGreeting()}, {currentUser?.name?.split(' ')[0] || 'Rekan'}!
           </h1>
           <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-            Selamat datang di <strong className="text-white font-semibold">{systemSettings?.companyName || 'PT DJI'} Document Control Center</strong>. 
+            Selamat datang di <strong className="text-white font-semibold">{(currentUser?.companyCode && currentUser.companyCode !== 'ALL' ? currentUser.companyName : systemSettings?.companyName) || 'PT DJI'} Document Control Center</strong>. 
             {isViewer
               ? ' Telusuri SOP, Instruksi Kerja, dan formulir operasional terkendali resmi yang berlaku.'
               : ' Pantau integritas siklus dokumen, status verifikasi, dan audit kepatuhan mutu secara real-time.'}

@@ -32,6 +32,8 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
     setBreadcrumbs,
     documents,
     systemSettings,
+    currentUser,
+    isHoldingAdmin,
     role,
     isViewer,
     isStaff,
@@ -124,10 +126,14 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
           {!isCollapsed && (
             <div className="overflow-hidden">
               <h2 className="font-extrabold text-sm tracking-wider text-white truncate font-sans">
-                {systemSettings.companyName || 'PT DENTELLE JAYA INFINITEX'}
+                {currentUser?.companyCode && currentUser.companyCode !== 'ALL'
+                  ? (currentUser.companyName || currentUser.companyCode)
+                  : (systemSettings.companyName || 'PT DENTELLE JAYA INFINITEX')}
               </h2>
               <p className="text-[10px] text-sky-400 font-semibold tracking-widest uppercase truncate mt-0.5">
-                {systemSettings.systemName || 'DOCUMENT CONTROL SYSTEM'}
+                {currentUser?.companyCode && currentUser.companyCode !== 'ALL'
+                  ? `UNIT ${currentUser.companyCode} TERKENDALI`
+                  : (systemSettings.systemName || 'DOCUMENT CONTROL SYSTEM')}
               </p>
             </div>
           )}
@@ -374,16 +380,18 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
 
               {(!isCollapsed && openSections.master) && (
                 <div className="mt-1 pl-7 pr-1 space-y-1">
-                  <button
-                    onClick={() => handleNavClick('master-company', ['Dashboard', 'Master Data', 'Perusahaan'])}
-                    className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
-                      activeMenu === 'master-company'
-                        ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
-                        : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
-                    }`}
-                  >
-                    <span>Perusahaan (Multi-PT)</span>
-                  </button>
+                  {isHoldingAdmin && (
+                    <button
+                      onClick={() => handleNavClick('master-company', ['Dashboard', 'Master Data', 'Perusahaan'])}
+                      className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
+                        activeMenu === 'master-company'
+                          ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
+                          : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
+                      }`}
+                    >
+                      <span>Perusahaan (Multi-PT)</span>
+                    </button>
+                  )}
                   <button
                     onClick={() => handleNavClick('master-emp', ['Dashboard', 'Master Data', 'Karyawan'])}
                     className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
@@ -414,19 +422,21 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
                   >
                     <span>Jenis Dokumen</span>
                   </button>
-                  <button
-                    onClick={() => handleNavClick('master-role', ['Dashboard', 'Master Data', 'Role & Hak Akses'])}
-                    className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
-                      activeMenu === 'master-role'
-                        ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
-                        : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
-                    }`}
-                  >
-                    <span>Role & Hak Akses</span>
-                    <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-purple-500/20 text-purple-300">
-                      6
-                    </span>
-                  </button>
+                  {isHoldingAdmin && (
+                    <button
+                      onClick={() => handleNavClick('master-role', ['Dashboard', 'Master Data', 'Role & Hak Akses'])}
+                      className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition flex items-center justify-between ${
+                        activeMenu === 'master-role'
+                          ? 'bg-blue-600/20 text-blue-400 font-bold border-l-2 border-blue-500'
+                          : 'text-slate-400 hover:text-white hover:bg-[#13233c]'
+                      }`}
+                    >
+                      <span>Role & Hak Akses</span>
+                      <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-purple-500/20 text-purple-300">
+                        6
+                      </span>
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -495,8 +505,8 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
             </div>
           )}
 
-          {/* 7. Setting (Admin & Approver Only) */}
-          {canManageSettings && (
+          {/* 7. Setting (Holding Admin Only) */}
+          {(isHoldingAdmin && canManageSettings) && (
             <button
               onClick={() => handleNavClick('settings', ['Dashboard', 'Pengaturan', 'Sistem & Database'])}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition group ${
@@ -510,7 +520,7 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
                 <div className="flex items-center justify-between w-full">
                   <span>Setting</span>
                   <span className="text-[8px] font-extrabold uppercase px-1 py-0.2 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40">
-                    Admin
+                    Holding
                   </span>
                 </div>
               )}

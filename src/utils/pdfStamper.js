@@ -50,7 +50,12 @@ export function downloadBlobAsFile(blob, fileName) {
  * langsung ke atas berkas PDF asli yang diunggah pengguna (mempertahankan seluruh halaman dokumen asli).
  */
 export async function stampOfficialLetterheadOnPDF(docData, systemSettings = {}, qrDataUrl = null) {
-  const companyName = systemSettings.companyName || 'PT DJI';
+  const compCode = (docData.companyCode || docData.docNumber?.split('-')[0] || 'DJI').toUpperCase();
+  const companyName = docData.companyName || (
+    compCode === 'UMI' ? 'PT ULTIMO MODA INDOTEX' :
+    compCode === 'IMK' ? 'PT IMK' :
+    (systemSettings.companyName || 'PT DENTELLE JAYA INFINITEX')
+  );
   const cleanTitle = (docData.title || 'DOKUMEN').replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 35);
   const officialFileName = `${docData.docNumber}_${cleanTitle}_Resmi_${companyName.replace(/\s+/g, '_')}.pdf`;
 

@@ -873,14 +873,14 @@ export function DocumentControlProvider({ children }) {
   // Toast Notification State
   const [toast, setToast] = useState(null);
 
-  // 2. LocalStorage Syncing with Quota Protection
+  // 2. LocalStorage Syncing with Quota Protection (Persist Raw Multi-Tenant Datasets)
   useEffect(() => {
     try {
-      localStorage.setItem('dji_dms_documents', JSON.stringify(documents));
+      localStorage.setItem('dji_dms_documents', JSON.stringify(rawDocuments));
     } catch (e) {
       console.warn('LocalStorage quota limit reached, optimizing document storage', e);
       try {
-        const lightweightDocs = documents.map(d => ({
+        const lightweightDocs = rawDocuments.map(d => ({
           ...d,
           fileUrl: d.fileUrl && d.fileUrl.length > 500000 ? null : d.fileUrl
         }));
@@ -889,7 +889,7 @@ export function DocumentControlProvider({ children }) {
         console.error('Failed to save to localStorage:', err);
       }
     }
-  }, [documents]);
+  }, [rawDocuments]);
 
   useEffect(() => {
     localStorage.setItem('dji_dms_companies', JSON.stringify(companies));
@@ -904,8 +904,8 @@ export function DocumentControlProvider({ children }) {
   }, [documentTypes]);
 
   useEffect(() => {
-    localStorage.setItem('dji_dms_employees', JSON.stringify(employees));
-  }, [employees]);
+    localStorage.setItem('dji_dms_employees', JSON.stringify(rawEmployees));
+  }, [rawEmployees]);
 
   // Sinkronisasi otomatis agar akun resmi PT DJI tersedia dan dummy lama dibersihkan
   useEffect(() => {
@@ -1435,8 +1435,23 @@ export function DocumentControlProvider({ children }) {
       return false;
     }
 
-    const existingTarget = documents.find(d => d.id === docId);
-    if (existingTarget && !canUserViewPendingDoc(existingTarget)) {
+    const existingTarget = (rawDocuments || []).find(d => d.id === docId);
+    if (!existingTarget) {
+      showToast('Dokumen tidak ditemukan.', 'danger');
+      return false;
+    }
+
+    // Strict multi-tenant isolation: Users cannot review documents of other companies
+    if (currentUser?.companyCode && currentUser.companyCode !== 'ALL') {
+      const userCompany = currentUser.companyCode.toUpperCase();
+      const docCompany = (existingTarget.companyCode || existingTarget.docNumber?.split('-')[0] || 'DJI').toUpperCase();
+      if (docCompany !== userCompany) {
+        showToast('Akses ditolak! Anda tidak memiliki wewenang menelaah dokumen perusahaan lain.', 'danger');
+        return false;
+      }
+    }
+
+    if (!canUserViewPendingDoc(existingTarget)) {
       showToast(`Akses ditolak! Dokumen ini hanya dapat direview oleh Atasan Departemen ${existingTarget.department}.`, 'danger');
       return false;
     }
@@ -1489,10 +1504,13 @@ export function DocumentControlProvider({ children }) {
           };
         }
 
-        // Auto-obsolete versi lama jika dokumen ini langsung aktif
+        // Auto-obsolete versi lama jika dokumen ini langsung aktif (Strict Per-Company Scope)
+        const docComp = (doc.companyCode || doc.docNumber?.split('-')[0] || 'DJI').toUpperCase();
+        const targetComp = (target.companyCode || target.docNumber?.split('-')[0] || 'DJI').toUpperCase();
         if (
           canActivateNow &&
           doc.id !== docId &&
+          docComp === targetComp &&
           doc.type === target.type &&
           doc.department === target.department &&
           doc.seqNumber === target.seqNumber &&
@@ -1554,6 +1572,22 @@ export function DocumentControlProvider({ children }) {
       return false;
     }
 
+    const existingTarget = (rawDocuments || []).find(d => d.id === docId);
+    if (!existingTarget) {
+      showToast('Dokumen tidak ditemukan.', 'danger');
+      return false;
+    }
+
+    // Strict multi-tenant isolation: DCO cannot verify documents of other companies
+    if (currentUser?.companyCode && currentUser.companyCode !== 'ALL') {
+      const userCompany = currentUser.companyCode.toUpperCase();
+      const docCompany = (existingTarget.companyCode || existingTarget.docNumber?.split('-')[0] || 'DJI').toUpperCase();
+      if (docCompany !== userCompany) {
+        showToast('Akses ditolak! Anda tidak memiliki wewenang memverifikasi dokumen perusahaan lain.', 'danger');
+        return false;
+      }
+    }
+
     const today = new Date().toISOString().slice(0, 10);
     let targetDoc = null;
     let becameActive = false;
@@ -1601,10 +1635,13 @@ export function DocumentControlProvider({ children }) {
           };
         }
 
-        // Auto-obsolete versi lama jika dokumen ini langsung aktif
+        // Auto-obsolete versi lama jika dokumen ini langsung aktif (Strict Per-Company Scope)
+        const docComp = (doc.companyCode || doc.docNumber?.split('-')[0] || 'DJI').toUpperCase();
+        const targetComp = (target.companyCode || target.docNumber?.split('-')[0] || 'DJI').toUpperCase();
         if (
           isFastTrack &&
           doc.id !== docId &&
+          docComp === targetComp &&
           doc.type === target.type &&
           doc.department === target.department &&
           doc.seqNumber === target.seqNumber &&
@@ -1663,6 +1700,22 @@ export function DocumentControlProvider({ children }) {
       return false;
     }
 
+    const existingTarget = (rawDocuments || []).find(d => d.id === docId);
+    if (!existingTarget) {
+      showToast('Dokumen tidak ditemukan.', 'danger');
+      return false;
+    }
+
+    // Strict multi-tenant isolation: Approvers cannot approve documents of other companies
+    if (currentUser?.companyCode && currentUser.companyCode !== 'ALL') {
+      const userCompany = currentUser.companyCode.toUpperCase();
+      const docCompany = (existingTarget.companyCode || existingTarget.docNumber?.split('-')[0] || 'DJI').toUpperCase();
+      if (docCompany !== userCompany) {
+        showToast('Akses ditolak! Anda tidak memiliki wewenang mengesahkan dokumen perusahaan lain.', 'danger');
+        return false;
+      }
+    }
+
     const today = new Date().toISOString().slice(0, 10);
     let targetDoc = null;
 
@@ -1695,9 +1748,12 @@ export function DocumentControlProvider({ children }) {
 
         // AUTO-OBSOLETE RULE:
         // Jika ada dokumen lain dengan type, department, dan seqNumber yang sama dan berstatus AKTIF (revisi lebih lama),
-        // ubah statusnya menjadi OBSOLETE!
+        // ubah statusnya menjadi OBSOLETE! (Strict Per-Company Scope)
+        const docComp = (doc.companyCode || doc.docNumber?.split('-')[0] || 'DJI').toUpperCase();
+        const targetComp = (target.companyCode || target.docNumber?.split('-')[0] || 'DJI').toUpperCase();
         if (
           doc.id !== docId &&
+          docComp === targetComp &&
           doc.type === target.type &&
           doc.department === target.department &&
           doc.seqNumber === target.seqNumber &&
@@ -1748,6 +1804,22 @@ export function DocumentControlProvider({ children }) {
     if (!canReviewContent && !canVerifyFormat && !canApproveDocument) {
       showToast('Akses ditolak! Anda tidak memiliki wewenang menolak pengajuan dokumen.', 'danger');
       return false;
+    }
+
+    const existingTarget = (rawDocuments || []).find(d => d.id === docId);
+    if (!existingTarget) {
+      showToast('Dokumen tidak ditemukan.', 'danger');
+      return false;
+    }
+
+    // Strict multi-tenant isolation: Users cannot reject documents of other companies
+    if (currentUser?.companyCode && currentUser.companyCode !== 'ALL') {
+      const userCompany = currentUser.companyCode.toUpperCase();
+      const docCompany = (existingTarget.companyCode || existingTarget.docNumber?.split('-')[0] || 'DJI').toUpperCase();
+      if (docCompany !== userCompany) {
+        showToast('Akses ditolak! Anda tidak memiliki wewenang menolak dokumen perusahaan lain.', 'danger');
+        return false;
+      }
     }
 
     let targetDoc = null;
@@ -1808,6 +1880,22 @@ export function DocumentControlProvider({ children }) {
     if (!canReviewContent && !canVerifyFormat && !canApproveDocument) {
       showToast('Akses ditolak! Anda tidak memiliki wewenang meminta revisi dokumen.', 'danger');
       return false;
+    }
+
+    const existingTarget = (rawDocuments || []).find(d => d.id === docId);
+    if (!existingTarget) {
+      showToast('Dokumen tidak ditemukan.', 'danger');
+      return false;
+    }
+
+    // Strict multi-tenant isolation: Users cannot request revisions for documents of other companies
+    if (currentUser?.companyCode && currentUser.companyCode !== 'ALL') {
+      const userCompany = currentUser.companyCode.toUpperCase();
+      const docCompany = (existingTarget.companyCode || existingTarget.docNumber?.split('-')[0] || 'DJI').toUpperCase();
+      if (docCompany !== userCompany) {
+        showToast('Akses ditolak! Anda tidak memiliki wewenang meminta revisi dokumen perusahaan lain.', 'danger');
+        return false;
+      }
     }
 
     let targetDoc = null;
@@ -2038,8 +2126,18 @@ export function DocumentControlProvider({ children }) {
       return false;
     }
 
-    const targetDoc = documents.find(d => d.id === docId);
+    const targetDoc = (rawDocuments || []).find(d => d.id === docId);
     if (!targetDoc) return false;
+
+    // Strict multi-tenant isolation: Users cannot cancel documents of other companies
+    if (currentUser?.companyCode && currentUser.companyCode !== 'ALL') {
+      const userCompany = currentUser.companyCode.toUpperCase();
+      const docCompany = (targetDoc.companyCode || targetDoc.docNumber?.split('-')[0] || 'DJI').toUpperCase();
+      if (docCompany !== userCompany) {
+        showToast('Akses ditolak! Anda tidak memiliki wewenang membatalkan dokumen perusahaan lain.', 'danger');
+        return false;
+      }
+    }
 
     const today = new Date().toISOString().slice(0, 10);
     const cancellationDetail = `Dibatalkan oleh Administrator (${currentUser ? currentUser.name : 'Admin'}): ${cancelReason || 'Penarikan/Pembatalan dokumen resmi'}`;
@@ -2140,8 +2238,18 @@ export function DocumentControlProvider({ children }) {
    * - Pembuat dokumen (Creator) dapat menghapus draf miliknya atau pengajuan miliknya yang DITOLAK.
    */
   const deleteDocument = (docId) => {
-    const docToDelete = documents.find(d => d.id === docId);
+    const docToDelete = (rawDocuments || []).find(d => d.id === docId);
     if (!docToDelete) return false;
+
+    // Strict multi-tenant isolation: Users cannot delete documents of other companies
+    if (currentUser?.companyCode && currentUser.companyCode !== 'ALL') {
+      const userCompany = currentUser.companyCode.toUpperCase();
+      const docCompany = (docToDelete.companyCode || docToDelete.docNumber?.split('-')[0] || 'DJI').toUpperCase();
+      if (docCompany !== userCompany) {
+        showToast('Akses ditolak! Anda tidak memiliki wewenang menghapus dokumen perusahaan lain.', 'danger');
+        return false;
+      }
+    }
 
     const isCreator = currentUser && (
       currentUser.name === docToDelete.creator ||
@@ -2180,6 +2288,10 @@ export function DocumentControlProvider({ children }) {
 
   // 4. Master Data CRUD Handlers with Database Sync & Audit Trail
   const addCompany = (comp) => {
+    if (currentUser?.companyCode && currentUser.companyCode !== 'ALL') {
+      showToast('Akses ditolak! Pengelolaan Master Perusahaan hanya diizinkan untuk Akun Holding Group (ALL).', 'danger');
+      return false;
+    }
     const newComp = {
       ...comp,
       id: comp.id || `comp-${Date.now()}`,
@@ -2206,6 +2318,10 @@ export function DocumentControlProvider({ children }) {
   };
 
   const updateCompany = (id, updatedData) => {
+    if (currentUser?.companyCode && currentUser.companyCode !== 'ALL') {
+      showToast('Akses ditolak! Pengelolaan Master Perusahaan hanya diizinkan untuk Akun Holding Group (ALL).', 'danger');
+      return false;
+    }
     const prevComp = companies.find(c => c.id === id);
     setCompanies(prev => prev.map(c => c.id === id ? { ...c, ...updatedData } : c));
     addAuditLog('UPDATE_COMPANY', updatedData.code || prevComp?.code || id, updatedData.name || prevComp?.name || 'Perusahaan', `Memperbarui data perusahaan: ${updatedData.name || prevComp?.name} (${updatedData.code || prevComp?.code})`);
@@ -2226,6 +2342,10 @@ export function DocumentControlProvider({ children }) {
   };
 
   const deleteCompany = (id) => {
+    if (currentUser?.companyCode && currentUser.companyCode !== 'ALL') {
+      showToast('Akses ditolak! Pengelolaan Master Perusahaan hanya diizinkan untuk Akun Holding Group (ALL).', 'danger');
+      return false;
+    }
     const comp = companies.find(c => c.id === id);
     setCompanies(prev => prev.filter(c => c.id !== id));
     addAuditLog('DELETE_COMPANY', comp?.code || id, comp?.name || 'Perusahaan', `Menghapus data perusahaan: ${comp?.name || id} (${comp?.code || '-'})`);
@@ -2605,6 +2725,7 @@ export function DocumentControlProvider({ children }) {
         setSelectedCompanyFilter,
         isCompanyLocked: Boolean(currentUser?.companyCode && currentUser.companyCode !== 'ALL'),
         userCompanyCode: currentUser?.companyCode || null,
+        isHoldingAdmin: Boolean(currentUser?.companyCode === 'ALL' && (currentUser?.role === 'admin' || currentUser?.role === 'approver')),
         addCompany,
         updateCompany,
         deleteCompany,

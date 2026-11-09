@@ -37,6 +37,7 @@ export default function NewRegistrationView() {
     departments,
     documentTypes,
     employees,
+    allEmployees,
     verifierTeams,
     documents,
     currentUser,
@@ -89,47 +90,51 @@ export default function NewRegistrationView() {
   const [createdDate, setCreatedDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [selectedVerifierTeam, setSelectedVerifierTeam] = useState('Document Control Team');
 
-  // 1. Ambil daftar Reviewer (Atasan) langsung mengacu ke Master Data Karyawan resmi
+  // Target Unit Perusahaan (Strict Zero-Overleft Isolation)
+  const targetCompany = (selectedCompany || currentUser?.companyCode || 'DJI').toUpperCase();
+
+  // 1. Ambil daftar Reviewer (Atasan) strictly terikat ke Unit Perusahaan yang dipilih (Zero Cross-PT Leak)
   const availableReviewers = React.useMemo(() => {
     const list = [];
     const addedKeys = new Set();
+    const sourceEmps = allEmployees?.length > 0 ? allEmployees : (employees || []);
 
-    // Prioritaskan seluruh Kepala Departemen yang terdaftar di Master Data Departemen
+    // Filter seluruh karyawan aktif hanya dari perusahaan yang bersangkutan
+    const companyEmps = sourceEmps.filter(e => {
+      if (e.status === 'Nonaktif') return false;
+      const empComp = (e.companyCode || (e.nik?.startsWith('UMI') ? 'UMI' : e.nik?.startsWith('IMK') ? 'IMK' : 'DJI')).toUpperCase();
+      return empComp === targetCompany;
+    });
+
+    // A. Prioritaskan Kepala Departemen di Master Departemen HANYA jika ia terdaftar sebagai karyawan di PT ini
     (departments || []).forEach(dept => {
       const headName = (dept.head || '').trim();
-      // Lewati jika belum ada pejabatnya (tanda garis '------------')
       if (!headName || headName.includes('---') || headName === '-') return;
 
       const normalized = headName.toUpperCase();
-      // Hubungkan dengan profil resmi di Master Karyawan
-      const matchedEmp = (employees || []).find(e => {
+      const matchedEmp = companyEmps.find(e => {
         const empName = (e.name || '').toUpperCase().trim();
-        return empName === normalized ||
-          empName.includes(normalized) ||
-          normalized.includes(empName);
+        return empName === normalized || empName.includes(normalized) || normalized.includes(empName);
       });
 
-      // Selalu gunakan nama & jabatan resmi dari Master Karyawan sebagai Single Source of Truth
-      const canonicalName = matchedEmp ? matchedEmp.name : headName;
-      const canonicalKey = canonicalName.toUpperCase().trim();
-
-      if (!addedKeys.has(canonicalKey)) {
-        addedKeys.add(canonicalKey);
-
-        list.push({
-          nik: matchedEmp?.nik || `HEAD-${dept.code}`,
-          name: canonicalName,
-          position: matchedEmp?.position || `Kepala Departemen ${dept.name}`,
-          department: matchedEmp?.department || dept.code,
-          role: matchedEmp?.role || 'reviewer',
-          status: 'Aktif'
-        });
+      if (matchedEmp) {
+        const canonicalKey = matchedEmp.name.toUpperCase().trim();
+        if (!addedKeys.has(canonicalKey)) {
+          addedKeys.add(canonicalKey);
+          list.push(matchedEmp);
+        }
       }
     });
 
-    // Tambahkan juga akun Reviewer resmi dari Master Karyawan jika belum masuk
-    (employees || []).forEach(emp => {
-      if (emp.status !== 'Nonaktif' && (emp.role === 'reviewer' || emp.role === 'approver')) {
+    // B. Tambahkan akun pejabat review (reviewer, approver, manager, spv, lead) resmi dari PT ini
+    companyEmps.forEach(emp => {
+      const pos = (emp.position || '').toUpperCase();
+      const isReviewAuthority = emp.role === 'reviewer' || emp.role === 'approver' ||
+        pos.includes('HEAD') || pos.includes('KEPALA') || pos.includes('MANAGER') ||
+        pos.includes('SUPERVISOR') || pos.includes('SPV') || pos.includes('LEAD') ||
+        pos.includes('MR') || pos.includes('GENERAL MANAGER') || pos.includes('DIREKSI');
+
+      if (isReviewAuthority) {
         const canonicalKey = (emp.name || '').toUpperCase().trim();
         if (!addedKeys.has(canonicalKey)) {
           addedKeys.add(canonicalKey);
@@ -138,36 +143,51 @@ export default function NewRegistrationView() {
       }
     });
 
-    return list;
-  }, [departments, employees]);
-
-  // 2. Filter authorized approvers: Khusus Management Representative (MR) & Direksi
-  const availableApprovers = React.useMemo(() => {
-    const list = (employees || []).filter(
-      e => e.status !== 'Nonaktif' && (
-        e.role === 'approver' ||
-        e.department === 'MGMT' ||
-        (e.position || '').toUpperCase().includes('GENERAL MANAGER') ||
-        (e.position || '').toUpperCase().includes('DIREKSI') ||
-        (e.position || '').toUpperCase().includes('MR')
-      )
-    );
-    if (list.length === 0 && employees?.length > 0) {
-      return employees.filter(e => e.status !== 'Nonaktif');
+    // C. Fallback: jika tidak ada role reviewer eksplisit, masukkan karyawan aktif unit ini
+    if (list.length === 0 && companyEmps.length > 0) {
+      return companyEmps;
     }
-    return list;
-  }, [employees]);
 
-  // Smart routing: tentukan Reviewer otomatis berdasarkan Level Dokumen ISO
-  // Level 1: Management Representative (MR) untuk telaah mutu ISO (setelah format diverifikasi DCO)
-  // Level 2, 3, 4: Kepala Departemen pemilik dokumen
+    return list;
+  }, [allEmployees, employees, departments, targetCompany]);
+
+  // 2. Filter authorized approvers strictly per Perusahaan (atau Holding Direksi untuk Level 1 Kebijakan)
+  const availableApprovers = React.useMemo(() => {
+    const sourceEmps = allEmployees?.length > 0 ? allEmployees : (employees || []);
+    const docType = (documentTypes || []).find(t => t.code === selectedType);
+    const isLevel1 = docType?.level === 1;
+
+    const companyEmps = sourceEmps.filter(e => {
+      if (e.status === 'Nonaktif') return false;
+      const empComp = (e.companyCode || (e.nik?.startsWith('UMI') ? 'UMI' : e.nik?.startsWith('IMK') ? 'IMK' : 'DJI')).toUpperCase();
+      if (isLevel1) {
+        // Dokumen Level 1 (Policy) mengizinkan MR Unit dan Pengesahan Akhir Direksi Holding
+        return empComp === targetCompany || empComp === 'ALL' || empComp === 'DJI';
+      }
+      return empComp === targetCompany;
+    });
+
+    const list = companyEmps.filter(e =>
+      e.role === 'approver' ||
+      e.department === 'MGMT' ||
+      (e.position || '').toUpperCase().includes('GENERAL MANAGER') ||
+      (e.position || '').toUpperCase().includes('DIREKSI') ||
+      (e.position || '').toUpperCase().includes('MR')
+    );
+
+    if (list.length > 0) return list;
+    return companyEmps.length > 0 ? companyEmps : (employees || []);
+  }, [allEmployees, employees, targetCompany, selectedType, documentTypes]);
+
+  // Smart routing: tentukan Reviewer otomatis berdasarkan Level Dokumen ISO & PT bersangkutan
   const getDefaultReviewerNik = (deptCode, typeCode) => {
     const docType = (documentTypes || []).find(t => t.code === (typeCode || selectedType));
     const level = docType?.level || 2;
+    const cleanDept = (deptCode || selectedDept || '').toUpperCase();
 
     if (level === 1) {
-      // Level 1 (Policy): Telaah mutu ISO dilakukan oleh Management Representative (MR)
-      const mr = (employees || []).find(
+      // Level 1 (Policy): Telaah mutu ISO oleh Management Representative (MR) unit terkait
+      const mr = availableReviewers.find(
         e => (e.position || '').toUpperCase().includes('MR') ||
           (e.position || '').toUpperCase().includes('MANAGEMENT REPRESENTATIVE') ||
           e.role === 'approver'
@@ -175,29 +195,23 @@ export default function NewRegistrationView() {
       if (mr) return mr.nik;
     }
 
-    const cleanDept = (deptCode || '').toUpperCase();
-    const deptObj = (departments || []).find(d => d.code.toUpperCase() === cleanDept);
-    const deptHeadName = (deptObj?.head || '').trim();
+    // 1. Cari reviewer yang departemennya sesuai dalam PT yang dipilih
+    const deptMatch = availableReviewers.find(r => (r.department || '').toUpperCase() === cleanDept);
+    if (deptMatch) return deptMatch.nik;
 
-    // Jika departemen ini memiliki Kepala Departemen yang terdaftar di Master Data Departemen
-    if (deptHeadName && !deptHeadName.includes('---') && deptHeadName !== '-') {
-      const matched = availableReviewers.find(r =>
-        r.name.toUpperCase() === deptHeadName.toUpperCase() ||
-        r.department === cleanDept
-      );
-      if (matched) return matched.nik;
-    }
-
-    // Jika belum ada kepala seksi tersendiri (seperti QAQC & Warehouse dengan tanda garis '------------'),
-    // otomatis dialihkan ke Management Representative (Baban Rachmat Subagja) atau General Manager (Deni Ramdan)
+    // 2. Jika belum ada kepala seksi di departemen ini, alihkan ke MR unit terkait
     const mr = availableReviewers.find(r =>
-      r.department === 'HRGA' ||
-      r.position?.toUpperCase().includes('MR') ||
-      r.name.toUpperCase().includes('BABAN')
+      (r.department || '').toUpperCase() === 'HRGA' ||
+      (r.position || '').toUpperCase().includes('MR') ||
+      r.role === 'approver'
     );
     if (mr) return mr.nik;
 
-    return availableReviewers[0]?.nik || 'DJI022203';
+    if (availableReviewers.length > 0) return availableReviewers[0].nik;
+
+    if (targetCompany === 'UMI') return 'UMI01001';
+    if (targetCompany === 'IMK') return 'IMK01001';
+    return 'DJI022203';
   };
 
   const [selectedReviewerNik, setSelectedReviewerNik] = useState(() => getDefaultReviewerNik(selectedDept, selectedType));
@@ -206,22 +220,24 @@ export default function NewRegistrationView() {
     const suggestedNik = getDefaultReviewerNik(selectedDept, selectedType);
     if (availableReviewers.some(r => r.nik === suggestedNik) || availableApprovers.some(a => a.nik === suggestedNik)) {
       setSelectedReviewerNik(suggestedNik);
+    } else if (availableReviewers.length > 0) {
+      setSelectedReviewerNik(availableReviewers[0].nik);
     }
-  }, [selectedDept, selectedType, availableReviewers, availableApprovers]);
+  }, [selectedDept, selectedType, availableReviewers, availableApprovers, targetCompany]);
 
   const activeReviewer = availableReviewers.find(r => r.nik === selectedReviewerNik) ||
     availableApprovers.find(a => a.nik === selectedReviewerNik) ||
-    availableReviewers[0] || {
-    name: 'DEDE SUHENDA',
-    nik: 'DJI022203',
-    position: 'KEPALA BAGIAN PRODUKSI',
-    department: 'PRODUKSI',
-    role: 'reviewer'
-  };
+    availableReviewers[0] || (
+      targetCompany === 'UMI'
+        ? { name: 'RATNA SARI', nik: 'UMI01001', position: 'MANAGER HRGA & MR (UMI)', department: 'HRGA', role: 'approver' }
+        : targetCompany === 'IMK'
+        ? { name: 'BAMBANG WIJAYA', nik: 'IMK01001', position: 'MANAGER HRGA & MR (IMK)', department: 'HRGA', role: 'approver' }
+        : { name: 'DEDE SUHENDA', nik: 'DJI022203', position: 'KEPALA BAGIAN PRODUKSI', department: 'PRODUKSI', role: 'reviewer' }
+    );
 
   // Hierarki Mutu ISO 9001:2015 Clause 7.5:
-  // Level 1: General Manager / Direksi
-  // Level 2 & 5: Management Representative (MR)
+  // Level 1: General Manager / Direksi Holding
+  // Level 2 & 5: Management Representative (MR) Unit Terkait
   // Level 3 & 4: Jalur Cepat (Fast-Track) — Cukup Kepala Departemen & Verifikasi DCO
   const getDefaultApproverNik = (currentReviewerNik, typeCode) => {
     const docType = (documentTypes || []).find(t => t.code === (typeCode || selectedType));
@@ -236,7 +252,7 @@ export default function NewRegistrationView() {
       );
       if (gm) return gm.nik;
     } else if (level === 2 || level === 5) {
-      // Level 2 (SOP) & Level 5 (EXT): Management Representative (MR)
+      // Level 2 (SOP) & Level 5 (EXT): Management Representative (MR) Unit
       const mr = availableApprovers.find(
         a => (a.position || '').toUpperCase().includes('MR') || a.role === 'approver'
       );
@@ -258,31 +274,37 @@ export default function NewRegistrationView() {
       if (altApprover) return altApprover.nik;
     }
     if (mr) return mr.nik;
-    return availableApprovers[0]?.nik || 'DJI012548';
+    if (availableApprovers.length > 0) return availableApprovers[0].nik;
+
+    if (targetCompany === 'UMI') return 'UMI01001';
+    if (targetCompany === 'IMK') return 'IMK01001';
+    return 'DJI012548';
   };
 
   const [selectedApproverNik, setSelectedApproverNik] = useState(() =>
-    getDefaultApproverNik(getDefaultReviewerNik(selectedDept), selectedType)
+    getDefaultApproverNik(getDefaultReviewerNik(selectedDept, selectedType), selectedType)
   );
 
   // Sync smart approver default when selected department or document type changes
   useEffect(() => {
-    const reviewerNik = getDefaultReviewerNik(selectedDept);
+    const reviewerNik = getDefaultReviewerNik(selectedDept, selectedType);
     const suggestedApproverNik = getDefaultApproverNik(reviewerNik, selectedType);
     if (availableApprovers.some(a => a.nik === suggestedApproverNik) || availableReviewers.some(r => r.nik === suggestedApproverNik)) {
       setSelectedApproverNik(suggestedApproverNik);
+    } else if (availableApprovers.length > 0) {
+      setSelectedApproverNik(availableApprovers[0].nik);
     }
-  }, [selectedDept, selectedType, availableApprovers, availableReviewers]);
+  }, [selectedDept, selectedType, availableApprovers, availableReviewers, targetCompany]);
 
   const activeApprover = availableApprovers.find(a => a.nik === selectedApproverNik) ||
     availableReviewers.find(r => r.nik === selectedApproverNik) ||
-    availableApprovers[0] || {
-    name: 'BABAN RACHMAT SUBAGJA',
-    nik: 'DJI012548',
-    position: 'MANAGER HRGA & MR (MANAGEMENT REPRESENTATIVE)',
-    department: 'HRGA',
-    role: 'approver'
-  };
+    availableApprovers[0] || (
+      targetCompany === 'UMI'
+        ? { name: 'RATNA SARI', nik: 'UMI01001', position: 'MANAGER HRGA & MR (UMI)', department: 'HRGA', role: 'approver' }
+        : targetCompany === 'IMK'
+        ? { name: 'BAMBANG WIJAYA', nik: 'IMK01001', position: 'MANAGER HRGA & MR (IMK)', department: 'HRGA', role: 'approver' }
+        : { name: 'BABAN RACHMAT SUBAGJA', nik: 'DJI012548', position: 'MANAGER HRGA & MR (MANAGEMENT REPRESENTATIVE)', department: 'HRGA', role: 'approver' }
+    );
 
   const isDcoOrAdmin = currentUser?.role === 'doc_control' || currentUser?.role === 'admin';
   const currentDocTypeObj = (documentTypes || []).find(t => t.code === selectedType) || { level: 2 };
