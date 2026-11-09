@@ -34,6 +34,8 @@ import { uploadDocumentFile } from '../../lib/supabaseClient';
 export default function NewRegistrationView() {
   const {
     companies,
+    selectedCompanyFilter,
+    setSelectedCompanyFilter,
     departments,
     documentTypes,
     employees,
@@ -49,25 +51,29 @@ export default function NewRegistrationView() {
     showToast
   } = useDocumentControl();
 
-  // Form State
+  // Form State: Otomatis tersinkronisasi dengan filter perusahaan aktif di header
   const [selectedCompany, setSelectedCompany] = useState(() => (
     currentUser?.companyCode && currentUser.companyCode !== 'ALL'
       ? currentUser.companyCode
-      : (companies?.[0]?.code || 'DJI')
+      : (selectedCompanyFilter && selectedCompanyFilter !== 'ALL' ? selectedCompanyFilter : (companies?.[0]?.code || 'DJI'))
   ));
 
   useEffect(() => {
     if (currentUser?.companyCode && currentUser.companyCode !== 'ALL') {
       setSelectedCompany(currentUser.companyCode);
+    } else if (selectedCompanyFilter && selectedCompanyFilter !== 'ALL') {
+      setSelectedCompany(selectedCompanyFilter);
     }
-  }, [currentUser?.companyCode]);
+  }, [currentUser?.companyCode, selectedCompanyFilter]);
+
+  const targetCompany = (selectedCompany || currentUser?.companyCode || 'DJI').toUpperCase();
 
   const [selectedType, setSelectedType] = useState('IK');
   const [selectedDept, setSelectedDept] = useState(() => currentUser?.department || 'PRODUKSI');
 
   // Creator automatically locked to logged-in user session
   const activeCreator = currentUser || employees?.[0] || {
-    name: 'Karyawan PT DJI',
+    name: `Karyawan ${targetCompany}`,
     nik: '-',
     position: 'Staff',
     department: 'PRODUKSI',
@@ -89,9 +95,6 @@ export default function NewRegistrationView() {
   const [title, setTitle] = useState('');
   const [createdDate, setCreatedDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [selectedVerifierTeam, setSelectedVerifierTeam] = useState('Document Control Team');
-
-  // Target Unit Perusahaan (Strict Zero-Overleft Isolation)
-  const targetCompany = (selectedCompany || currentUser?.companyCode || 'DJI').toUpperCase();
 
   // 1. Ambil daftar Reviewer (Atasan) strictly terikat ke Unit Perusahaan yang dipilih (Zero Cross-PT Leak)
   const availableReviewers = React.useMemo(() => {
@@ -514,7 +517,12 @@ export default function NewRegistrationView() {
                         <button
                           key={c.id}
                           type="button"
-                          onClick={() => setSelectedCompany(c.code)}
+                          onClick={() => {
+                            setSelectedCompany(c.code);
+                            if (!currentUser?.companyCode || currentUser.companyCode === 'ALL') {
+                              setSelectedCompanyFilter(c.code);
+                            }
+                          }}
                           className={`p-3 rounded-xl border text-left transition relative flex flex-col justify-between ${isSelected
                               ? 'bg-blue-50/70 dark:bg-blue-950/40 border-blue-500 ring-2 ring-blue-500/30 shadow-sm'
                               : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'

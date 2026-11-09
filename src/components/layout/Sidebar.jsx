@@ -53,6 +53,21 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
     canUserViewDraftDoc
   } = useDocumentControl();
 
+  // Active Company Scope Resolution (Seamless synchronization with header & active session)
+  const activeCompanyCode = (currentUser?.companyCode && currentUser.companyCode !== 'ALL')
+    ? currentUser.companyCode
+    : (selectedCompanyFilter !== 'ALL' ? selectedCompanyFilter : 'ALL');
+
+  const activeCompanyObj = (companies || []).find(c => c.code === activeCompanyCode);
+
+  const displayCompanyName = activeCompanyCode === 'ALL'
+    ? 'HOLDING GROUP (MULTI-PT)'
+    : (activeCompanyObj?.name || (activeCompanyCode === 'UMI' ? 'PT ULTIMO MODA INDOTEX' : activeCompanyCode === 'IMK' ? 'PT IMK' : (systemSettings.companyName || 'PT DENTELLE JAYA INFINITEX')));
+
+  const displaySubtitle = activeCompanyCode === 'ALL'
+    ? 'CONTROL TOWER (3 PT)'
+    : `UNIT ${activeCompanyCode} - SISTEM TERKENDALI`;
+
   // Accordion open/close state
   const [openSections, setOpenSections] = useState({
     registration: true,
@@ -122,20 +137,6 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
       >
         {/* Brand Header (Dynamic per Active Unit / Holding) */}
         {(() => {
-          const activeCompanyCode = (currentUser?.companyCode && currentUser.companyCode !== 'ALL')
-            ? currentUser.companyCode
-            : (selectedCompanyFilter !== 'ALL' ? selectedCompanyFilter : 'ALL');
-
-          const activeCompanyObj = (companies || []).find(c => c.code === activeCompanyCode);
-
-          const displayCompanyName = activeCompanyCode === 'ALL'
-            ? 'HOLDING GROUP (MULTI-PT)'
-            : (activeCompanyObj?.name || (activeCompanyCode === 'UMI' ? 'PT ULTIMO MODA INDOTEX' : activeCompanyCode === 'IMK' ? 'PT IMK' : (systemSettings.companyName || 'PT DENTELLE JAYA INFINITEX')));
-
-          const displaySubtitle = activeCompanyCode === 'ALL'
-            ? 'CONTROL TOWER (3 PT)'
-            : `UNIT ${activeCompanyCode} - SISTEM TERKENDALI`;
-
           const renderCompanyIcon = () => {
             if (activeCompanyCode === 'DJI') {
               return (
@@ -577,7 +578,9 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
         {/* Footer info */}
         {!isCollapsed && (
           <div className="p-3 border-t border-[#172740] bg-[#07101e] text-center text-[10px] text-slate-500">
-            <div>© 2026 PT DJI</div>
+            <div className="font-medium text-slate-400">
+              © 2026 {activeCompanyCode === 'ALL' ? 'Holding Group (Multi-PT)' : (activeCompanyObj?.name || `PT ${activeCompanyCode}`)}
+            </div>
             <div className="text-[9px] text-slate-600">Document Control System v2.4</div>
           </div>
         )}

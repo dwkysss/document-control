@@ -10,6 +10,8 @@ export default function DashboardOverview() {
     documents = [],
     departments = [],
     documentTypes = [],
+    companies = [],
+    selectedCompanyFilter = 'ALL',
     systemSettings = {},
     currentUser,
     setActiveMenu,
@@ -67,6 +69,8 @@ export default function DashboardOverview() {
       <ControlTowerHeader
         currentUser={currentUser}
         systemSettings={systemSettings}
+        companies={companies}
+        selectedCompanyFilter={selectedCompanyFilter}
         isViewer={isViewer}
         canRegisterDocument={canRegisterDocument}
         canRequestRevision={canRequestRevision}

@@ -3,12 +3,23 @@ import React from 'react';
 export default function ControlTowerHeader({
   currentUser,
   systemSettings,
+  companies = [],
+  selectedCompanyFilter = 'ALL',
   isViewer,
   canRegisterDocument,
   canRequestRevision,
   canAccessReports,
   navigateTo
 }) {
+  // Active company resolution matching global header filter & user session
+  const activeCompanyCode = (currentUser?.companyCode && currentUser.companyCode !== 'ALL')
+    ? currentUser.companyCode
+    : (selectedCompanyFilter !== 'ALL' ? selectedCompanyFilter : 'ALL');
+
+  const activeCompanyObj = (companies || []).find(c => c.code === activeCompanyCode);
+  const activeCompanyName = activeCompanyCode === 'ALL'
+    ? 'Group Holding (Multi-PT)'
+    : (activeCompanyObj?.name || (activeCompanyCode === 'UMI' ? 'PT Ultimo Moda Indotex' : activeCompanyCode === 'IMK' ? 'PT IMK' : (systemSettings?.companyName || 'PT Dentelle Jaya Infinitex')));
   // Time-based greeting
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -59,7 +70,7 @@ export default function ControlTowerHeader({
             {getGreeting()}, {currentUser?.name?.split(' ')[0] || 'Rekan'}!
           </h1>
           <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-            Selamat datang di <strong className="text-white font-semibold">{(currentUser?.companyCode && currentUser.companyCode !== 'ALL' ? currentUser.companyName : systemSettings?.companyName) || 'PT DJI'} Document Control Center</strong>. 
+            Selamat datang di <strong className="text-white font-semibold">{activeCompanyName} Document Control Center</strong>. 
             {isViewer
               ? ' Telusuri SOP, Instruksi Kerja, dan formulir operasional terkendali resmi yang berlaku.'
               : ' Pantau integritas siklus dokumen, status verifikasi, dan audit kepatuhan mutu secara real-time.'}

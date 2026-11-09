@@ -5,7 +5,7 @@ import { useDocumentControl } from '../../context/DocumentControlContext';
 import { initialEmployees } from '../../data/initialData';
 
 export default function EmployeeMasterView() {
-  const { employees, departments, companies, currentUser, addEmployee, updateEmployee, deleteEmployee, isAdmin, showToast } = useDocumentControl();
+  const { employees, departments, companies, selectedCompanyFilter, currentUser, addEmployee, updateEmployee, deleteEmployee, isAdmin, showToast } = useDocumentControl();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
@@ -14,7 +14,9 @@ export default function EmployeeMasterView() {
   const [nik, setNik] = useState('');
   const [name, setName] = useState('');
   const [companyCode, setCompanyCode] = useState(() => (
-    currentUser?.companyCode && currentUser.companyCode !== 'ALL' ? currentUser.companyCode : 'DJI'
+    currentUser?.companyCode && currentUser.companyCode !== 'ALL'
+      ? currentUser.companyCode
+      : (selectedCompanyFilter !== 'ALL' ? selectedCompanyFilter : 'DJI')
   ));
   const [department, setDepartment] = useState('HRGA');
   const [position, setPosition] = useState('');
@@ -40,7 +42,7 @@ export default function EmployeeMasterView() {
     setEditingEmployee(null);
     setNik('');
     setName('');
-    setCompanyCode(currentUser?.companyCode && currentUser.companyCode !== 'ALL' ? currentUser.companyCode : 'DJI');
+    setCompanyCode(currentUser?.companyCode && currentUser.companyCode !== 'ALL' ? currentUser.companyCode : (selectedCompanyFilter !== 'ALL' ? selectedCompanyFilter : 'DJI'));
     setDepartment('HRGA');
     setPosition('');
     setEmail('');
