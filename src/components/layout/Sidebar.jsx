@@ -34,6 +34,8 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
     systemSettings,
     currentUser,
     isHoldingAdmin,
+    companies,
+    selectedCompanyFilter,
     role,
     isViewer,
     isStaff,
@@ -118,26 +120,70 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
           isCollapsed ? 'w-20' : 'w-72'
         } ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
-        {/* Brand Header */}
-        <div className="p-4 border-b border-[#172740] flex items-center gap-3 bg-[#07101e]">
-          <div className="w-11 h-11 rounded-xl bg-white p-1 flex items-center justify-center shadow-md shadow-blue-500/20 flex-shrink-0 overflow-hidden ring-1 ring-white/20">
-            <img src="/dji-logo.png" alt="PT DJI Logo" className="w-full h-full object-contain" />
-          </div>
-          {!isCollapsed && (
-            <div className="overflow-hidden">
-              <h2 className="font-extrabold text-sm tracking-wider text-white truncate font-sans">
-                {currentUser?.companyCode && currentUser.companyCode !== 'ALL'
-                  ? (currentUser.companyName || currentUser.companyCode)
-                  : (systemSettings.companyName || 'PT DENTELLE JAYA INFINITEX')}
-              </h2>
-              <p className="text-[10px] text-sky-400 font-semibold tracking-widest uppercase truncate mt-0.5">
-                {currentUser?.companyCode && currentUser.companyCode !== 'ALL'
-                  ? `UNIT ${currentUser.companyCode} TERKENDALI`
-                  : (systemSettings.systemName || 'DOCUMENT CONTROL SYSTEM')}
-              </p>
+        {/* Brand Header (Dynamic per Active Unit / Holding) */}
+        {(() => {
+          const activeCompanyCode = (currentUser?.companyCode && currentUser.companyCode !== 'ALL')
+            ? currentUser.companyCode
+            : (selectedCompanyFilter !== 'ALL' ? selectedCompanyFilter : 'ALL');
+
+          const activeCompanyObj = (companies || []).find(c => c.code === activeCompanyCode);
+
+          const displayCompanyName = activeCompanyCode === 'ALL'
+            ? 'HOLDING GROUP (MULTI-PT)'
+            : (activeCompanyObj?.name || (activeCompanyCode === 'UMI' ? 'PT ULTIMO MODA INDOTEX' : activeCompanyCode === 'IMK' ? 'PT IMK' : (systemSettings.companyName || 'PT DENTELLE JAYA INFINITEX')));
+
+          const displaySubtitle = activeCompanyCode === 'ALL'
+            ? 'CONTROL TOWER (3 PT)'
+            : `UNIT ${activeCompanyCode} - SISTEM TERKENDALI`;
+
+          const renderCompanyIcon = () => {
+            if (activeCompanyCode === 'DJI') {
+              return (
+                <div className="w-11 h-11 rounded-xl bg-white p-1 flex items-center justify-center shadow-md shadow-blue-500/20 flex-shrink-0 overflow-hidden ring-1 ring-white/20">
+                  <img src="/dji-logo.png" alt="PT DJI Logo" className="w-full h-full object-contain" />
+                </div>
+              );
+            }
+            if (activeCompanyCode === 'UMI') {
+              return (
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-blue-800 p-1 flex flex-col items-center justify-center shadow-md shadow-indigo-500/30 flex-shrink-0 ring-1 ring-white/20">
+                  <span className="font-black text-white text-sm tracking-wider font-sans">UMI</span>
+                  <span className="text-[7px] text-indigo-200 font-bold uppercase tracking-tighter">TEXTILE</span>
+                </div>
+              );
+            }
+            if (activeCompanyCode === 'IMK') {
+              return (
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-600 via-teal-700 to-slate-900 p-1 flex flex-col items-center justify-center shadow-md shadow-emerald-500/30 flex-shrink-0 ring-1 ring-white/20">
+                  <span className="font-black text-white text-sm tracking-wider font-sans">IMK</span>
+                  <span className="text-[7px] text-emerald-200 font-bold uppercase tracking-tighter">KNITTING</span>
+                </div>
+              );
+            }
+            return (
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-700 via-slate-800 to-indigo-900 p-1 flex flex-col items-center justify-center shadow-md shadow-blue-500/30 flex-shrink-0 ring-1 ring-white/20">
+                <Building2 className="w-5 h-5 text-sky-300" />
+                <span className="text-[7px] text-sky-200 font-extrabold uppercase tracking-tight">HOLDING</span>
+              </div>
+            );
+          };
+
+          return (
+            <div className="p-4 border-b border-[#172740] flex items-center gap-3 bg-[#07101e]">
+              {renderCompanyIcon()}
+              {!isCollapsed && (
+                <div className="overflow-hidden min-w-0">
+                  <h2 className="font-extrabold text-sm tracking-wider text-white truncate font-sans" title={displayCompanyName}>
+                    {displayCompanyName}
+                  </h2>
+                  <p className="text-[10px] text-sky-400 font-semibold tracking-widest uppercase truncate mt-0.5">
+                    {displaySubtitle}
+                  </p>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          );
+        })()}
 
         {/* Navigation Menu List */}
         <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1.5 scrollbar-thin">
