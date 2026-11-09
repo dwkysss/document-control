@@ -90,10 +90,8 @@ export default function DraftListView() {
                           (doc.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                           (doc.creator || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesDept = selectedDept === 'ALL' || doc.department === selectedDept;
-    const docComp = (doc.companyCode || doc.docNumber?.split('-')[0] || 'DJI').toUpperCase();
-    const matchesCompany = selectedCompanyFilter === 'ALL' || docComp === selectedCompanyFilter;
 
-    return matchesSearch && matchesDept && matchesCompany;
+    return matchesSearch && matchesDept;
   });
 
   const handleOpenEditModal = (doc) => {
@@ -271,7 +269,7 @@ export default function DraftListView() {
             >
               <span>Perlu Perbaikan</span>
               {revisionCount > 0 ? (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-500 text-white font-bold animate-pulse">
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-500 text-white font-bold">
                   {revisionCount}
                 </span>
               ) : (
@@ -334,32 +332,37 @@ export default function DraftListView() {
         {filteredDrafts.length === 0 ? (
           drafts.length === 0 ? (
             /* Empty State 1: Zero draft in database */
-            <div className="py-16 px-4 text-center">
-              <div className="w-14 h-14 mx-auto rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/80 flex items-center justify-center text-blue-600 dark:text-blue-400 mb-3 shadow-2xs">
-                <FileText className="w-7 h-7" />
-              </div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                {!isDcoOrAdmin || dcoScope === 'MINE'
-                  ? 'Belum Ada Berkas Draft Pribadi yang Tersimpan'
-                  : 'Belum Ada Berkas Draft yang Tersimpan di Sistem'}
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 max-w-md mx-auto leading-relaxed">
-                {!isDcoOrAdmin || dcoScope === 'MINE'
-                  ? 'Anda belum memiliki usulan dokumen yang tersimpan sebagai draft. Saat Anda mengisi formulir registrasi dokumen dan memilih Simpan Draft, berkas Anda akan tersimpan di sini secara aman.'
-                  : 'Saat ini tidak ada staf yang sedang menyimpan draf atau dokumen dalam status perbaikan revisi.'}
-              </p>
-              <div className="mt-5 flex items-center justify-center gap-3">
+            <div className="px-6 py-12 sm:px-10 sm:py-16">
+              <div className="mx-auto flex max-w-3xl flex-col items-start gap-6 sm:flex-row sm:items-center sm:gap-8">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300">
+                  <FileText className="h-7 w-7" aria-hidden="true" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-blue-700 dark:text-blue-300">Ruang kerja draft</p>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    {!isDcoOrAdmin || dcoScope === 'MINE'
+                      ? 'Belum ada draft milik Anda'
+                      : 'Belum ada draft tersimpan'}
+                  </h3>
+                  <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                    {!isDcoOrAdmin || dcoScope === 'MINE'
+                      ? 'Simpan formulir registrasi sebagai draft untuk melanjutkan pengisian nanti. Dokumen yang perlu diperbaiki juga akan muncul di sini.'
+                      : 'Draft registrasi dan dokumen yang menunggu perbaikan akan tercatat di halaman ini.'}
+                  </p>
+                </div>
+                <div className="w-full shrink-0 border-t border-slate-200 pt-5 dark:border-slate-700 sm:w-auto sm:border-l sm:border-t-0 sm:py-1 sm:pl-8 sm:pt-1">
                 <button
                   type="button"
                   onClick={() => {
                     setActiveMenu('reg-new');
                     setBreadcrumbs(['Dashboard', 'Registrasi Dokumen', 'Dokumen Baru']);
                   }}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-lg text-xs font-bold shadow-sm transition cursor-pointer"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700 active:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 cursor-pointer sm:w-auto"
                 >
                   <Plus className="w-4 h-4" />
-                  Mulai Registrasi Dokumen Baru
+                  Buat draft dokumen
                 </button>
+                </div>
               </div>
             </div>
           ) : (

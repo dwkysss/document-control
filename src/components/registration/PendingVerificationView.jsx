@@ -76,10 +76,6 @@ export default function PendingVerificationView() {
     : pendingDocs.filter(d => d.status === activeTab);
 
   const filteredDocs = displayedDocs.filter(d => {
-    if (selectedCompanyFilter !== 'ALL') {
-      const docComp = (d.companyCode || d.docNumber?.split('-')[0] || 'DJI').toUpperCase();
-      if (docComp !== selectedCompanyFilter) return false;
-    }
     if (filterDept !== 'ALL' && (d.department || '').toUpperCase() !== filterDept.toUpperCase()) {
       return false;
     }
@@ -217,24 +213,24 @@ export default function PendingVerificationView() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* 1. Header Bar (Clean & Simple) */}
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
-            <Clock className="w-5 h-5" />
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300">
+            <Clock className="h-5 w-5" aria-hidden="true" />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-base font-bold text-slate-900 dark:text-white">
                 Menunggu Verifikasi
               </h2>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-mono">
-                {pendingDocs.length} Berkas
+              <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-bold tabular-nums text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                {pendingDocs.length} berkas
               </span>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Antrean verifikasi 3 tahap (Review Atasan, Verifikasi DCO, Pengesahan MR).
+            <p className="text-sm text-slate-600 dark:text-slate-300 mt-0.5">
+              Pantau posisi dokumen dan lanjutkan pemeriksaan sesuai wewenang Anda.
             </p>
           </div>
         </div>
@@ -243,145 +239,148 @@ export default function PendingVerificationView() {
       {/* 2. Unified Card: Toolbar (Tabs + Search/Filter) & Table */}
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 overflow-hidden">
         {/* Toolbar Header */}
-        <div className="p-3 sm:p-4 border-b border-slate-200 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/50">
-          {/* Segmented Filter Pills */}
-          <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/90 rounded-lg shrink-0 overflow-x-auto">
+        <div className="border-b border-slate-200 dark:border-slate-800">
+          <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Antrean verifikasi</h3>
+              <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-300">Menampilkan {filteredDocs.length} dari {pendingDocs.length} berkas</p>
+            </div>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+              <label className="relative min-w-0 flex-1 sm:w-72">
+                <span className="sr-only">Cari nomor, judul, pembuat, atau departemen</span>
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" aria-hidden="true" />
+                <input type="search" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Cari nomor, judul, pembuat" className="w-full rounded-md border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-white" />
+              </label>
+              <label>
+                <span className="sr-only">Filter departemen</span>
+                <select value={filterDept} onChange={(e) => setFilterDept(e.target.value)} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 sm:w-auto">
+                  <option value="ALL">Semua departemen</option>
+                  {departments.map(d => <option key={d.id || d.code} value={d.code}>{d.code}</option>)}
+                </select>
+              </label>
+              {(searchTerm || filterDept !== 'ALL') && (
+                <button type="button" onClick={() => { setSearchTerm(''); setFilterDept('ALL'); }} className="inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:text-blue-300 dark:hover:bg-slate-800 cursor-pointer" title="Reset filter">
+                  <RotateCcw className="h-4 w-4" aria-hidden="true" /> Reset
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div role="group" aria-label="Filter tahap verifikasi" className="flex overflow-x-auto border-t border-slate-100 px-3 dark:border-slate-800">
             <button
               type="button"
+              aria-pressed={activeTab === 'ALL'}
               onClick={() => setActiveTab('ALL')}
-              className={`px-3 py-1.5 rounded-md text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+              className={`shrink-0 border-b-2 px-4 py-3 text-xs font-bold transition cursor-pointer flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600 ${
                 activeTab === 'ALL'
-                  ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-2xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'border-blue-600 text-blue-700 dark:text-blue-300'
+                  : 'border-transparent text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800'
               }`}
             >
               <span>Semua Antrean</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
-                activeTab === 'ALL' ? 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
-              }`}>
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] tabular-nums text-slate-700 dark:bg-slate-700 dark:text-slate-200">
                 {pendingDocs.length}
               </span>
             </button>
 
             <button
               type="button"
+              aria-pressed={activeTab === 'REVIEW'}
               onClick={() => setActiveTab('REVIEW')}
-              className={`px-3 py-1.5 rounded-md text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+              className={`shrink-0 border-b-2 px-4 py-3 text-xs font-bold transition cursor-pointer flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-purple-600 ${
                 activeTab === 'REVIEW'
-                  ? 'bg-white dark:bg-slate-700 text-purple-600 dark:text-purple-400 shadow-2xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'border-purple-600 text-purple-800 dark:text-purple-300'
+                  : 'border-transparent text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800'
               }`}
             >
               <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
               <span>Tahap 1: Review Atasan</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
-                activeTab === 'REVIEW' ? 'bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
-              }`}>
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] tabular-nums text-slate-700 dark:bg-slate-700 dark:text-slate-200">
                 {stage1Count}
               </span>
             </button>
 
             <button
               type="button"
+              aria-pressed={activeTab === 'VERIFIKASI'}
               onClick={() => setActiveTab('VERIFIKASI')}
-              className={`px-3 py-1.5 rounded-md text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+              className={`shrink-0 border-b-2 px-4 py-3 text-xs font-bold transition cursor-pointer flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-600 ${
                 activeTab === 'VERIFIKASI'
-                  ? 'bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-400 shadow-2xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'border-amber-600 text-amber-800 dark:text-amber-300'
+                  : 'border-transparent text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800'
               }`}
             >
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
               <span>Tahap 2: Verifikasi DCO</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
-                activeTab === 'VERIFIKASI' ? 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
-              }`}>
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] tabular-nums text-slate-700 dark:bg-slate-700 dark:text-slate-200">
                 {stage2Count}
               </span>
             </button>
 
             <button
               type="button"
+              aria-pressed={activeTab === 'APPROVAL'}
               onClick={() => setActiveTab('APPROVAL')}
-              className={`px-3 py-1.5 rounded-md text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+              className={`shrink-0 border-b-2 px-4 py-3 text-xs font-bold transition cursor-pointer flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-600 ${
                 activeTab === 'APPROVAL'
-                  ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-2xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'border-emerald-600 text-emerald-800 dark:text-emerald-300'
+                  : 'border-transparent text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800'
               }`}
             >
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
               <span>Tahap 3: Pengesahan MR</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
-                activeTab === 'APPROVAL' ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
-              }`}>
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] tabular-nums text-slate-700 dark:bg-slate-700 dark:text-slate-200">
                 {stage3Count}
               </span>
             </button>
-          </div>
-
-          {/* Search & Dept Filter */}
-          <div className="flex items-center gap-2">
-            <div className="relative w-full sm:w-60">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Cari nomor, judul, pembuat..."
-                className="w-full pl-8 pr-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <select
-              value={filterDept}
-              onChange={(e) => setFilterDept(e.target.value)}
-              className="text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="ALL">Semua Dept</option>
-              {departments.map(d => (
-                <option key={d.id || d.code} value={d.code}>{d.code}</option>
-              ))}
-            </select>
-
-            {(searchTerm || filterDept !== 'ALL') && (
-              <button
-                type="button"
-                onClick={() => { setSearchTerm(''); setFilterDept('ALL'); }}
-                className="p-1.5 text-xs text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer"
-                title="Reset Filter"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-              </button>
-            )}
           </div>
         </div>
 
         {/* Clean Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full min-w-[980px] table-fixed text-left border-collapse text-sm">
+            <colgroup>
+              <col className="w-[34%]" />
+              <col className="w-[10%]" />
+              <col className="w-[15%]" />
+              <col className="w-[21%]" />
+              <col className="w-[20%]" />
+            </colgroup>
             <thead>
-              <tr className="bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 uppercase text-[10px] font-bold tracking-wider">
-                <th className="py-3.5 px-4 text-center w-12 whitespace-nowrap">No.</th>
-                <th className="py-3.5 px-4 whitespace-nowrap">No. Dokumen</th>
-                <th className="py-3.5 px-4">Judul Dokumen</th>
-                <th className="py-3.5 px-4 whitespace-nowrap">Departemen</th>
-                <th className="py-3.5 px-4 whitespace-nowrap">Pembuat</th>
-                <th className="py-3.5 px-4 whitespace-nowrap">Tahap Berjalan</th>
-                <th className="py-3.5 px-4 text-right whitespace-nowrap">Aksi</th>
+              <tr className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold">
+                <th className="py-3 px-4">Dokumen</th>
+                <th className="py-3 px-3">Dept.</th>
+                <th className="py-3 px-3">Pembuat</th>
+                <th className="py-3 px-3">Tahap</th>
+                <th className="py-3 px-3 text-right">Tindakan</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filteredDocs.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-14 text-center text-slate-400">
+                  <td colSpan={5} className="px-6 py-14 text-center">
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <FileText className="w-8 h-8 text-slate-300 dark:text-slate-600" />
-                      <p className="font-bold text-slate-700 dark:text-slate-300 text-sm">Tidak ada berkas pada antrean ini</p>
-                      <p className="text-xs text-slate-400">Semua dokumen pada kategori ini telah selesai diproses.</p>
+                      <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                        <FileText className="h-6 w-6" aria-hidden="true" />
+                      </div>
+                      <p className="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+                        {pendingDocs.length === 0 ? 'Tidak ada dokumen yang menunggu verifikasi' : 'Tidak ada dokumen pada tahap ini'}
+                      </p>
+                      <p className="max-w-md text-xs text-slate-600 dark:text-slate-300">
+                        {pendingDocs.length === 0
+                          ? 'Pengajuan baru akan muncul di antrean setelah dikirim untuk diverifikasi.'
+                          : searchTerm || filterDept !== 'ALL'
+                          ? 'Ubah kata kunci atau departemen, atau reset filter untuk melihat dokumen lain.'
+                          : 'Semua dokumen pada tahap ini sudah diteruskan ke proses berikutnya.'}
+                      </p>
+                      {(searchTerm || filterDept !== 'ALL') && (
+                        <button type="button" onClick={() => { setSearchTerm(''); setFilterDept('ALL'); }} className="mt-1 rounded-md px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:text-blue-300 dark:hover:bg-slate-800 cursor-pointer">Reset filter</button>
+                      )}
                     </div>
                   </td>
                 </tr>
               ) : (
-                filteredDocs.map((doc, idx) => {
+                filteredDocs.map((doc) => {
                   const isStage1 = doc.status === 'REVIEW';
                   const isStage2 = doc.status === 'VERIFIKASI';
                   const isStage3 = doc.status === 'APPROVAL';
@@ -390,59 +389,33 @@ export default function PendingVerificationView() {
                   const isFastTrack = docLevel === 3 || docLevel === 4;
 
                   return (
-                    <tr key={doc.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition">
-                      {/* 1. No */}
-                      <td className="py-3.5 px-4 text-center text-slate-400 font-medium whitespace-nowrap">
-                        {idx + 1}
-                      </td>
-
-                      {/* 2. No Dokumen */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="flex items-center gap-1.5">
+                    <tr key={doc.id} className="transition-colors hover:bg-blue-50/40 dark:hover:bg-slate-800/70">
+                      <td className="py-4 px-4">
+                        <div className="flex min-w-0 items-start gap-2.5">
                           <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
-                          <button
-                            type="button"
-                            onClick={() => setViewingDocument(doc)}
-                            className="font-bold font-mono text-blue-600 dark:text-blue-400 hover:underline cursor-pointer text-xs"
-                            title="Buka Pratinjau Dokumen"
-                          >
-                            {doc.docNumber}
-                          </button>
-                          <span className="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900">
-                            {doc.type || 'SOP'}
-                          </span>
+                          <div className="min-w-0">
+                            <div className="flex min-w-0 items-center gap-2">
+                              <button type="button" onClick={() => setViewingDocument(doc)} className="truncate text-left font-mono text-xs font-bold text-blue-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:text-blue-300 cursor-pointer" title="Buka pratinjau dokumen">{doc.docNumber}</button>
+                              <span className="shrink-0 rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">{doc.type || 'SOP'}</span>
+                            </div>
+                            <p className="mt-1 truncate text-xs font-medium text-slate-800 dark:text-slate-200" title={doc.title}>{doc.title}</p>
+                          </div>
                         </div>
                       </td>
 
-                      {/* 3. Judul Dokumen */}
-                      <td className="py-3.5 px-4">
-                        <div className="font-semibold text-slate-900 dark:text-white max-w-[260px] truncate" title={doc.title}>
-                          {doc.title}
-                        </div>
+                      <td className="py-4 px-3">
+                        <span className="inline-flex rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-bold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">{doc.department}</span>
                       </td>
 
-                      {/* 4. Departemen */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                          {doc.department}
-                        </span>
+                      <td className="py-4 px-3">
+                        <div className="truncate text-xs font-semibold text-slate-800 dark:text-slate-200" title={doc.creator}>{doc.creator}</div>
+                        <div className="mt-1 truncate text-[10px] text-slate-600 dark:text-slate-400" title={doc.createdDate}>{doc.createdDate}</div>
                       </td>
 
-                      {/* 5. Pembuat */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="font-semibold text-slate-800 dark:text-slate-200 text-xs">
-                          {doc.creator}
-                        </div>
-                        <div className="text-[10px] text-slate-400">
-                          {doc.createdDate}
-                        </div>
-                      </td>
-
-                      {/* 6. Tahap Berjalan */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
+                      <td className="py-4 px-3">
                         {isStage1 && (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-purple-600"></span>
                             {docLevel === 1 ? 'Tahap 3: Telaah Mutu (MR)' : 'Tahap 1: Review Atasan'}
                           </span>
                         )}
@@ -452,7 +425,7 @@ export default function PendingVerificationView() {
                               ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
                               : 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
                           }`}>
-                            <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isFastTrack ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                            <span className={`w-1.5 h-1.5 rounded-full ${isFastTrack ? 'bg-emerald-600' : 'bg-amber-600'}`}></span>
                             {docLevel === 1
                               ? 'Tahap 2: Verifikasi Format DCO'
                               : isFastTrack
@@ -462,15 +435,15 @@ export default function PendingVerificationView() {
                         )}
                         {isStage3 && (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
                             {docLevel === 1 ? 'Tahap 4: Pengesahan GM / Direksi' : 'Tahap 3: Pengesahan MR'}
                           </span>
                         )}
                       </td>
 
                       {/* 7. Tindakan / Aksi */}
-                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1.5">
+                      <td className="py-4 px-3">
+                        <div className="flex flex-wrap items-center justify-end gap-1.5">
                           {/* Quick Preview Button */}
                           <button
                             type="button"

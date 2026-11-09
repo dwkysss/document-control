@@ -50,14 +50,14 @@ export function downloadBlobAsFile(blob, fileName) {
  * langsung ke atas berkas PDF asli yang diunggah pengguna (mempertahankan seluruh halaman dokumen asli).
  */
 export async function stampOfficialLetterheadOnPDF(docData, systemSettings = {}, qrDataUrl = null) {
-  const compCode = (docData.companyCode || docData.docNumber?.split('-')[0] || 'DJI').toUpperCase();
+  const compCode = (docData.companyCode || (docData.docNumber?.startsWith('UMI') ? 'UMI' : docData.docNumber?.startsWith('IMK') ? 'IMK' : 'DJI')).toUpperCase();
   const companyName = docData.companyName || (
     compCode === 'UMI' ? 'PT ULTIMO MODA INDOTEX' :
     compCode === 'IMK' ? 'PT IMK' :
     (systemSettings.companyName || 'PT DENTELLE JAYA INFINITEX')
   );
   const cleanTitle = (docData.title || 'DOKUMEN').replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 35);
-  const officialFileName = `${docData.docNumber}_${cleanTitle}_Resmi_${companyName.replace(/\s+/g, '_')}.pdf`;
+  const officialFileName = `${docData.docNumber}_${cleanTitle}_Resmi_${compCode}.pdf`;
 
   const fileNameLower = (docData.fileName || '').toLowerCase();
   const fileTypeLower = (docData.fileType || '').toLowerCase();
@@ -88,16 +88,18 @@ export async function stampOfficialLetterheadOnPDF(docData, systemSettings = {},
     const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-    // 2. Muat Logo Resmi PT DJI untuk Kop Surat
+    // 2. Muat Logo Resmi PT DJI untuk Kop Surat HANYA jika dokumen milik PT DJI
     let logoImg = null;
-    try {
-      const logoRes = await fetch('/dji-logo.png');
-      if (logoRes.ok) {
-        const logoBytes = await logoRes.arrayBuffer();
-        logoImg = await pdfDoc.embedPng(new Uint8Array(logoBytes));
+    if (compCode === 'DJI') {
+      try {
+        const logoRes = await fetch('/dji-logo.png');
+        if (logoRes.ok) {
+          const logoBytes = await logoRes.arrayBuffer();
+          logoImg = await pdfDoc.embedPng(new Uint8Array(logoBytes));
+        }
+      } catch (err) {
+        console.warn('Could not load logo for PDF stamping:', err);
       }
-    } catch (err) {
-      console.warn('Could not load logo for PDF stamping:', err);
     }
 
     // 3. Muat QR Code jika ada
@@ -228,7 +230,7 @@ export async function stampOfficialLetterheadOnPDF(docData, systemSettings = {},
           thickness: 1,
         });
 
-        // ================= KOLOM 1: LOGO RESMI (BERSIH & CENTERED) =================
+        // ================= KOLOM 1: IDENTITAS PERUSAHAAN (LOGO / BADGE RESMI) =================
         if (logoImg) {
           const logoAspect = logoImg.width / logoImg.height;
           const logoH = 34;
@@ -242,14 +244,107 @@ export async function stampOfficialLetterheadOnPDF(docData, systemSettings = {},
             width: logoW,
             height: logoH,
           });
-        } else {
-          const compW = helveticaBold.widthOfTextAtSize(companyName, 13);
-          page.drawText(companyName, {
-            x: 18 + (col1W - compW) / 2,
-            y: headerY + (headerH - 13) / 2,
-            size: 13,
+        } else if (compCode === 'IMK') {
+          // Badge Resmi PT IMK (Emerald)
+          const badgeW = 76;
+          const badgeH = 22;
+          const badgeX = 18 + (col1W - badgeW) / 2;
+          const badgeY = headerY + 36;
+
+          page.drawRectangle({
+            x: badgeX,
+            y: badgeY,
+            width: badgeW,
+            height: badgeH,
+            color: rgb(0.02, 0.58, 0.41),
+          });
+
+          const codeText = 'PT IMK';
+          const codeW = helveticaBold.widthOfTextAtSize(codeText, 11);
+          page.drawText(codeText, {
+            x: badgeX + (badgeW - codeW) / 2,
+            y: badgeY + 6.5,
+            size: 11,
+            font: helveticaBold,
+            color: rgb(1, 1, 1),
+          });
+
+          const subText = 'KNITTING & TEXTILE';
+          const subW = helvetica.widthOfTextAtSize(subText, 6.5);
+          page.drawText(subText, {
+            x: 18 + (col1W - subW) / 2,
+            y: headerY + 18,
+            size: 6.5,
             font: helveticaBold,
             color: rgb(0.06, 0.16, 0.3),
+          });
+        } else if (compCode === 'UMI') {
+          // Badge Resmi PT Ultimo Moda Indotex (Indigo)
+          const badgeW = 88;
+          const badgeH = 22;
+          const badgeX = 18 + (col1W - badgeW) / 2;
+          const badgeY = headerY + 36;
+
+          page.drawRectangle({
+            x: badgeX,
+            y: badgeY,
+            width: badgeW,
+            height: badgeH,
+            color: rgb(0.31, 0.27, 0.90),
+          });
+
+          const codeText = 'ULTIMO MODA';
+          const codeW = helveticaBold.widthOfTextAtSize(codeText, 9.5);
+          page.drawText(codeText, {
+            x: badgeX + (badgeW - codeW) / 2,
+            y: badgeY + 6.5,
+            size: 9.5,
+            font: helveticaBold,
+            color: rgb(1, 1, 1),
+          });
+
+          const subText = 'PT ULTIMO MODA INDOTEX';
+          const subW = helvetica.widthOfTextAtSize(subText, 6);
+          page.drawText(subText, {
+            x: 18 + (col1W - subW) / 2,
+            y: headerY + 18,
+            size: 6,
+            font: helveticaBold,
+            color: rgb(0.06, 0.16, 0.3),
+          });
+        } else {
+          // Default / Holding
+          const badgeW = 84;
+          const badgeH = 22;
+          const badgeX = 18 + (col1W - badgeW) / 2;
+          const badgeY = headerY + 36;
+
+          page.drawRectangle({
+            x: badgeX,
+            y: badgeY,
+            width: badgeW,
+            height: badgeH,
+            color: rgb(0.12, 0.23, 0.38),
+          });
+
+          const codeText = companyName.substring(0, 16);
+          const codeW = helveticaBold.widthOfTextAtSize(codeText, 8.5);
+          page.drawText(codeText, {
+            x: badgeX + (badgeW - codeW) / 2,
+            y: badgeY + 7,
+            size: 8.5,
+            font: helveticaBold,
+            color: rgb(1, 1, 1),
+          });
+
+          const subText = 'DOCUMENT CONTROL';
+          const subW = helvetica.widthOfTextAtSize(subText, 6);
+          page.drawText(subText, {
+            x: 18 + (col1W - subW) / 2,
+            y: headerY + 18,
+            size: 6,
+            font: helveticaBold,
+            color: rgb(0.35, 0.42, 0.52),
           });
         }
 

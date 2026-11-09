@@ -49,20 +49,7 @@ export default function ControlTowerHeader({
   };
 
   return (
-    <div className="relative rounded-2xl bg-gradient-to-br from-[#071326] via-[#0d2244] to-[#143265] text-white p-5 sm:p-6 shadow-elevated border border-blue-950/60 overflow-hidden">
-      {/* Background Decorative Patterns */}
-      <div className="absolute -right-16 -top-16 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute right-1/3 -bottom-20 w-64 h-64 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
-      
-      {/* Subtle Grid Watermark Pattern */}
-      <div
-        className="absolute inset-0 opacity-[0.03] pointer-events-none"
-        style={{
-          backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)',
-          backgroundSize: '24px 24px'
-        }}
-      />
-
+    <div className="relative rounded-2xl bg-[#102a4e] text-white p-5 sm:p-6 shadow-sm border border-slate-800 overflow-hidden">
       <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
         {/* Left Column: Greeting & Info */}
         <div className="space-y-2 max-w-2xl">
@@ -79,10 +66,10 @@ export default function ControlTowerHeader({
           {/* User Profile Meta */}
           <div className="flex flex-wrap items-center gap-2 pt-0.5 text-xs text-slate-300">
             <span className="font-semibold text-white tracking-wide">{currentUser?.name}</span>
-            <span className="text-slate-500">&bull;</span>
+            <span className="text-slate-400">&bull;</span>
             <span className="text-sky-300 font-mono font-medium">{currentUser?.department}</span>
-            <span className="text-slate-500">&bull;</span>
-            <span className="px-2.5 py-0.5 rounded-full bg-blue-500/20 text-sky-200 border border-blue-400/30 text-[11px] font-medium">
+            <span className="text-slate-400">&bull;</span>
+            <span className="px-2.5 py-0.5 rounded-full bg-blue-500/20 text-sky-200 border border-blue-400/30 text-[11px] font-semibold">
               {getRoleLabel(currentUser?.role)}
             </span>
           </div>
@@ -93,7 +80,7 @@ export default function ControlTowerHeader({
           {isViewer ? (
             <button
               onClick={() => navigateTo('ctrl-active', ['Dashboard', 'Document Control', 'Dokumen Aktif'])}
-              className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-900/30 transition transform hover:-translate-y-0.5 active:translate-y-0"
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer"
             >
               Buka Master Dokumen Aktif
             </button>
@@ -102,7 +89,7 @@ export default function ControlTowerHeader({
               {canRegisterDocument && (
                 <button
                   onClick={() => navigateTo('reg-new', ['Dashboard', 'Registrasi Dokumen', 'Dokumen Baru'])}
-                  className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-900/40 transition transform hover:-translate-y-0.5 active:translate-y-0"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer"
                 >
                   + Dokumen Baru
                 </button>
@@ -111,7 +98,7 @@ export default function ControlTowerHeader({
               {canRequestRevision && (
                 <button
                   onClick={() => navigateTo('rev-new', ['Dashboard', 'Document Revision', 'Pengajuan Revisi'])}
-                  className="px-4 py-2 bg-slate-800/90 hover:bg-slate-700/90 text-indigo-200 hover:text-white rounded-xl text-xs font-bold border border-indigo-500/30 transition transform hover:-translate-y-0.5 active:translate-y-0"
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-indigo-200 hover:text-white rounded-xl text-xs font-bold border border-indigo-500/40 transition cursor-pointer"
                 >
                   Ajukan Revisi
                 </button>
@@ -120,7 +107,7 @@ export default function ControlTowerHeader({
               {canAccessReports && (
                 <button
                   onClick={() => navigateTo('rep-register', ['Dashboard', 'Report', 'Register Dokumen'])}
-                  className="px-3.5 py-2 bg-slate-800/60 hover:bg-slate-700/80 text-slate-300 hover:text-white rounded-xl text-xs font-medium border border-slate-700/60 transition"
+                  className="px-3.5 py-2 bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-semibold border border-slate-700 transition cursor-pointer"
                   title="Unduh Master Register Dokumen Terkendali ISO"
                 >
                   Register ISO

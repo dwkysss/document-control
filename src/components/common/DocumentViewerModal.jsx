@@ -85,6 +85,13 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
     )
   );
 
+  const docCompanyCode = (doc?.companyCode || (doc?.docNumber?.startsWith('UMI') ? 'UMI' : doc?.docNumber?.startsWith('IMK') ? 'IMK' : 'DJI')).toUpperCase();
+  const docCompanyName = doc?.companyName || (
+    docCompanyCode === 'UMI' ? 'PT Ultimo Moda Indotex' :
+    docCompanyCode === 'IMK' ? 'PT IMK' :
+    (systemSettings?.companyName || 'PT Dentelle Jaya Infinitex')
+  );
+
   // Siapkan QR Code dan Blob URL
   useEffect(() => {
     let isMounted = true;
@@ -221,7 +228,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
   const handleDownloadOfficialPDF = async () => {
     if (isProcessingDownload) return;
     setIsProcessingDownload(true);
-    showToast('Menyematkan Kop Surat PT DJI dan Watermark ke dalam berkas PDF...', 'info');
+    showToast(`Menyematkan Kop Surat ${docCompanyName} dan Watermark ke dalam berkas PDF...`, 'info');
 
     try {
       const fileName = await stampOfficialLetterheadOnPDF({
@@ -303,7 +310,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
       isOpen={isOpen}
       onClose={onClose}
       title="Pratinjau Dokumen Terkendali (Controlled Document Viewer)"
-      subtitle={`${doc.companyName || (doc.docNumber?.startsWith('UMI') ? 'PT Ultimo Moda Indotex' : doc.docNumber?.startsWith('IMK') ? 'PT IMK' : 'PT Dentelle Jaya Infinitex')} | No. Dokumen: ${doc.docNumber} | ISO 9001:2015 Klausul 7.5`}
+      subtitle={`${docCompanyName} | No. Dokumen: ${doc.docNumber} | ISO 9001:2015 Klausul 7.5`}
       maxWidth="max-w-6xl"
     >
       {/* Hidden File Input for quick attachment */}
@@ -378,7 +385,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
             onClick={handleDownloadOfficialPDF}
             disabled={isProcessingDownload}
             className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-lg shadow-sm transition cursor-pointer"
-            title="Unduh PDF Resmi dengan Kop Surat PT DJI dan Tanda Tangan"
+            title={`Unduh PDF Resmi dengan Kop Surat ${docCompanyCode} dan Tanda Tangan`}
           >
             <Stamp className="w-3.5 h-3.5 text-amber-300" />
             {isProcessingDownload ? 'Memproses...' : 'Unduh PDF + Kop Surat'}
@@ -399,7 +406,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
                 Sistem Verifikasi Digital Terdaftar (ISO 9001:2015)
               </h4>
               <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 max-w-lg">
-                QR Code ini membuktikan integritas dokumen resmi {systemSettings.companyName || 'PT DJI'}. Scan menggunakan kamera ponsel untuk memvalidasi nomor registrasi <strong>{doc.docNumber}</strong> dan status saat ini.
+                QR Code ini membuktikan integritas dokumen resmi {docCompanyName}. Scan menggunakan kamera ponsel untuk memvalidasi nomor registrasi <strong>{doc.docNumber}</strong> dan status saat ini.
               </p>
               <div className="flex gap-3 text-[11px] text-slate-500 mt-2">
                 <span>Status: <strong className="text-slate-800 dark:text-slate-200">{doc.status}</strong></span>
@@ -459,7 +466,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
               />
               <span className="flex items-center gap-1">
                 <Stamp className="w-3.5 h-3.5 text-blue-600" />
-                Sematkan Kop Surat Resmi PT DJI
+                Sematkan Kop Surat Resmi {docCompanyCode}
               </span>
             </label>
           )}
@@ -490,17 +497,46 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
 
       {/* ================= AREA UTAMA PRATINJAU DOKUMEN ================= */}
       <div className="space-y-4">
-        {/* Kop Surat Terkendali Resmi PT DJI (Otomatis & Terintegrasi) */}
+        {/* Kop Surat Terkendali Resmi (Otomatis & Terintegrasi Sesuai Unit PT) */}
         {includeLetterhead && (
           <div className="bg-white dark:bg-slate-900 border-2 border-slate-800 dark:border-slate-300 rounded-lg overflow-hidden shadow-xs animate-fade-in">
             <div className="grid grid-cols-12 divide-x-2 divide-slate-800 dark:divide-slate-300">
-              {/* Logo Box: Bersih hanya Logo Resmi PT DJI (Centered Vertikal & Horizontal) */}
+              {/* Logo Box: Dinamis sesuai PT */}
               <div className="col-span-3 p-3 flex items-center justify-center bg-white dark:bg-slate-800/80">
-                <img
-                  src="/dji-logo.png"
-                  alt="PT DJI Logo"
-                  className="h-11 max-w-[145px] object-contain drop-shadow-2xs"
-                />
+                {docCompanyCode === 'DJI' ? (
+                  <img
+                    src="/dji-logo.png"
+                    alt="PT DJI Logo"
+                    className="h-11 max-w-[145px] object-contain drop-shadow-2xs"
+                  />
+                ) : docCompanyCode === 'UMI' ? (
+                  <div className="flex flex-col items-center justify-center text-center">
+                    <div className="px-3 py-1 bg-indigo-600 text-white font-mono font-black text-xs tracking-wider rounded shadow-2xs">
+                      UMI TEXTILE
+                    </div>
+                    <span className="text-[9px] font-bold text-indigo-950 dark:text-indigo-300 mt-1 uppercase tracking-tight">
+                      PT Ultimo Moda Indotex
+                    </span>
+                  </div>
+                ) : docCompanyCode === 'IMK' ? (
+                  <div className="flex flex-col items-center justify-center text-center">
+                    <div className="px-3 py-1 bg-emerald-600 text-white font-mono font-black text-xs tracking-wider rounded shadow-2xs">
+                      IMK KNITTING
+                    </div>
+                    <span className="text-[9px] font-bold text-emerald-950 dark:text-emerald-300 mt-1 uppercase tracking-tight">
+                      PT IMK
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-center">
+                    <div className="px-3 py-1 bg-slate-800 text-white font-mono font-black text-xs tracking-wider rounded shadow-2xs">
+                      HOLDING GROUP
+                    </div>
+                    <span className="text-[9px] font-bold text-slate-700 dark:text-slate-300 mt-1 uppercase tracking-tight">
+                      Document Control
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Document Title Header (Tengah, Rapi, Simetris & Berbobot) */}
@@ -813,7 +849,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
                     </span>
                   </div>
                   <p className="font-bold text-slate-900 dark:text-white truncate" title={doc.approvedBy || doc.targetApprover || (doc.status === 'AKTIF' ? 'Management Rep.' : '-')}>
-                    {doc.approvedBy || doc.targetApprover || (doc.status === 'AKTIF' ? 'BABAN RACHMAT SUBAGJA' : 'MR / Direksi')}
+                    {doc.approvedBy || doc.targetApprover || (doc.status === 'AKTIF' ? (docCompanyCode === 'UMI' ? 'RATNA SARI' : docCompanyCode === 'IMK' ? 'BAMBANG WIJAYA' : 'BABAN RACHMAT SUBAGJA') : 'MR / Direksi')}
                   </p>
                   <p className="text-[11px] text-slate-500 truncate">
                     {doc.approverPosition || 'Management Representative'}
@@ -830,7 +866,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
 
         {/* Footer Disclaimer */}
         <div className="pt-2 flex items-center justify-between text-[10.5px] text-slate-400">
-          <span>Sistem Manajemen Dokumen Terkendali • {systemSettings.companyName || 'PT DJI'}</span>
+          <span>Sistem Manajemen Dokumen Terkendali • {docCompanyName}</span>
           <span>Standar Mutu ISO 9001:2015 Klausul 7.5</span>
         </div>
       </div>

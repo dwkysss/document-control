@@ -74,21 +74,24 @@ export default function DocumentTypeMasterView() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Top Banner */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 p-5 flex flex-wrap items-center justify-between gap-4">
-        <div>
+      <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300"><BookmarkCheck className="h-5 w-5" aria-hidden="true" /></div>
+          <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <BookmarkCheck className="w-5 h-5 text-blue-600" />
             Master Jenis Dokumen (ISO Document Hierarchy)
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
             Daftar klasifikasi dokumen mutu (Level 1 Kebijakan, Level 2 SOP, Level 3 IK/WI, Level 4 Formulir, dan Dokumen Eksternal).
           </p>
+          </div>
         </div>
         <button
+          type="button"
           onClick={handleOpenAddModal}
-          className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition"
+          className="flex items-center gap-1.5 px-4 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-md transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
         >
           <Plus className="w-4 h-4" />
           Tambah Jenis Dokumen
@@ -96,29 +99,28 @@ export default function DocumentTypeMasterView() {
       </div>
 
       {/* Table */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
+        <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
+          <div><h3 className="text-sm font-bold text-slate-900 dark:text-white">Jenis dokumen</h3><p className="mt-0.5 text-xs text-slate-600 dark:text-slate-300">{filtered.length} jenis terdaftar</p></div>
+          <label className="relative w-full sm:w-80"><span className="sr-only">Cari kode atau nama jenis dokumen</span><Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" aria-hidden="true" /><input type="search" placeholder="Cari kode atau jenis dokumen" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full rounded-md border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-white" /></label>
+        </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full min-w-[900px] table-fixed text-left border-collapse text-sm">
+            <colgroup><col className="w-[14%]" /><col className="w-[26%]" /><col className="w-[18%]" /><col className="w-[30%]" /><col className="w-[12%]" /></colgroup>
             <thead>
-              <tr className="bg-[#102a4e] text-white uppercase text-[10px] tracking-wider">
-                <th className="py-3 px-4 text-center">No.</th>
-                <th className="py-3 px-4">Kode Singkatan</th>
-                <th className="py-3 px-4">Nama Jenis Dokumen</th>
-                <th className="py-3 px-4 text-center">Hierarki Mutu (Level)</th>
-                <th className="py-3 px-4">Deskripsi / Peruntukan</th>
-                <th className="py-3 px-4 text-center">Aksi</th>
+              <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                <th className="py-3 px-4">Kode</th><th className="py-3 px-4">Jenis dokumen</th><th className="py-3 px-4">Hierarki</th><th className="py-3 px-4">Deskripsi</th><th className="py-3 px-4 text-right">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {filtered.map((item, idx) => (
-                <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
-                  <td className="py-3.5 px-4 text-center text-slate-400">{idx + 1}</td>
-                  <td className="py-3.5 px-4 font-mono font-bold text-cyan-600 dark:text-cyan-400 text-sm">
+              {filtered.length === 0 ? <tr><td colSpan={5} className="px-6 py-12 text-center text-sm text-slate-600 dark:text-slate-300">{searchTerm ? 'Tidak ada jenis dokumen yang cocok.' : 'Belum ada jenis dokumen.'}</td></tr> : filtered.map((item) => (
+                <tr key={item.id} className="transition-colors hover:bg-blue-50/40 dark:hover:bg-slate-800/70">
+                  <td className="py-4 px-4 font-mono text-xs font-bold text-blue-800 dark:text-blue-300">
                     {item.code}
                   </td>
-                  <td className="py-3.5 px-4 font-bold text-slate-800 dark:text-slate-200">{item.name}</td>
-                  <td className="py-3.5 px-4 text-center font-bold">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                  <td className="py-4 px-4 font-semibold text-slate-900 dark:text-slate-100">{item.name}</td>
+                  <td className="py-4 px-4">
+                    <span className={`inline-flex px-2.5 py-1 rounded-md text-xs font-bold ${
                       item.level === 5
                         ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border border-purple-200 dark:border-purple-800'
                         : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
@@ -126,23 +128,23 @@ export default function DocumentTypeMasterView() {
                       {item.level === 5 ? 'Dokumen Eksternal' : `Level ${item.level}`}
                     </span>
                   </td>
-                  <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400">{item.description}</td>
-                  <td className="py-3.5 px-4 text-center">
-                    <div className="flex items-center justify-center gap-1.5">
+                  <td className="py-4 px-4 text-sm text-slate-700 dark:text-slate-300">{item.description || 'Belum ada deskripsi'}</td>
+                  <td className="py-4 px-4 text-right">
+                    <div className="flex items-center justify-end gap-1.5">
                       <button
-                        onClick={() => handleOpenEditModal(item)}
-                        className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded"
+                        type="button" onClick={() => handleOpenEditModal(item)}
+                        className="p-2 text-slate-700 hover:text-blue-800 hover:bg-blue-50 rounded-md cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
                         title="Edit Jenis Dokumen"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => {
+                        type="button" onClick={() => {
                           if (confirm(`Hapus jenis dokumen ${item.code}?`)) {
                             deleteDocumentType(item.id);
                           }
                         }}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded"
+                        className="p-2 text-slate-500 hover:text-rose-700 hover:bg-rose-50 rounded-md cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600"
                         title="Hapus"
                       >
                         <Trash2 className="w-4 h-4" />

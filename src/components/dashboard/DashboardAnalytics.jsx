@@ -65,10 +65,10 @@ export default function DashboardAnalytics({
         short: 'Kebijakan & Sasaran Mutu',
         count: l1.length,
         percentage: calcPct(l1.length),
-        gradient: 'from-indigo-600 to-indigo-700',
-        badgeColor: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300',
-        borderAccent: 'border-indigo-300 dark:border-indigo-700',
-        bgBox: 'bg-indigo-50/70 dark:bg-indigo-950/30',
+        gradient: 'from-purple-600 to-purple-700',
+        badgeColor: 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800',
+        borderAccent: 'border-purple-300 dark:border-purple-800',
+        bgBox: 'bg-purple-50/70 dark:bg-purple-950/30',
         widthClass: 'w-[75%]',
         desc: 'Komitmen manajemen puncak, sasaran mutu & manual ISO'
       },
@@ -239,7 +239,7 @@ export default function DashboardAnalytics({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
       {/* Chart 1: Donut Chart / ISO Quality Pyramid (5 Cols) */}
-      <div className="lg:col-span-5 bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-card flex flex-col justify-between">
+      <div className="lg:col-span-5 bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
         <div>
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2">
@@ -250,7 +250,7 @@ export default function DashboardAnalytics({
                 <h3 className="text-xs font-bold text-slate-900 dark:text-white">
                   Hierarki Dokumen Mutu ISO
                 </h3>
-                <p className="text-[11px] text-slate-500">Piramida dokumen Klausul 7.5</p>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400">Piramida dokumen Klausul 7.5</p>
               </div>
             </div>
 
@@ -260,8 +260,8 @@ export default function DashboardAnalytics({
                   type="button"
                   onClick={() => setHierarchyMode('pyramid')}
                   className={`px-2 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${hierarchyMode === 'pyramid'
-                      ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 font-bold shadow-xs'
-                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                      ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 font-bold shadow-2xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   title="Piramida Mutu ISO 4 Tingkat"
                 >
@@ -272,8 +272,8 @@ export default function DashboardAnalytics({
                   type="button"
                   onClick={() => setHierarchyMode('chart')}
                   className={`px-2 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${hierarchyMode === 'chart'
-                      ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 font-bold shadow-xs'
-                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                      ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 font-bold shadow-2xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   title="Grafik Donat Dokumen"
                 >
@@ -284,7 +284,7 @@ export default function DashboardAnalytics({
 
               <button
                 onClick={() => navigateTo('rep-type', ['Dashboard', 'Report', 'Dokumen per Tipe'])}
-                className="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1 hover:underline ml-0.5"
+                className="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1 hover:underline ml-0.5 cursor-pointer"
               >
                 <span>Detail</span>
                 <ArrowUpRight className="w-3.5 h-3.5" />
@@ -299,27 +299,27 @@ export default function DashboardAnalytics({
                 {pyramidTiers.map((tier) => (
                   <div
                     key={tier.level}
-                    className={`${tier.widthClass} transition-all duration-200 hover:scale-[1.02] cursor-default`}
+                    className={`${tier.widthClass} transition cursor-default`}
                   >
-                    <div className={`p-2.5 rounded-xl border ${tier.borderAccent} ${tier.bgBox} shadow-xs flex items-center justify-between gap-2`}>
+                    <div className={`p-2.5 rounded-xl border ${tier.borderAccent} ${tier.bgBox} shadow-2xs flex items-center justify-between gap-2`}>
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className={`w-5 h-5 rounded-md bg-gradient-to-r ${tier.gradient} text-white font-bold text-[10px] flex items-center justify-center shrink-0 shadow-xs`}>
+                        <span className={`w-5 h-5 rounded-md bg-gradient-to-r ${tier.gradient} text-white font-bold text-[10px] flex items-center justify-center shrink-0`}>
                           L{tier.level}
                         </span>
                         <div className="min-w-0">
                           <p className="text-[11px] font-bold text-slate-800 dark:text-slate-100 truncate">
                             {tier.short}
                           </p>
-                          <p className="text-[9.5px] text-slate-500 dark:text-slate-400 truncate hidden sm:block">
+                          <p className="text-[10px] text-slate-600 dark:text-slate-400 truncate hidden sm:block">
                             {tier.desc}
                           </p>
                         </div>
                       </div>
                       <div className="text-right shrink-0">
-                        <span className="font-mono font-black text-xs text-slate-900 dark:text-white">
+                        <span className="font-mono font-bold text-xs text-slate-900 dark:text-white">
                           {tier.count}
                         </span>
-                        <span className="text-[10px] text-slate-500 font-semibold ml-1">
+                        <span className="text-[10px] text-slate-600 dark:text-slate-400 font-medium ml-1">
                           ({tier.percentage}%)
                         </span>
                       </div>
@@ -329,7 +329,7 @@ export default function DashboardAnalytics({
               </div>
 
               {/* Assessment Footer for ISO Pyramid Health */}
-              <div className="mt-3 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 text-[10.5px] flex items-start gap-2 text-slate-600 dark:text-slate-300">
+              <div className="mt-3 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 text-[10.5px] flex items-start gap-2 text-slate-700 dark:text-slate-300">
                 <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                 <p className="leading-relaxed">
                   <strong>Struktur ISO 9001:2015 Sehat:</strong> Piramida dokumen didukung fondasi <strong>{pyramidTiers[2].count + pyramidTiers[3].count} dokumen operasional</strong> (Level 3 & 4), menjamin ketertelusuran SOP dan Kebijakan Mutu.
@@ -384,7 +384,7 @@ export default function DashboardAnalytics({
       </div>
 
       {/* Chart 2: Department Distribution (7 Cols) */}
-      <div className="lg:col-span-7 bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-card flex flex-col justify-between">
+      <div className="lg:col-span-7 bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
         <div>
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2">
@@ -395,26 +395,28 @@ export default function DashboardAnalytics({
                 <h3 className="text-xs font-bold text-slate-900 dark:text-white">
                   Distribusi Dokumen per Unit Kerja
                 </h3>
-                <p className="text-[11px] text-slate-500">Sebaran SOP & IK pada masing-masing divisi</p>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400">Sebaran SOP & IK pada masing-masing divisi</p>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
               <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 text-xs">
                 <button
+                  type="button"
                   onClick={() => setViewMode('chart')}
-                  className={`px-2 py-1 rounded-md text-[11px] font-semibold transition ${viewMode === 'chart'
-                      ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-xs'
-                      : 'text-slate-500 hover:text-slate-900'
+                  className={`px-2 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${viewMode === 'chart'
+                      ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-2xs font-bold'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                 >
                   Grafik
                 </button>
                 <button
+                  type="button"
                   onClick={() => setViewMode('table')}
-                  className={`px-2 py-1 rounded-md text-[11px] font-semibold transition ${viewMode === 'table'
-                      ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-xs'
-                      : 'text-slate-500 hover:text-slate-900'
+                  className={`px-2 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${viewMode === 'table'
+                      ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-2xs font-bold'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                 >
                   Tabel
@@ -423,7 +425,7 @@ export default function DashboardAnalytics({
 
               <button
                 onClick={() => navigateTo('rep-dept', ['Dashboard', 'Report', 'Dokumen per Departemen'])}
-                className="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1 hover:underline"
+                className="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1 hover:underline cursor-pointer"
               >
                 <span>Laporan</span>
                 <ArrowUpRight className="w-3.5 h-3.5" />
@@ -435,7 +437,7 @@ export default function DashboardAnalytics({
           {viewMode === 'chart' ? (
             <div className="h-64 pt-3">
               {totalDocs === 0 ? (
-                <div className="h-full flex items-center justify-center text-center text-xs text-slate-400">
+                <div className="h-full flex items-center justify-center text-center text-xs text-slate-500">
                   Belum ada dokumen yang terdaftar untuk ditampilkan.
                 </div>
               ) : (
@@ -446,20 +448,20 @@ export default function DashboardAnalytics({
             <div className="pt-2 max-h-64 overflow-y-auto">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 text-[10px] uppercase font-bold">
-                    <th className="py-2">Kode</th>
-                    <th className="py-2">Departemen</th>
-                    <th className="py-2 text-right">Jumlah</th>
-                    <th className="py-2 text-right">Porsi</th>
+                  <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 text-[10px] uppercase font-bold">
+                    <th className="py-2.5">Kode</th>
+                    <th className="py-2.5">Departemen</th>
+                    <th className="py-2.5 text-right">Jumlah</th>
+                    <th className="py-2.5 text-right">Porsi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {deptBreakdown.map(dept => (
-                    <tr key={dept.code} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                      <td className="py-2 font-mono font-bold text-blue-600">{dept.code}</td>
-                      <td className="py-2 text-slate-700 dark:text-slate-300 truncate max-w-xs">{dept.name}</td>
+                    <tr key={dept.code} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                      <td className="py-2 font-mono font-bold text-blue-700 dark:text-blue-400">{dept.code}</td>
+                      <td className="py-2 text-slate-800 dark:text-slate-200 truncate max-w-xs">{dept.name}</td>
                       <td className="py-2 text-right font-mono font-bold text-slate-900 dark:text-white">{dept.count}</td>
-                      <td className="py-2 text-right text-slate-500 font-semibold">{dept.percentage}%</td>
+                      <td className="py-2 text-right text-slate-600 dark:text-slate-400 font-semibold">{dept.percentage}%</td>
                     </tr>
                   ))}
                 </tbody>

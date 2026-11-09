@@ -75,21 +75,24 @@ export default function DepartmentMasterView() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Top Banner */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 p-5 flex flex-wrap items-center justify-between gap-4">
-        <div>
+      <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300"><Building2 className="h-5 w-5" aria-hidden="true" /></div>
+          <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-blue-600" />
             Master Data Departemen
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
             Daftar departemen & divisi operasional yang menjadi segmen penomoran kode dokumen.
           </p>
+          </div>
         </div>
         <button
           onClick={handleOpenAddModal}
-          className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition"
+          type="button"
+          className="flex items-center gap-1.5 px-4 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-md transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
         >
           <Plus className="w-4 h-4" />
           Tambah Departemen
@@ -97,43 +100,42 @@ export default function DepartmentMasterView() {
       </div>
 
       {/* Table */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
+        <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
+          <div><h3 className="text-sm font-bold text-slate-900 dark:text-white">Daftar departemen</h3><p className="mt-0.5 text-xs text-slate-600 dark:text-slate-300">{filtered.length} departemen</p></div>
+          <label className="relative w-full sm:w-80"><span className="sr-only">Cari kode, departemen, atau kepala departemen</span><Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" aria-hidden="true" /><input type="search" placeholder="Cari kode, nama, atau kepala" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full rounded-md border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-white" /></label>
+        </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full min-w-[760px] text-left border-collapse text-sm">
             <thead>
-              <tr className="bg-[#102a4e] text-white uppercase text-[10px] tracking-wider">
-                <th className="py-3 px-4 text-center">No.</th>
-                <th className="py-3 px-4">Kode Departemen</th>
-                <th className="py-3 px-4">Nama Departemen</th>
-                <th className="py-3 px-4">Kepala Departemen (Head of Dept)</th>
-                <th className="py-3 px-4 text-center">Aksi</th>
+              <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                <th className="py-3 px-4">Kode</th><th className="py-3 px-4">Departemen</th><th className="py-3 px-4">Kepala departemen</th><th className="py-3 px-4 text-right">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {filtered.map((dept, idx) => (
-                <tr key={dept.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
-                  <td className="py-3.5 px-4 text-center text-slate-400">{idx + 1}</td>
-                  <td className="py-3.5 px-4 font-mono font-bold text-blue-600 dark:text-blue-400 text-sm">
+              {filtered.length === 0 ? <tr><td colSpan={4} className="px-6 py-12 text-center text-sm text-slate-600 dark:text-slate-300">{searchTerm ? 'Tidak ada departemen yang cocok dengan pencarian.' : 'Belum ada departemen.'}</td></tr> : filtered.map((dept) => (
+                <tr key={dept.id} className="transition-colors hover:bg-blue-50/40 dark:hover:bg-slate-800/70">
+                  <td className="py-4 px-4 font-mono text-xs font-bold text-blue-800 dark:text-blue-300">
                     {dept.code}
                   </td>
-                  <td className="py-3.5 px-4 font-bold text-slate-800 dark:text-slate-200">{dept.name}</td>
-                  <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400 font-medium">{dept.head || '-'}</td>
-                  <td className="py-3.5 px-4 text-center">
+                  <td className="py-4 px-4 font-semibold text-slate-900 dark:text-slate-100">{dept.name}</td>
+                  <td className="py-4 px-4 text-sm text-slate-700 dark:text-slate-300">{dept.head || 'Belum ditetapkan'}</td>
+                  <td className="py-4 px-4 text-right">
                     <div className="flex items-center justify-center gap-1.5">
                       <button
-                        onClick={() => handleOpenEditModal(dept)}
-                        className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded"
+                        type="button" onClick={() => handleOpenEditModal(dept)}
+                        className="p-2 text-slate-700 hover:text-blue-800 hover:bg-blue-50 rounded-md cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
                         title="Edit Departemen"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => {
+                        type="button" onClick={() => {
                           if (confirm(`Hapus departemen ${dept.code}?`)) {
                             deleteDepartment(dept.id);
                           }
                         }}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded"
+                        className="p-2 text-slate-500 hover:text-rose-700 hover:bg-rose-50 rounded-md cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600"
                         title="Hapus Departemen"
                       >
                         <Trash2 className="w-4 h-4" />

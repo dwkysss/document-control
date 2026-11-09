@@ -96,14 +96,40 @@ export function DocumentControlProvider({ children }) {
         ];
         let cleaned = parsed
           .filter(e => !dummyNiks.includes(String(e.nik || '').trim()))
-          .map(e => ({
-            ...e,
-            companyCode: e.companyCode || (e.nik?.startsWith('UMI') ? 'UMI' : e.nik?.startsWith('IMK') ? 'IMK' : (e.nik === '123463' ? 'ALL' : 'DJI')),
-            companyName: e.companyName || (e.companyCode === 'UMI' ? 'PT Ultimo Moda Indotex' : e.companyCode === 'IMK' ? 'PT IMK' : (e.companyCode === 'ALL' ? 'Holding (Multi-Company)' : 'PT Dentelle Jaya Infinitex'))
-          }));
+          .map(e => {
+            const forcedComp = e.nik?.startsWith('UMI')
+              ? 'UMI'
+              : e.nik?.startsWith('IMK')
+              ? 'IMK'
+              : e.nik === '123463'
+              ? 'ALL'
+              : (e.companyCode || 'DJI');
+            const forcedCompName = forcedComp === 'UMI'
+              ? 'PT Ultimo Moda Indotex'
+              : forcedComp === 'IMK'
+              ? 'PT IMK'
+              : forcedComp === 'ALL'
+              ? 'Holding (Multi-Company)'
+              : 'PT Dentelle Jaya Infinitex';
+            return {
+              ...e,
+              companyCode: forcedComp,
+              companyName: forcedCompName
+            };
+          });
 
         initialEmployees.forEach(initEmp => {
-          if (!cleaned.some(e => String(e?.nik || '').trim() === String(initEmp.nik).trim())) {
+          const existingIdx = cleaned.findIndex(e => String(e?.nik || '').trim() === String(initEmp.nik).trim());
+          if (existingIdx >= 0) {
+            cleaned[existingIdx] = {
+              ...cleaned[existingIdx],
+              companyCode: initEmp.companyCode,
+              companyName: initEmp.companyName,
+              role: cleaned[existingIdx].role || initEmp.role,
+              department: cleaned[existingIdx].department || initEmp.department,
+              position: cleaned[existingIdx].position || initEmp.position
+            };
+          } else {
             cleaned.push(initEmp);
           }
         });
@@ -246,6 +272,51 @@ export function DocumentControlProvider({ children }) {
     }
     return null; // Start logged out so user logs in with NIP
   });
+
+  // Ensure all baseline personnel across companies (IMK, UMI, DJI) are merged into rawEmployees & persisted
+  useEffect(() => {
+    setRawEmployees(prev => {
+      let changed = false;
+      const updated = (prev || []).map(e => {
+        const canonicalComp = e.nik?.startsWith('UMI')
+          ? 'UMI'
+          : e.nik?.startsWith('IMK')
+          ? 'IMK'
+          : e.nik === '123463'
+          ? 'ALL'
+          : (e.companyCode || 'DJI');
+        if (e.companyCode !== canonicalComp) {
+          changed = true;
+          return {
+            ...e,
+            companyCode: canonicalComp,
+            companyName: canonicalComp === 'UMI' ? 'PT Ultimo Moda Indotex' : canonicalComp === 'IMK' ? 'PT IMK' : canonicalComp === 'ALL' ? 'Holding (Multi-Company)' : 'PT Dentelle Jaya Infinitex'
+          };
+        }
+        return e;
+      });
+
+      initialEmployees.forEach(initEmp => {
+        const found = updated.find(e => String(e?.nik || '').trim() === String(initEmp.nik).trim());
+        if (!found) {
+          updated.push(initEmp);
+          changed = true;
+        } else if (found.companyCode !== initEmp.companyCode) {
+          found.companyCode = initEmp.companyCode;
+          found.companyName = initEmp.companyName;
+          changed = true;
+        }
+      });
+
+      if (changed) {
+        try {
+          localStorage.setItem('dji_dms_employees', JSON.stringify(updated));
+        } catch (e) {}
+        return [...updated];
+      }
+      return prev;
+    });
+  }, []);
 
   // Strict Tenant Isolation: Whenever currentUser changes, enforce company scope
   useEffect(() => {
@@ -516,6 +587,41 @@ export function DocumentControlProvider({ children }) {
     }
 
     // 2. Staff / Reviewer: HANYA dapat melihat draft miliknya sendiri (Personal Draft)
+    const userName = (currentUser.name || '').toUpperCase().trim();
+    const userNik = (currentUser.nik || '').toUpperCase().trim();
+    const isOwner = (doc.creatorNik && doc.creatorNik.toUpperCase().trim() === userNik) ||
+                    (doc.creator && doc.creator.toUpperCase().trim() === userName);
+    return Boolean(isOwner);
+  };
+
+  // Scope akses berkas Ditolak berdasarkan Kepemilikan & Role
+  const canUserViewRejectedDoc = (doc) => {
+    if (!doc) return false;
+    if (!currentUser) return false;
+
+    // Strict multi-tenant isolation
+    if (currentUser.companyCode && currentUser.companyCode !== 'ALL') {
+      const userCompany = currentUser.companyCode.toUpperCase();
+      const docCompany = (doc.companyCode || doc.docNumber?.split('-')[0] || 'DJI').toUpperCase();
+      if (docCompany !== userCompany) return false;
+    }
+
+    const userRole = currentUser.role || 'staff';
+    if (userRole === 'viewer') return false;
+
+    // 1. Admin, Approver (MR), dan DCO dapat memantau seluruh dokumen yang ditolak
+    if (userRole === 'admin' || userRole === 'approver' || userRole === 'doc_control') {
+      return true;
+    }
+
+    // 2. Reviewer (Atasan Dept): Melihat dokumen ditolak dari departemennya
+    if (userRole === 'reviewer') {
+      const userDept = (currentUser.department || '').toUpperCase().trim();
+      const docDept = (doc.department || '').toUpperCase().trim();
+      if (userDept && docDept && userDept === docDept) return true;
+    }
+
+    // 3. Staff: Hanya dokumen ditolak yang diajukan oleh dirinya sendiri
     const userName = (currentUser.name || '').toUpperCase().trim();
     const userNik = (currentUser.nik || '').toUpperCase().trim();
     const isOwner = (doc.creatorNik && doc.creatorNik.toUpperCase().trim() === userNik) ||
@@ -817,8 +923,29 @@ export function DocumentControlProvider({ children }) {
         if (cloudTypes && !typesErr) setDocumentTypes(cloudTypes);
         if (cloudEmps && !empsErr) {
           const dummyNiks = ['123456', '123457', '123458', '123459', '123460', '123461', '123462'];
-          const cleanedEmps = cloudEmps.filter(e => !dummyNiks.includes(String(e.nik || '').trim()));
-          const sortedEmps = cleanedEmps.sort((a, b) => {
+          const cleanedEmps = cloudEmps
+            .filter(e => !dummyNiks.includes(String(e.nik || '').trim()))
+            .map(e => {
+              const nik = String(e.nik || '').trim().toUpperCase();
+              const companyCode = String(
+                nik.startsWith('UMI') ? 'UMI' : nik.startsWith('IMK') ? 'IMK' : nik === '123463' ? 'ALL' : (e.company_code || e.companyCode || 'DJI')
+              ).toUpperCase();
+              return {
+                ...e,
+                companyCode,
+                companyName: e.company_name || e.companyName || (
+                  companyCode === 'UMI' ? 'PT Ultimo Moda Indotex' : companyCode === 'IMK' ? 'PT IMK' : companyCode === 'ALL' ? 'Holding (Multi-Company)' : 'PT Dentelle Jaya Infinitex'
+                )
+              };
+            });
+          const employeesByNik = new Map(
+            cleanedEmps.map(employee => [String(employee.nik || '').trim().toUpperCase(), employee])
+          );
+          initialEmployees.forEach(employee => {
+            const nik = String(employee.nik || '').trim().toUpperCase();
+            if (nik && !employeesByNik.has(nik)) employeesByNik.set(nik, employee);
+          });
+          const sortedEmps = [...employeesByNik.values()].sort((a, b) => {
             if (a.department === 'MGMT' || a.nik === 'DJI000001') return -1;
             if (b.department === 'MGMT' || b.nik === 'DJI000001') return 1;
             return 0;
@@ -1972,8 +2099,9 @@ export function DocumentControlProvider({ children }) {
     const createdDate = now.toISOString().slice(0, 10);
     const createdTime = now.toLocaleTimeString('id-ID');
 
+    const targetComp = originalDoc.companyCode || (originalDoc.docNumber?.split('-')[0]) || systemSettings.companyCode || 'DJI';
     const newDocNumber = formatDocumentNumber({
-      companyCode: systemSettings.companyCode,
+      companyCode: targetComp,
       docType: originalDoc.type,
       department: originalDoc.department,
       seqNumber: originalDoc.seqNumber,
@@ -2473,6 +2601,8 @@ export function DocumentControlProvider({ children }) {
       supabase.from('employees').upsert([{
         id: newEmp.id,
         nik: newEmp.nik,
+        company_code: newEmp.companyCode || 'DJI',
+        company_name: newEmp.companyName || null,
         name: newEmp.name,
         department: newEmp.department,
         position: newEmp.position,
@@ -2495,6 +2625,8 @@ export function DocumentControlProvider({ children }) {
     if (isSupabaseConfigured && supabase) {
       supabase.from('employees').update({
         nik: updatedData.nik,
+        company_code: updatedData.companyCode || prevEmp?.companyCode || 'DJI',
+        company_name: updatedData.companyName || prevEmp?.companyName || null,
         name: updatedData.name,
         department: updatedData.department,
         position: updatedData.position,
@@ -2776,6 +2908,7 @@ export function DocumentControlProvider({ children }) {
         canViewAllDocuments,
         canUserViewPendingDoc,
         canUserViewDraftDoc,
+        canUserViewRejectedDoc,
         cancelDocument,
         confirmDocumentPeriodicReview,
         reviewDocumentContent,

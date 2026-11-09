@@ -50,7 +50,8 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
     canManageMasterData,
     canManageSettings,
     canUserViewPendingDoc,
-    canUserViewDraftDoc
+    canUserViewDraftDoc,
+    canUserViewRejectedDoc
   } = useDocumentControl();
 
   // Active Company Scope Resolution (Seamless synchronization with header & active session)
@@ -112,7 +113,10 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
     .length;
   const activeCount = safeDocs.filter(d => d?.status === 'AKTIF').length;
   const obsoleteCount = safeDocs.filter(d => d?.status === 'OBSOLETE').length;
-  const rejectedCount = safeDocs.filter(d => d?.status === 'DITOLAK').length;
+  const rejectedCount = safeDocs
+    .filter(d => d?.status === 'DITOLAK')
+    .filter(d => (canUserViewRejectedDoc ? canUserViewRejectedDoc(d) : true))
+    .length;
 
   const handleNavClick = (menuKey, crumbs) => {
     setActiveMenu(menuKey);

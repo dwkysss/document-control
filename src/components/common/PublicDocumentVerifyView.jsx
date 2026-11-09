@@ -70,7 +70,12 @@ export default function PublicDocumentVerifyView({ docNumber, onBackToApp }) {
     };
   }, [doc, systemSettings]);
 
-  const companyName = systemSettings?.companyName || 'PT DJI';
+  const docComp = (doc?.companyCode || (doc?.docNumber?.startsWith('UMI') ? 'UMI' : doc?.docNumber?.startsWith('IMK') ? 'IMK' : 'DJI')).toUpperCase();
+  const companyName = doc?.companyName || (
+    docComp === 'UMI' ? 'PT Ultimo Moda Indotex' :
+    docComp === 'IMK' ? 'PT IMK' :
+    (systemSettings?.companyName || 'PT Dentelle Jaya Infinitex')
+  );
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col justify-between py-6 px-4 sm:px-6">
@@ -78,7 +83,21 @@ export default function PublicDocumentVerifyView({ docNumber, onBackToApp }) {
         {/* Brand Header */}
         <div className="text-center space-y-2">
           <div className="inline-flex items-center justify-center p-3 bg-white rounded-2xl shadow-lg border border-slate-200">
-            <img src="/dji-logo.png" alt="PT DJI Logo" className="h-10 object-contain" />
+            {docComp === 'DJI' ? (
+              <img src="/dji-logo.png" alt="PT DJI Logo" className="h-10 object-contain" />
+            ) : docComp === 'UMI' ? (
+              <div className="px-4 py-1.5 bg-indigo-600 text-white font-mono font-black text-sm tracking-wider rounded-lg">
+                UMI TEXTILE
+              </div>
+            ) : docComp === 'IMK' ? (
+              <div className="px-4 py-1.5 bg-emerald-600 text-white font-mono font-black text-sm tracking-wider rounded-lg">
+                IMK KNITTING
+              </div>
+            ) : (
+              <div className="px-4 py-1.5 bg-slate-800 text-white font-mono font-black text-sm tracking-wider rounded-lg">
+                HOLDING GROUP
+              </div>
+            )}
           </div>
           <h1 className="text-lg sm:text-xl font-extrabold tracking-tight text-white">
             {companyName} Document Control System
@@ -124,7 +143,7 @@ export default function PublicDocumentVerifyView({ docNumber, onBackToApp }) {
                     <span>STATUS: SALINAN RESMI TERKENDALI AKTIF</span>
                   </div>
                   <p className="text-xs text-emerald-100 mt-1 leading-relaxed">
-                    Dokumen fisik cetak ini <strong>SAH & RESMI</strong> berlaku untuk seluruh operasional PT DJI. Nomor registrasi dan revisi terdaftar aktif di pangkalan data Document Control.
+                    Dokumen fisik cetak ini <strong>SAH & RESMI</strong> berlaku untuk seluruh operasional {companyName}. Nomor registrasi dan revisi terdaftar aktif di pangkalan data Document Control.
                   </p>
                 </div>
               </div>

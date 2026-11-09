@@ -21,6 +21,13 @@ import Badge from '../common/Badge';
 import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
 
+const formatRevisionDate = (value) => {
+  if (!value) return 'Belum tercatat';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Jakarta' }).format(date);
+};
+
 export default function RevisionHistoryView() {
   const { documents = [], departments = [], documentTypes = [], setViewingDocument } = useDocumentControl();
   const [searchTerm, setSearchTerm] = useState('');
@@ -279,25 +286,17 @@ export default function RevisionHistoryView() {
 
         {/* Dense, Clean Table (100% Width, Zero Empty Holes) */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full min-w-[1240px] table-fixed text-left border-collapse text-sm">
+            <colgroup><col className="w-[28%]" /><col className="w-[9%]" /><col className="w-[12%]" /><col className="w-[11%]" /><col className="w-[12%]" /><col className="w-[18%]" /><col className="w-[10%]" /></colgroup>
             <thead>
-              <tr className="bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 uppercase text-[10px] font-bold tracking-wider">
-                <th className="py-3.5 px-4 text-center whitespace-nowrap w-12">No.</th>
-                <th className="py-3.5 px-4 whitespace-nowrap">No. Dokumen</th>
-                <th className="py-3.5 px-4 min-w-[200px]">Judul Dokumen</th>
-                <th className="py-3.5 px-4 whitespace-nowrap">Departemen</th>
-                <th className="py-3.5 px-4 text-center whitespace-nowrap">Revisi</th>
-                <th className="py-3.5 px-4 text-center whitespace-nowrap">Status</th>
-                <th className="py-3.5 px-4 text-center whitespace-nowrap min-w-[110px]">Tgl. Efektif</th>
-                <th className="py-3.5 px-4 whitespace-nowrap min-w-[130px]">Pembuat</th>
-                <th className="py-3.5 px-4 min-w-[220px]">Catatan / Alasan Revisi</th>
-                <th className="py-3.5 px-4 text-right whitespace-nowrap">Aksi</th>
+              <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                <th className="py-3 px-4">Dokumen</th><th className="py-3 px-3">Dept.</th><th className="py-3 px-3">Versi</th><th className="py-3 px-3">Tgl. berlaku</th><th className="py-3 px-3">Pembuat</th><th className="py-3 px-3">Catatan revisi</th><th className="py-3 px-3 text-right">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filteredDocs.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-14 text-center text-slate-400">
+                  <td colSpan={7} className="py-14 text-center text-slate-500">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <GitBranch className="w-8 h-8 text-slate-300 dark:text-slate-600" />
                       <p className="font-bold text-slate-700 dark:text-slate-300 text-sm">
@@ -326,66 +325,35 @@ export default function RevisionHistoryView() {
 
                   return (
                     <tr key={doc.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition">
-                      {/* 1. No */}
-                      <td className="py-3.5 px-4 text-center text-slate-400 whitespace-nowrap font-medium">
-                        {startIndex + idx + 1}
-                      </td>
-
-                      {/* 2. No Dokumen */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="flex items-center gap-1.5">
+                      <td className="py-4 px-4">
+                        <div className="flex min-w-0 items-start gap-2.5">
+                          <span className="mt-0.5 text-slate-500"><GitBranch className="h-4 w-4" aria-hidden="true" /></span>
+                          <div className="min-w-0">
+                            <div className="flex min-w-0 items-center gap-2">
                           <button
                             type="button"
                             onClick={() => setViewingDocument(doc)}
-                            className="font-bold font-mono text-blue-600 dark:text-blue-400 hover:underline cursor-pointer text-xs"
+                            className="truncate text-left font-bold font-mono text-blue-700 dark:text-blue-300 hover:underline cursor-pointer text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
                             title="Buka Pratinjau Dokumen"
                           >
                             {doc.docNumber}
                           </button>
-                          <span className="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900">
+                          <span className="shrink-0 rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
                             {doc.type || 'SOP'}
                           </span>
+                            </div>
+                            <div className="mt-1 truncate text-xs font-medium text-slate-700 dark:text-slate-300" title={doc.title}>{doc.title}</div>
+                          </div>
                         </div>
                       </td>
-
-                      {/* 3. Judul Dokumen */}
-                      <td className="py-3.5 px-4">
-                        <div className="font-semibold text-slate-900 dark:text-white max-w-[240px] truncate" title={doc.title}>
-                          {doc.title}
-                        </div>
+                      <td className="py-4 px-3 text-xs text-slate-700 dark:text-slate-300">{doc.department}</td>
+                      <td className="py-4 px-3">
+                        <div className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200">Rev. {doc.revision || '00'}</div>
+                        <div className="mt-1"><Badge status={doc.status} size="sm" /></div>
                       </td>
-
-                      {/* 4. Departemen */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                          {doc.department}
-                        </span>
-                      </td>
-
-                      {/* 5. Revisi */}
-                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                        <span className="font-mono font-bold text-xs px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
-                          Rev. {doc.revision || '00'}
-                        </span>
-                      </td>
-
-                      {/* 6. Status */}
-                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                        <Badge status={doc.status} size="sm" />
-                      </td>
-
-                      {/* 7. Tanggal Efektif (Single Line) */}
-                      <td className="py-3.5 px-4 text-center text-slate-600 dark:text-slate-300 font-mono text-[11px] whitespace-nowrap">
-                        {doc.effectiveDate || doc.createdDate || '-'}
-                      </td>
-
-                      {/* 8. Pembuat */}
-                      <td className="py-3.5 px-4 whitespace-nowrap text-slate-700 dark:text-slate-300 font-medium">
-                        {doc.creator}
-                      </td>
-
-                      {/* 9. Catatan / Alasan Revisi */}
-                      <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400">
+                      <td className="py-4 px-3 whitespace-nowrap text-xs text-slate-700 dark:text-slate-300">{formatRevisionDate(doc.effectiveDate || doc.createdDate)}</td>
+                      <td className="py-4 px-3 text-xs text-slate-700 dark:text-slate-300"><span className="block truncate" title={doc.creator}>{doc.creator}</span></td>
+                      <td className="py-4 px-3 text-slate-600 dark:text-slate-400">
                         {doc.notes || doc.changeReason ? (
                           <div className="line-clamp-2 italic text-[11px]" title={doc.notes || doc.changeReason}>
                             "{doc.notes || doc.changeReason}"
@@ -398,8 +366,8 @@ export default function RevisionHistoryView() {
                       </td>
 
                       {/* 10. Aksi */}
-                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1.5">
+                      <td className="py-4 px-3">
+                        <div className="flex flex-wrap items-center justify-end gap-1.5">
                           <button
                             type="button"
                             onClick={() => setViewingDocument(doc)}

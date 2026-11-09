@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Menu, Bell, Search, UserCheck, ChevronDown, Check, Shield, FileText, CheckCircle2, AlertCircle, RefreshCw, X, Eye, LogOut, Building2, Lock } from 'lucide-react';
 import { useDocumentControl } from '../../context/DocumentControlContext';
+import { initialEmployees } from '../../data/initialData';
 import Badge from '../common/Badge';
 
 export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
@@ -36,10 +37,56 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [demoCompanyTab, setDemoCompanyTab] = useState('ALL');
 
   const notifRef = useRef(null);
   const userMenuRef = useRef(null);
   const searchRef = useRef(null);
+
+  // List personil demo: Memadukan initialEmployees secara deterministik agar akun IMK/UMI selalu ada dan tidak pernah kosong
+  const demoEmployeesList = useMemo(() => {
+    const sourceMap = new Map();
+    // 1. Masukkan semua akun standar (DJI, IMK, UMI, ALL) dari initialData
+    (initialEmployees || []).forEach(e => {
+      const canonicalComp = e.nik?.startsWith('UMI')
+        ? 'UMI'
+        : e.nik?.startsWith('IMK')
+        ? 'IMK'
+        : e.nik === '123463'
+        ? 'ALL'
+        : (e.companyCode || 'DJI');
+      sourceMap.set(String(e.nik || '').trim(), { ...e, companyCode: canonicalComp });
+    });
+
+    // 2. Tumpuk dengan state allEmployees / employees jika ada personil tambahan
+    (allEmployees || employees || []).forEach(e => {
+      const nik = String(e?.nik || '').trim();
+      if (nik) {
+        const canonicalComp = nik.startsWith('UMI')
+          ? 'UMI'
+          : nik.startsWith('IMK')
+          ? 'IMK'
+          : nik === '123463'
+          ? 'ALL'
+          : (e.companyCode || 'DJI');
+        const prev = sourceMap.get(nik) || {};
+        sourceMap.set(nik, { ...prev, ...e, companyCode: canonicalComp });
+      }
+    });
+
+    const list = Array.from(sourceMap.values());
+    const filtered = demoCompanyTab === 'ALL'
+      ? list
+      : list.filter(e => (e.companyCode || '').toUpperCase() === demoCompanyTab.toUpperCase());
+
+    // Urutan prioritas: Holding (ALL) -> IMK -> UMI -> DJI
+    const priority = { ALL: 1, IMK: 2, UMI: 3, DJI: 4 };
+    return [...filtered].sort((a, b) => {
+      const pDiff = (priority[a.companyCode] || 99) - (priority[b.companyCode] || 99);
+      if (pDiff !== 0) return pDiff;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+  }, [allEmployees, employees, demoCompanyTab]);
 
   const unreadCount = (notifications || []).filter(n => !n?.read).length;
 
@@ -156,27 +203,8 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
 
         {/* Right Side: Global Search, Notification Center, User Profile */}
         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-          {/* Multi-Company Scope Filter Pill */}
-          {isCompanyLocked ? (
-            <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100/90 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 text-xs shadow-2xs">
-              <Building2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-              <span className="font-extrabold text-[11px] text-slate-800 dark:text-slate-100">
-                {currentUser?.companyName || currentUser?.companyCode}
-              </span>
-              <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-bold ${
-                currentUser?.companyCode === 'UMI'
-                  ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300'
-                  : currentUser?.companyCode === 'IMK'
-                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                  : 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
-              }`}>
-                {currentUser?.companyCode}
-              </span>
-              <span className="text-[10px] text-slate-400 font-medium flex items-center gap-0.5 ml-1 border-l border-slate-200 dark:border-slate-700 pl-2">
-                <Lock className="w-2.5 h-2.5 text-amber-500" /> Terkunci
-              </span>
-            </div>
-          ) : (
+          {/* Multi-Company Scope Filter Pill (Hanya untuk Admin Holding) */}
+          {!isCompanyLocked && (
             <div className="hidden lg:flex items-center bg-slate-100/90 dark:bg-slate-800/90 p-0.5 rounded-xl border border-slate-200/80 dark:border-slate-700/80 text-xs shadow-2xs">
               <button
                 type="button"
@@ -418,41 +446,93 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
 
             {/* Profile & Auth Menu */}
             {showUserMenu && currentUser && (
-              <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-900 rounded-xl shadow-elevated border border-slate-200 dark:border-slate-800 py-2 z-50 animate-fade-in">
-                <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
-                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Profil Karyawan Aktif:</p>
-                  <p className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">{currentUser.name}</p>
-                  <div className="flex items-center gap-1.5 mt-1 text-[11px] text-slate-600 dark:text-slate-400 font-medium">
-                    <Shield className="w-3.5 h-3.5 text-blue-600" />
-                    <span>NIP: {currentUser.nik} • Dept: {currentUser.department}</span>
+              <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 py-2 z-50 animate-fadeIn">
+                <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm font-bold text-slate-900 dark:text-white">{currentUser.name}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        {currentUser.position || 'Personil Terdaftar'}
+                      </p>
+                    </div>
+                    <span className="uppercase text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-900">
+                      {currentUser.role}
+                    </span>
                   </div>
-                  <div className="mt-2 p-2 rounded-lg bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-900/50 text-[11px]">
-                    <div className="font-bold text-blue-900 dark:text-blue-200 flex items-center justify-between">
-                      <span>Wewenang Role:</span>
-                      <span className="uppercase text-[9px] px-1.5 py-0.5 rounded font-black bg-blue-200 text-blue-900 dark:bg-blue-800 dark:text-blue-100">
-                        {currentUser.role}
-                      </span>
-                    </div>
-                    <div className="text-blue-800 dark:text-blue-300 text-[10px] mt-0.5">
-                      {currentUser.role === 'admin' && 'Akses penuh seluruh fitur, konfigurasi master data, serta wewenang hapus & pembatalan dokumen.'}
-                      {currentUser.role === 'approver' && 'Pengesahan akhir dokumen resmi terbit (Management Representative / MR).'}
-                      {currentUser.role === 'reviewer' && 'Pemeriksaan materi isi dokumen, alur kerja operasional, dan persyaratan teknis (Atasan / Kepala Departemen).'}
-                      {currentUser.role === 'doc_control' && 'Pemeriksaan tata naskah format ISO, penomoran resmi master list, & distribusi salinan terkendali.'}
-                      {currentUser.role === 'staff' && 'Menyusun dan mengajukan draft usulan dokumen baru departemennya.'}
-                      {currentUser.role === 'viewer' && 'Hanya membaca dan mengunduh salinan dokumen terkendali berstatus AKTIF (Controlled Copy) untuk operasional kerja.'}
-                    </div>
+                  <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400 font-mono">
+                    <Shield className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <span>NIK: {currentUser.nik}</span>
+                    <span className="text-slate-300 dark:text-slate-700">&bull;</span>
+                    <span>Dept: {currentUser.department}</span>
                   </div>
                 </div>
 
                 {/* Quick Account Switcher for Testing/Demo */}
-                <div className="px-3 py-2">
-                  <div className="text-[10px] uppercase font-bold text-slate-400 px-2 py-1 tracking-wider flex items-center justify-between">
-                    <span>Ganti Akun Demo (Uji Isolasi PT):</span>
-                    <span className="text-[9px] text-blue-600 font-semibold">1-Klik</span>
+                <div className="px-3 py-2.5">
+                  <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 px-1 pb-1.5 flex items-center justify-between">
+                    <span>Simulasi Akun Demo</span>
+                    <span className="text-[10px] text-slate-400">Pilih Entitas</span>
                   </div>
-                  <div className="space-y-1 mt-1 max-h-52 overflow-y-auto pr-1 scrollbar-thin">
-                    {(allEmployees || employees).map(emp => {
-                      const empComp = emp.companyCode || (emp.nik?.startsWith('UMI') ? 'UMI' : emp.nik?.startsWith('IMK') ? 'IMK' : (emp.nik === '123463' ? 'ALL' : 'DJI'));
+
+                  {/* Filter Pills PT Demo */}
+                  <div className="flex items-center gap-1 mb-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-[10px] font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setDemoCompanyTab('ALL')}
+                      className={`flex-1 py-1 rounded transition text-center cursor-pointer ${
+                        demoCompanyTab === 'ALL'
+                          ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs font-extrabold'
+                          : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
+                      }`}
+                    >
+                      Semua
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDemoCompanyTab('IMK')}
+                      className={`flex-1 py-1 rounded transition text-center flex items-center justify-center gap-1 cursor-pointer ${
+                        demoCompanyTab === 'IMK'
+                          ? 'bg-emerald-600 text-white shadow-2xs font-extrabold'
+                          : 'text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
+                      }`}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                      IMK
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDemoCompanyTab('UMI')}
+                      className={`flex-1 py-1 rounded transition text-center flex items-center justify-center gap-1 cursor-pointer ${
+                        demoCompanyTab === 'UMI'
+                          ? 'bg-indigo-600 text-white shadow-2xs font-extrabold'
+                          : 'text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40'
+                      }`}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                      UMI
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDemoCompanyTab('DJI')}
+                      className={`flex-1 py-1 rounded transition text-center flex items-center justify-center gap-1 cursor-pointer ${
+                        demoCompanyTab === 'DJI'
+                          ? 'bg-blue-600 text-white shadow-2xs font-extrabold'
+                          : 'text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40'
+                      }`}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                      DJI
+                    </button>
+                  </div>
+
+                  <div className="space-y-1 mt-1 max-h-56 overflow-y-auto pr-1 scrollbar-thin">
+                    {demoEmployeesList.length === 0 ? (
+                      <div className="py-3 text-center text-xs text-slate-400 font-medium">
+                        Tidak ada personil untuk unit {demoCompanyTab}.
+                      </div>
+                    ) : (
+                      demoEmployeesList.map(emp => {
+                      const empComp = (emp.companyCode || (emp.nik?.startsWith('UMI') ? 'UMI' : emp.nik?.startsWith('IMK') ? 'IMK' : (emp.nik === '123463' ? 'ALL' : 'DJI'))).toUpperCase();
                       const badgeClass = empComp === 'UMI'
                         ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300'
                         : empComp === 'IMK'
@@ -463,7 +543,7 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
 
                       return (
                         <button
-                          key={emp.id}
+                          key={emp.id || emp.nik}
                           onClick={() => {
                             setCurrentUser(emp);
                             if (empComp && empComp !== 'ALL') {
@@ -477,8 +557,8 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
                             setShowUserMenu(false);
                             showToast(`Beralih ke ${emp.name} [${empComp}] (${emp.position})`, 'info');
                           }}
-                          className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition ${
-                            currentUser.id === emp.id
+                          className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition cursor-pointer ${
+                            currentUser.id === emp.id || currentUser.nik === emp.nik
                               ? 'bg-blue-50 text-blue-700 font-bold dark:bg-blue-950 dark:text-blue-300'
                               : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
                           }`}
@@ -494,10 +574,11 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
                               NIP: {emp.nik} • {emp.position}
                             </div>
                           </div>
-                          {currentUser.id === emp.id && <Check className="w-4 h-4 text-blue-600 flex-shrink-0" />}
+                          {(currentUser.id === emp.id || currentUser.nik === emp.nik) && <Check className="w-4 h-4 text-blue-600 flex-shrink-0" />}
                         </button>
                       );
-                    })}
+                    })
+                  )}
                   </div>
                 </div>
 

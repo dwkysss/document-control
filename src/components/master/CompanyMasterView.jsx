@@ -4,7 +4,7 @@ import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
 
 export default function CompanyMasterView() {
-  const { companies, documents, addCompany, updateCompany, deleteCompany, isAdmin, showToast } = useDocumentControl();
+  const { companies, documents, rawDocuments, isHoldingAdmin, addCompany, updateCompany, deleteCompany, isAdmin, showToast } = useDocumentControl();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState(null);
@@ -18,6 +18,7 @@ export default function CompanyMasterView() {
     (c.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (c.tagline || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
+  const companyDocuments = isHoldingAdmin && Array.isArray(rawDocuments) ? rawDocuments : documents;
 
   const handleOpenAddModal = () => {
     setEditingCompany(null);
@@ -79,7 +80,7 @@ export default function CompanyMasterView() {
   };
 
   const handleDelete = (comp) => {
-    const docCount = (documents || []).filter(
+    const docCount = (companyDocuments || []).filter(
       d => (d.companyCode || d.docNumber?.split('-')[0]) === comp.code
     ).length;
 
@@ -94,35 +95,39 @@ export default function CompanyMasterView() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Top Banner */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 p-5 flex flex-wrap items-center justify-between gap-4">
-        <div>
+      <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300"><Building2 className="h-5 w-5" aria-hidden="true" /></div>
+          <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-blue-600" />
             Master Data Perusahaan (Multi-Company)
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Daftar 3 entitas bisnis dalam naungan grup yang memiliki sistem pengendalian dokumen ISO 9001:2015.
+            Daftar {companies.length} entitas bisnis dalam naungan grup.
           </p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="relative">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <label className="relative min-w-0 sm:w-64">
+            <span className="sr-only">Cari perusahaan</span>
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" aria-hidden="true" />
             <input
-              type="text"
+              type="search"
               placeholder="Cari perusahaan..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-slate-200"
+              className="w-full rounded-md border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
             />
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
-          </div>
+          </label>
 
           {isAdmin && (
             <button
+              type="button"
               onClick={handleOpenAddModal}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition"
+              className="flex items-center justify-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               Tambah Perusahaan
@@ -132,20 +137,26 @@ export default function CompanyMasterView() {
       </div>
 
       {/* Grid of Companies */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {filtered.length === 0 ? (
+        <div className="rounded-lg border border-slate-200 bg-white px-6 py-14 text-center dark:border-slate-800 dark:bg-slate-900">
+          <Building2 className="mx-auto mb-3 h-8 w-8 text-slate-400" aria-hidden="true" />
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white">Tidak ada perusahaan yang cocok</h3>
+          <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Ubah kata kunci pencarian untuk melihat entitas lain.</p>
+        </div>
+      ) : <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-5">
         {filtered.map((comp) => {
-          const docCount = (documents || []).filter(
+          const docCount = (companyDocuments || []).filter(
             d => (d.companyCode || d.docNumber?.split('-')[0]) === comp.code
           ).length;
 
-          const activeCount = (documents || []).filter(
+          const activeCount = (companyDocuments || []).filter(
             d => (d.companyCode || d.docNumber?.split('-')[0]) === comp.code && d.status === 'AKTIF'
           ).length;
 
           return (
             <div
               key={comp.id}
-              className="bg-white dark:bg-slate-900 rounded-2xl shadow-card border border-slate-200 dark:border-slate-800 p-6 flex flex-col justify-between relative overflow-hidden transition hover:shadow-md"
+              className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-5 flex flex-col justify-between relative overflow-hidden transition-colors hover:border-slate-300 dark:hover:border-slate-700"
             >
               <div className="space-y-4">
                 <div className="flex items-start justify-between">
@@ -161,14 +172,14 @@ export default function CompanyMasterView() {
 
                   {isAdmin && (
                     <div className="flex items-center gap-1">
-                      <button
+                      <button type="button"
                         onClick={() => handleOpenEditModal(comp)}
                         className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
                         title="Edit Perusahaan"
                       >
                         <Edit className="w-3.5 h-3.5" />
                       </button>
-                      <button
+                      <button type="button"
                         onClick={() => handleDelete(comp)}
                         className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
                         title="Hapus Perusahaan"
@@ -200,7 +211,7 @@ export default function CompanyMasterView() {
 
               {/* Stats Bar */}
               <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 grid grid-cols-2 gap-3 text-center">
-                <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl">
+                  <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-md">
                   <div className="text-lg font-black text-slate-900 dark:text-white">
                     {docCount}
                   </div>
@@ -208,7 +219,7 @@ export default function CompanyMasterView() {
                     Total Dokumen
                   </div>
                 </div>
-                <div className="bg-emerald-50 dark:bg-emerald-950/40 p-2.5 rounded-xl">
+                  <div className="bg-emerald-50 dark:bg-emerald-950/40 p-2.5 rounded-md">
                   <div className="text-lg font-black text-emerald-600 dark:text-emerald-400">
                     {activeCount}
                   </div>
@@ -220,7 +231,7 @@ export default function CompanyMasterView() {
             </div>
           );
         })}
-      </div>
+      </div>}
 
       {/* Modal Add / Edit */}
       <Modal

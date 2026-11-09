@@ -79,14 +79,22 @@ export function exportToCSV(data, fileName = 'Master_Document_Register') {
 /**
  * Ekspor Master Register Dokumen ke format PDF Standar ISO 9001
  */
-export function exportMasterRegisterPDF(documents, systemSettings = {}) {
+export function exportMasterRegisterPDF(documents = [], systemSettings = {}, targetCompanyFilter = 'ALL') {
   const doc = new jsPDF('landscape', 'pt', 'a4');
-  const compCode = (docData.companyCode || docData.docNumber?.split('-')[0] || 'DJI').toUpperCase();
-  const company = docData.companyName || (
-    compCode === 'UMI' ? 'PT ULTIMO MODA INDOTEX' :
-    compCode === 'IMK' ? 'PT IMK' :
-    (systemSettings.companyName || 'PT DENTELLE JAYA INFINITEX')
-  );
+  const compCode = (
+    targetCompanyFilter && targetCompanyFilter !== 'ALL'
+      ? targetCompanyFilter
+      : (documents?.[0]?.companyCode || (documents?.[0]?.docNumber?.startsWith('UMI') ? 'UMI' : documents?.[0]?.docNumber?.startsWith('IMK') ? 'IMK' : 'ALL'))
+  ).toUpperCase();
+
+  const company = compCode === 'UMI'
+    ? 'PT ULTIMO MODA INDOTEX'
+    : compCode === 'IMK'
+    ? 'PT IMK'
+    : compCode === 'DJI'
+    ? (systemSettings.companyName || 'PT DENTELLE JAYA INFINITEX')
+    : 'HOLDING GROUP (MULTI-COMPANY)';
+
   const currentDate = new Date().toLocaleDateString('id-ID', {
     day: 'numeric',
     month: 'long',
@@ -97,7 +105,7 @@ export function exportMasterRegisterPDF(documents, systemSettings = {}) {
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(11, 26, 48); // Navy
-  doc.text(company.startsWith('PT') ? company : `PT ${company}`, 40, 45);
+  doc.text(company.startsWith('PT') || company.startsWith('HOLDING') ? company : `PT ${company}`, 40, 45);
 
   doc.setFontSize(12);
   doc.text('DAFTAR INDUK DOKUMEN TERKENDALI (MASTER DOCUMENT REGISTER)', 40, 65);
@@ -169,7 +177,7 @@ export function exportMasterRegisterPDF(documents, systemSettings = {}) {
       doc.setFontSize(8);
       doc.setTextColor(148, 163, 184);
       doc.text(
-        `Halaman ${data.pageNumber} dari ${pageCount} | DJI Document Control System - Confidential`,
+        `Halaman ${data.pageNumber} dari ${pageCount} | ${company} Document Control System - Confidential`,
         doc.internal.pageSize.width / 2,
         doc.internal.pageSize.height - 20,
         { align: 'center' }
@@ -177,7 +185,7 @@ export function exportMasterRegisterPDF(documents, systemSettings = {}) {
     }
   });
 
-  doc.save(`Master_Document_Register_DJI_${new Date().toISOString().slice(0, 10)}.pdf`);
+  doc.save(`Master_Document_Register_${compCode}_${new Date().toISOString().slice(0, 10)}.pdf`);
 }
 
 /**
@@ -185,7 +193,7 @@ export function exportMasterRegisterPDF(documents, systemSettings = {}) {
  */
 export function exportControlledDocumentPDF(docData, systemSettings = {}, qrDataUrl = null) {
   const doc = new jsPDF('portrait', 'pt', 'a4');
-  const compCode = (docData.companyCode || docData.docNumber?.split('-')[0] || 'DJI').toUpperCase();
+  const compCode = (docData.companyCode || (docData.docNumber?.startsWith('UMI') ? 'UMI' : docData.docNumber?.startsWith('IMK') ? 'IMK' : 'DJI')).toUpperCase();
   const company = docData.companyName || (
     compCode === 'UMI' ? 'PT ULTIMO MODA INDOTEX' :
     compCode === 'IMK' ? 'PT IMK' :
@@ -288,7 +296,7 @@ export function exportControlledDocumentPDF(docData, systemSettings = {}, qrData
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(51, 65, 85);
-  const scopeText = `Dokumen ${docData.docNumber} (${docData.title}) ini diterbitkan secara resmi sebagai pedoman baku operasional pada departemen ${docData.department} PT DJI Indonesia guna menjamin kualitas dan standardisasi sistem manajemen mutu ISO 9001:2015.`;
+  const scopeText = `Dokumen ${docData.docNumber} (${docData.title}) ini diterbitkan secara resmi sebagai pedoman baku operasional pada departemen ${docData.department} ${company} guna menjamin kualitas dan standardisasi sistem manajemen mutu ISO 9001:2015.`;
   const splitScope = doc.splitTextToSize(scopeText, boxWidth);
   doc.text(splitScope, startX, contentY);
 
@@ -364,5 +372,5 @@ export function exportControlledDocumentPDF(docData, systemSettings = {}, qrData
   doc.text(`Dokumen Resmi ${company} - Terdaftar pada Document Control System | ISO 9001:2015`, startX + (qrDataUrl ? 55 : 0), height - 40);
   doc.text(`Dicetak pada: ${new Date().toLocaleDateString('id-ID')} ${new Date().toLocaleTimeString('id-ID')} | Halaman 1 dari 1`, startX + (qrDataUrl ? 55 : 0), height - 28);
 
-  doc.save(`${docData.docNumber}_Resmi_${company}.pdf`);
+  doc.save(`${docData.docNumber}_Resmi_${compCode}.pdf`);
 }

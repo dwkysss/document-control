@@ -58,13 +58,19 @@ export const initialEmployees = [
   { id: 'emp-9', nik: 'DJI042211', name: 'AHMAD FAUZI', companyCode: 'DJI', companyName: 'PT Dentelle Jaya Infinitex', department: 'PRODUKSI', position: 'OPERATOR PRODUKSI', email: 'ahmad.fauzi@dji-indonesia.com', role: 'viewer', status: 'Aktif' },
   { id: 'emp-10', nik: 'DJI052219', name: 'NURUL HIDAYAH', companyCode: 'DJI', companyName: 'PT Dentelle Jaya Infinitex', department: 'FAT', position: 'OPERATOR ADM KEUANGAN', email: 'nurul.hidayah@dji-indonesia.com', role: 'viewer', status: 'Aktif' },
   // PT Ultimo Moda Indotex (UMI)
+  { id: 'emp-umi-0', nik: 'UMI00001', name: 'DIMAS SETIAWAN', companyCode: 'UMI', companyName: 'PT Ultimo Moda Indotex', department: 'IT', position: 'IT & SYSTEM ADMIN (UMI)', email: 'dimas.setiawan@ultimo-moda.com', role: 'admin', status: 'Aktif' },
   { id: 'emp-umi-1', nik: 'UMI01001', name: 'RATNA SARI', companyCode: 'UMI', companyName: 'PT Ultimo Moda Indotex', department: 'HRGA', position: 'MANAGER HRGA & MR (UMI)', email: 'ratna.sari@ultimo-moda.com', role: 'approver', status: 'Aktif' },
+  { id: 'emp-umi-4', nik: 'UMI04004', name: 'SITI LESTARI', companyCode: 'UMI', companyName: 'PT Ultimo Moda Indotex', department: 'PRODUKSI', position: 'KEPALA BAGIAN DYEING & FINISHING', email: 'siti.lestari@ultimo-moda.com', role: 'reviewer', status: 'Aktif' },
   { id: 'emp-umi-2', nik: 'UMI02002', name: 'HENDRA PRASETYA', companyCode: 'UMI', companyName: 'PT Ultimo Moda Indotex', department: 'FAT', position: 'DOCUMENT CONTROL OFFICER (UMI)', email: 'hendra.prasetya@ultimo-moda.com', role: 'doc_control', status: 'Aktif' },
   { id: 'emp-umi-3', nik: 'UMI03003', name: 'MAYA ANGGRAENI', companyCode: 'UMI', companyName: 'PT Ultimo Moda Indotex', department: 'PRODUKSI', position: 'STAFF PRODUKSI & QC (UMI)', email: 'maya.anggraeni@ultimo-moda.com', role: 'staff', status: 'Aktif' },
+  { id: 'emp-umi-5', nik: 'UMI05005', name: 'BAGUS KURNIAWAN', companyCode: 'UMI', companyName: 'PT Ultimo Moda Indotex', department: 'PRODUKSI', position: 'OPERATOR DYEING & LAB', email: 'bagus.kurniawan@ultimo-moda.com', role: 'viewer', status: 'Aktif' },
   // PT IMK (IMK)
+  { id: 'emp-imk-0', nik: 'IMK00001', name: 'ARIF BUDIMAN', companyCode: 'IMK', companyName: 'PT IMK', department: 'IT', position: 'IT & SYSTEM ADMIN (IMK)', email: 'arif.budiman@imk-textile.com', role: 'admin', status: 'Aktif' },
   { id: 'emp-imk-1', nik: 'IMK01001', name: 'BAMBANG WIJAYA', companyCode: 'IMK', companyName: 'PT IMK', department: 'HRGA', position: 'MANAGER HRGA & MR (IMK)', email: 'bambang.wijaya@imk-textile.com', role: 'approver', status: 'Aktif' },
+  { id: 'emp-imk-4', nik: 'IMK04004', name: 'FAJAR NUGRAHA', companyCode: 'IMK', companyName: 'PT IMK', department: 'PRODUKSI', position: 'KEPALA BAGIAN KNITTING', email: 'fajar.nugraha@imk-textile.com', role: 'reviewer', status: 'Aktif' },
   { id: 'emp-imk-2', nik: 'IMK02002', name: 'TIARA KUSUMA', companyCode: 'IMK', companyName: 'PT IMK', department: 'FAT', position: 'DOCUMENT CONTROL OFFICER (IMK)', email: 'tiara.kusuma@imk-textile.com', role: 'doc_control', status: 'Aktif' },
-  { id: 'emp-imk-3', nik: 'IMK03003', name: 'RIZKY PRATAMA', companyCode: 'IMK', companyName: 'PT IMK', department: 'PRODUKSI', position: 'STAFF PRODUKSI & KNITTING (IMK)', email: 'rizky.pratama@imk-textile.com', role: 'staff', status: 'Aktif' }
+  { id: 'emp-imk-3', nik: 'IMK03003', name: 'RIZKY PRATAMA', companyCode: 'IMK', companyName: 'PT IMK', department: 'PRODUKSI', position: 'STAFF PRODUKSI & KNITTING (IMK)', email: 'rizky.pratama@imk-textile.com', role: 'staff', status: 'Aktif' },
+  { id: 'emp-imk-5', nik: 'IMK05005', name: 'ANISA FITRIANI', companyCode: 'IMK', companyName: 'PT IMK', department: 'PRODUKSI', position: 'OPERATOR KNITTING & QC', email: 'anisa.fitriani@imk-textile.com', role: 'viewer', status: 'Aktif' }
 ];
 
 export const initialVerifierTeams = [

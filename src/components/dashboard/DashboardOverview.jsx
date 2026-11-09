@@ -3,6 +3,7 @@ import { useDocumentControl } from '../../context/DocumentControlContext';
 import ControlTowerHeader from './ControlTowerHeader';
 import MetricCardsGrid from './MetricCardsGrid';
 import DocumentLifecyclePipeline from './DocumentLifecyclePipeline';
+import ActionCenterTabs from './ActionCenterTabs';
 import DashboardAnalytics from './DashboardAnalytics';
 
 export default function DashboardOverview() {
@@ -19,16 +20,39 @@ export default function DashboardOverview() {
     isViewer,
     canRegisterDocument,
     canRequestRevision,
-    canAccessReports
+    canAccessReports,
+    auditLogs = [],
+    setViewingDocument,
+    confirmDocumentPeriodicReview,
+    setSelectedDocForRevision,
+    canUserViewPendingDoc,
+    canUserViewDraftDoc,
+    canUserViewRejectedDoc
   } = useDocumentControl();
 
-  // Metrics calculation
+  // Metrics calculation strictly synchronized with Sidebar badges & User Authority
   const totalDocs = documents.length;
   const activeDocs = documents.filter(d => d.status === 'AKTIF').length;
-  const pendingDocs = documents.filter(d => d.status === 'REVIEW' || d.status === 'VERIFIKASI' || d.status === 'APPROVAL').length;
-  const draftDocs = documents.filter(d => d.status === 'DRAFT').length;
+  
+  const scopedPendingList = documents.filter(d =>
+    (d.status === 'REVIEW' || d.status === 'VERIFIKASI' || d.status === 'APPROVAL') &&
+    (canUserViewPendingDoc ? canUserViewPendingDoc(d) : true)
+  );
+  const pendingDocs = scopedPendingList.length;
+
+  const scopedDraftList = documents.filter(d =>
+    (d.status === 'DRAFT' || d.status === 'PERLU REVISI' || d.status === 'REVISI') &&
+    (canUserViewDraftDoc ? canUserViewDraftDoc(d) : true)
+  );
+  const draftDocs = scopedDraftList.length;
+
   const obsoleteDocs = documents.filter(d => d.status === 'OBSOLETE').length;
-  const rejectedDocs = documents.filter(d => d.status === 'DITOLAK').length;
+
+  const scopedRejectedList = documents.filter(d =>
+    d.status === 'DITOLAK' &&
+    (canUserViewRejectedDoc ? canUserViewRejectedDoc(d) : true)
+  );
+  const rejectedDocs = scopedRejectedList.length;
 
   // Periodic review check (ISO 9001 Clause 7.5.3: Level 1 & 2 = 12 bulan, Level 3 & 4 = 24 bulan)
   const reviewDueDocs = documents.filter(d => {
@@ -101,7 +125,20 @@ export default function DashboardOverview() {
         />
       )}
 
-      {/* 4. Interactive Analytics (Charts for Hierarchy & Department Distribution) */}
+      {/* 4. Action Center: Tasks, Reviews & Audit Trail */}
+      <ActionCenterTabs
+        pendingDocs={scopedPendingList}
+        reviewDueDocs={reviewDueDocs}
+        auditLogs={auditLogs}
+        setViewingDocument={setViewingDocument}
+        navigateTo={navigateTo}
+        confirmDocumentPeriodicReview={confirmDocumentPeriodicReview}
+        setSelectedDocForRevision={setSelectedDocForRevision}
+        isViewer={isViewer}
+        reviewIntervalMonths={systemSettings.periodicReviewMonths || 12}
+      />
+
+      {/* 5. Interactive Analytics (Charts for Hierarchy & Department Distribution) */}
       <DashboardAnalytics
         documents={documents}
         departments={departments}

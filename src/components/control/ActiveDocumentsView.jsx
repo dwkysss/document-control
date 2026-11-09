@@ -30,6 +30,13 @@ import Badge, { CompanyBadge } from '../common/Badge';
 import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
 
+const formatActiveDate = (value) => {
+  if (!value) return 'Belum ditetapkan';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Jakarta' }).format(date);
+};
+
 /**
  * Utilitas untuk menghitung status jatuh tempo peninjauan berkala ISO 9001 (Langkah 8)
  */
@@ -597,25 +604,17 @@ export default function ActiveDocumentsView() {
       {/* Table */}
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full min-w-[1280px] table-fixed text-left border-collapse text-sm">
+            <colgroup><col className="w-[30%]" /><col className="w-[8%]" /><col className="w-[10%]" /><col className="w-[12%]" /><col className="w-[7%]" /><col className="w-[10%]" /><col className="w-[10%]" /><col className="w-[13%]" /></colgroup>
             <thead>
-              <tr className="bg-[#102a4e] text-white uppercase text-[10px] tracking-wider">
-                <th className="py-3 px-4 text-center">No.</th>
-                <th className="py-3 px-4">No. Dokumen</th>
-                <th className="py-3 px-4">Judul Dokumen</th>
-                <th className="py-3 px-4">Jenis</th>
-                <th className="py-3 px-4">Departemen</th>
-                <th className="py-3 px-4">Pembuat</th>
-                <th className="py-3 px-4 text-center">Revisi</th>
-                <th className="py-3 px-4 text-center">Tgl. Berlaku</th>
-                <th className="py-3 px-4 text-center">Monitoring & Review</th>
-                <th className="py-3 px-4 text-center">Aksi</th>
+              <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                <th className="py-3 px-4">Dokumen</th><th className="py-3 px-3">Jenis</th><th className="py-3 px-3">Dept.</th><th className="py-3 px-3">Pembuat</th><th className="py-3 px-3 text-center">Rev.</th><th className="py-3 px-3">Tgl. berlaku</th><th className="py-3 px-3">Tinjauan berkala</th><th className="py-3 px-3 text-right">Tindakan</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-12 text-center">
+                  <td colSpan={8} className="py-12 text-center">
                     <div className="flex flex-col items-center justify-center max-w-sm mx-auto space-y-3 text-slate-500">
                       <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
                         <Filter className="w-6 h-6" />
@@ -645,33 +644,29 @@ export default function ActiveDocumentsView() {
                   const reviewInfo = getPeriodicReviewInfo(doc, reviewIntervalMonths, documentTypes, systemSettings);
                   return (
                     <tr key={doc.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
-                      <td className="py-3.5 px-4 text-center text-slate-400">{startIndex + idx + 1}</td>
-                      <td className="py-3.5 px-4 font-bold font-mono text-slate-900 dark:text-white whitespace-nowrap">
-                        <div className="flex items-center gap-1.5">
+                      <td className="py-4 px-4">
+                        <div className="flex min-w-0 items-start gap-2.5">
                           <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
-                          <span>{doc.docNumber}</span>
+                          <div className="min-w-0"><div className="truncate font-mono text-xs font-bold text-slate-900 dark:text-white" title={doc.docNumber}>{doc.docNumber}</div><div className="mt-1 truncate text-xs text-slate-700 dark:text-slate-300" title={doc.title}>{doc.title}</div></div>
                         </div>
                       </td>
-                      <td className="py-3.5 px-4 font-medium text-slate-800 dark:text-slate-200 max-w-[220px] truncate" title={doc.title}>
-                        {doc.title}
-                      </td>
-                      <td className="py-3.5 px-4 font-semibold text-slate-600 dark:text-slate-400">{doc.type}</td>
-                      <td className="py-3.5 px-4 font-semibold text-slate-600 dark:text-slate-400">{doc.department}</td>
-                      <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400">{doc.creator}</td>
-                      <td className="py-3.5 px-4 text-center font-mono font-bold text-emerald-700 dark:text-emerald-400">
+                      <td className="py-4 px-3 text-xs font-semibold text-slate-700 dark:text-slate-300">{doc.type}</td>
+                      <td className="py-4 px-3 text-xs text-slate-700 dark:text-slate-300">{doc.department}</td>
+                      <td className="py-4 px-3 text-xs text-slate-700 dark:text-slate-300"><span className="block truncate" title={doc.creator}>{doc.creator}</span></td>
+                      <td className="py-4 px-3 text-center font-mono text-xs font-bold text-emerald-800 dark:text-emerald-300">
                         {doc.revision}
                       </td>
-                      <td className="py-3.5 px-4 text-center font-mono text-[11px] text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                        {doc.effectiveDate || doc.createdDate}
+                      <td className="py-4 px-3 whitespace-nowrap text-xs text-slate-700 dark:text-slate-300">
+                        {formatActiveDate(doc.effectiveDate || doc.createdDate)}
                       </td>
                       {/* Kolom Review Status (Langkah 8) */}
-                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                      <td className="py-4 px-3">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${reviewInfo.badgeColor}`} title={`Jatuh Tempo: ${reviewInfo.dueDateStr}`}>
                           {reviewInfo.label}
                         </span>
                       </td>
-                      <td className="py-3.5 px-4 text-center">
-                        <div className="flex items-center justify-center gap-1.5">
+                      <td className="py-4 px-3">
+                        <div className="flex flex-wrap items-center justify-end gap-1.5">
                           <button
                             onClick={() => setViewingDocument(doc)}
                             className="px-2 py-1 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-300 rounded-md transition flex items-center gap-1"

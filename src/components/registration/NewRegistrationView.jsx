@@ -234,8 +234,8 @@ export default function NewRegistrationView() {
       targetCompany === 'UMI'
         ? { name: 'RATNA SARI', nik: 'UMI01001', position: 'MANAGER HRGA & MR (UMI)', department: 'HRGA', role: 'approver' }
         : targetCompany === 'IMK'
-        ? { name: 'BAMBANG WIJAYA', nik: 'IMK01001', position: 'MANAGER HRGA & MR (IMK)', department: 'HRGA', role: 'approver' }
-        : { name: 'DEDE SUHENDA', nik: 'DJI022203', position: 'KEPALA BAGIAN PRODUKSI', department: 'PRODUKSI', role: 'reviewer' }
+          ? { name: 'BAMBANG WIJAYA', nik: 'IMK01001', position: 'MANAGER HRGA & MR (IMK)', department: 'HRGA', role: 'approver' }
+          : { name: 'DEDE SUHENDA', nik: 'DJI022203', position: 'KEPALA BAGIAN PRODUKSI', department: 'PRODUKSI', role: 'reviewer' }
     );
 
   // Hierarki Mutu ISO 9001:2015 Clause 7.5:
@@ -305,8 +305,8 @@ export default function NewRegistrationView() {
       targetCompany === 'UMI'
         ? { name: 'RATNA SARI', nik: 'UMI01001', position: 'MANAGER HRGA & MR (UMI)', department: 'HRGA', role: 'approver' }
         : targetCompany === 'IMK'
-        ? { name: 'BAMBANG WIJAYA', nik: 'IMK01001', position: 'MANAGER HRGA & MR (IMK)', department: 'HRGA', role: 'approver' }
-        : { name: 'BABAN RACHMAT SUBAGJA', nik: 'DJI012548', position: 'MANAGER HRGA & MR (MANAGEMENT REPRESENTATIVE)', department: 'HRGA', role: 'approver' }
+          ? { name: 'BAMBANG WIJAYA', nik: 'IMK01001', position: 'MANAGER HRGA & MR (IMK)', department: 'HRGA', role: 'approver' }
+          : { name: 'BABAN RACHMAT SUBAGJA', nik: 'DJI012548', position: 'MANAGER HRGA & MR (MANAGEMENT REPRESENTATIVE)', department: 'HRGA', role: 'approver' }
     );
 
   const isDcoOrAdmin = currentUser?.role === 'doc_control' || currentUser?.role === 'admin';
@@ -474,42 +474,16 @@ export default function NewRegistrationView() {
 
             {/* Active Form Inputs */}
             <div className="p-5 sm:p-6 space-y-5">
-              {/* Row 0: Pilihan Perusahaan Tujuan (Multi-Company) */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
-                    <Building2 className="w-4 h-4 text-blue-600" />
-                    Pilih Perusahaan Pemilik Dokumen <span className="text-red-500">*</span>
-                  </label>
-                  <span className="text-[11px] font-medium text-slate-500">
-                    Prefix nomor dokumen disesuaikan otomatis
-                  </span>
-                </div>
-                {currentUser?.companyCode && currentUser.companyCode !== 'ALL' ? (
-                  <div className="p-3.5 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50/60 dark:bg-blue-950/40 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className={`px-2.5 py-1 rounded font-mono font-bold text-xs ${selectedCompany === 'UMI'
-                          ? 'bg-indigo-600 text-white'
-                          : selectedCompany === 'IMK'
-                            ? 'bg-emerald-600 text-white'
-                            : 'bg-blue-600 text-white'
-                        }`}>
-                        {selectedCompany}
-                      </span>
-                      <div>
-                        <div className="font-bold text-xs text-slate-900 dark:text-white">
-                          {selectedCompanyObj.name}
-                        </div>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                          Dokumen diterbitkan di bawah unit usaha resmi ini (Akses akun Anda terikat ke {selectedCompany}).
-                        </p>
-                      </div>
-                    </div>
-                    <span className="text-[10px] px-2.5 py-1 rounded-md font-bold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center gap-1 shadow-2xs">
-                      <Lock className="w-3 h-3 text-amber-500" /> Terkunci Otomatis
-                    </span>
+              {/* Row 0: Pilihan Perusahaan Tujuan (Multi-Company) - Hanya ditampilkan untuk Akun Admin Holding */}
+              {(!currentUser?.companyCode || currentUser.companyCode === 'ALL') && (
+                <div className="space-y-2 pb-1">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                      <Building2 className="w-4 h-4 text-blue-600" />
+                      Pilih Perusahaan Pemilik Dokumen <span className="text-red-500">*</span>
+                    </label>
+
                   </div>
-                ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {(companies || []).map((c) => {
                       const isSelected = selectedCompany === c.code;
@@ -519,21 +493,19 @@ export default function NewRegistrationView() {
                           type="button"
                           onClick={() => {
                             setSelectedCompany(c.code);
-                            if (!currentUser?.companyCode || currentUser.companyCode === 'ALL') {
-                              setSelectedCompanyFilter(c.code);
-                            }
+                            setSelectedCompanyFilter(c.code);
                           }}
-                          className={`p-3 rounded-xl border text-left transition relative flex flex-col justify-between ${isSelected
-                              ? 'bg-blue-50/70 dark:bg-blue-950/40 border-blue-500 ring-2 ring-blue-500/30 shadow-sm'
-                              : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                          className={`p-3 rounded-xl border text-left transition relative flex flex-col justify-between cursor-pointer ${isSelected
+                            ? 'bg-blue-50/70 dark:bg-blue-950/40 border-blue-500 ring-2 ring-blue-500/30 shadow-sm'
+                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
                             }`}
                         >
                           <div className="flex items-center justify-between w-full mb-1">
                             <span className={`px-2 py-0.5 rounded font-mono font-bold text-xs ${c.code === 'DJI'
-                                ? 'bg-blue-600 text-white'
-                                : c.code === 'UMI'
-                                  ? 'bg-indigo-600 text-white'
-                                  : 'bg-emerald-600 text-white'
+                              ? 'bg-blue-600 text-white'
+                              : c.code === 'UMI'
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-emerald-600 text-white'
                               }`}>
                               {c.code}
                             </span>
@@ -548,8 +520,8 @@ export default function NewRegistrationView() {
                       );
                     })}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
 
               {/* Row 1: Jenis Dokumen & Departemen */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -568,31 +540,6 @@ export default function NewRegistrationView() {
                       </option>
                     ))}
                   </select>
-                  <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${docLevel === 1
-                        ? 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800'
-                        : docLevel === 2
-                          ? 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800'
-                          : docLevel === 3
-                            ? 'bg-cyan-100 text-cyan-800 border-cyan-200 dark:bg-cyan-950/60 dark:text-cyan-300 dark:border-cyan-800'
-                            : docLevel === 4
-                              ? 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
-                              : 'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
-                      }`}>
-                      ISO Level {docLevel}: {currentDocTypeObj.name || selectedType}
-                    </span>
-                    {isFastTrack ? (
-                      <span className="text-[10.5px] font-medium text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-                        <Zap className="w-3 h-3 text-amber-500 shrink-0" />
-                        <span>Jalur Cepat: Verifikasi DCO & Review Atasan Dept</span>
-                      </span>
-                    ) : (
-                      <span className="text-[10.5px] font-medium text-slate-600 dark:text-slate-400 flex items-center gap-1">
-                        <ShieldCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                        <span>Pengesahan Akhir: {docLevel === 1 ? 'General Manager / Direksi' : 'Management Representative (MR)'}</span>
-                      </span>
-                    )}
-                  </div>
                 </div>
 
                 <div>
@@ -602,7 +549,11 @@ export default function NewRegistrationView() {
                   <select
                     value={selectedDept}
                     onChange={(e) => setSelectedDept(e.target.value)}
-                    className="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2.5 font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition shadow-sm"
+                    disabled={Boolean(currentUser?.department)}
+                    className={`w-full text-xs rounded-lg px-3 py-2.5 font-medium transition shadow-sm ${currentUser?.department
+                      ? 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 cursor-not-allowed select-none'
+                      : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500'
+                      }`}
                   >
                     {departments.map((d) => (
                       <option key={d.id} value={d.code}>
@@ -635,10 +586,7 @@ export default function NewRegistrationView() {
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-200">
                       Pembuat Dokumen <span className="text-red-500">*</span>
                     </label>
-                    <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                      <Lock className="w-3 h-3" />
-                      Akun Login Aktif
-                    </span>
+
                   </div>
                   <div className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg select-none">
                     <div className="flex items-center gap-2.5 overflow-hidden">
@@ -950,7 +898,7 @@ export default function NewRegistrationView() {
         {/* Right 4-Cols: Sleek Unified Approval Timeline & Live Summary Panel */}
         <div className="xl:col-span-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-card border border-slate-200 dark:border-slate-800 overflow-hidden sticky top-6">
-            
+
             {/* Header Ringkasan */}
             <div className="bg-[#102a4e] text-white px-5 py-3.5 flex items-center justify-between border-b border-slate-800/40">
               <h3 className="text-xs font-bold tracking-wider uppercase flex items-center gap-2">
@@ -958,8 +906,8 @@ export default function NewRegistrationView() {
                 RINGKASAN PENGAJUAN
               </h3>
               <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase border ${title.trim()
-                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40'
-                  : 'bg-amber-500/20 text-amber-300 border-amber-400/40'
+                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40'
+                : 'bg-amber-500/20 text-amber-300 border-amber-400/40'
                 }`}>
                 {title.trim() ? 'Siap Diajukan' : 'Belum Lengkap'}
               </span>
@@ -1030,8 +978,8 @@ export default function NewRegistrationView() {
                     Alur Persetujuan ISO
                   </span>
                   <span className={`text-[9.5px] font-bold font-mono px-2 py-0.5 rounded-full ${isFastTrack
-                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                      : 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                    : 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
                     }`}>
                     {isFastTrack ? '3 Tahap (Jalur Cepat)' : '4 Tahap ISO'}
                   </span>

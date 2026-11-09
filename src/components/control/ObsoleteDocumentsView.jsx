@@ -149,24 +149,17 @@ export default function ObsoleteDocumentsView() {
 
         {/* Clean Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full min-w-[1080px] table-fixed text-left border-collapse text-sm">
+            <colgroup><col className="w-[32%]" /><col className="w-[9%]" /><col className="w-[14%]" /><col className="w-[8%]" /><col className="w-[19%]" /><col className="w-[8%]" /><col className="w-[10%]" /></colgroup>
             <thead>
-              <tr className="bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 uppercase text-[10px] font-bold tracking-wider">
-                <th className="py-3.5 px-4 text-center whitespace-nowrap w-12">No.</th>
-                <th className="py-3.5 px-4 whitespace-nowrap">No. Dokumen</th>
-                <th className="py-3.5 px-4 min-w-[200px]">Judul Dokumen</th>
-                <th className="py-3.5 px-4 whitespace-nowrap">Departemen</th>
-                <th className="py-3.5 px-4 whitespace-nowrap min-w-[130px]">Pembuat</th>
-                <th className="py-3.5 px-4 text-center whitespace-nowrap">Revisi</th>
-                <th className="py-3.5 px-4 whitespace-nowrap">Digantikan Oleh</th>
-                <th className="py-3.5 px-4 text-center whitespace-nowrap">Status</th>
-                <th className="py-3.5 px-4 text-right whitespace-nowrap">Aksi</th>
+              <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                <th className="py-3 px-4">Dokumen arsip</th><th className="py-3 px-3">Dept.</th><th className="py-3 px-3">Pembuat</th><th className="py-3 px-3 text-center">Rev.</th><th className="py-3 px-3">Digantikan oleh</th><th className="py-3 px-3">Status</th><th className="py-3 px-3 text-right">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-14 text-center text-slate-400">
+                  <td colSpan={7} className="py-14 text-center text-slate-500">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <Archive className="w-8 h-8 text-slate-300 dark:text-slate-600" />
                       <p className="font-bold text-slate-700 dark:text-slate-300 text-sm">
@@ -192,37 +185,37 @@ export default function ObsoleteDocumentsView() {
                   </td>
                 </tr>
               ) : (
-                paginatedDocs.map((doc, idx) => (
+                paginatedDocs.map((doc) => (
                   <tr key={doc.id} className="hover:bg-rose-50/20 dark:hover:bg-slate-800/40 transition">
-                    <td className="py-3.5 px-4 text-center text-slate-400 whitespace-nowrap">{startIndex + idx + 1}</td>
-                    <td className="py-3.5 px-4 font-bold font-mono text-slate-500 whitespace-nowrap line-through">
-                      {doc.docNumber}
+                    <td className="py-4 px-4">
+                      <div className="flex min-w-0 items-start gap-2.5">
+                        <span className="mt-0.5 text-slate-500"><Archive className="h-4 w-4" aria-hidden="true" /></span>
+                        <div className="min-w-0"><div className="truncate font-mono text-xs font-bold text-slate-600 line-through dark:text-slate-400" title={doc.docNumber}>{doc.docNumber}</div><div className="mt-1 truncate text-xs font-medium text-slate-700 dark:text-slate-300" title={doc.title}>{doc.title}</div></div>
+                      </div>
                     </td>
-                    <td className="py-3.5 px-4 font-medium text-slate-700 dark:text-slate-300 min-w-[200px]" title={doc.title}>
-                      {doc.title}
-                    </td>
-                    <td className="py-3.5 px-4 font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap">{doc.department}</td>
-                    <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">{doc.creator}</td>
-                    <td className="py-3.5 px-4 text-center font-mono font-bold text-rose-700 dark:text-rose-400 whitespace-nowrap">
+                    <td className="py-4 px-3 text-xs font-semibold text-slate-700 dark:text-slate-300">{doc.department}</td>
+                    <td className="py-4 px-3 text-xs text-slate-700 dark:text-slate-300"><span className="block truncate" title={doc.creator}>{doc.creator}</span></td>
+                    <td className="py-4 px-3 text-center font-mono text-xs font-bold text-rose-800 dark:text-rose-300">
                       {doc.revision}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-700 dark:text-slate-300 font-mono text-[11px] whitespace-nowrap">
+                    <td className="py-4 px-3 text-xs">
                       {doc.supersededBy ? (
                         <span className="font-bold text-blue-600 dark:text-blue-400">
-                          {doc.supersededBy}
+                          <span className="block truncate" title={doc.supersededBy}>{doc.supersededBy}</span>
                         </span>
                       ) : (
                         <span className="text-slate-400 italic">Revisi Baru</span>
                       )}
                     </td>
-                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                    <td className="py-4 px-3">
                       <Badge status={doc.status} size="sm" />
                     </td>
-                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                      <div className="flex items-center justify-end gap-1.5">
+                    <td className="py-4 px-3">
+                      <div className="flex flex-wrap items-center justify-end gap-1.5">
                         <button
+                          type="button"
                           onClick={() => setViewingDocument(doc)}
-                          className="px-2.5 py-1 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-md transition flex items-center gap-1 cursor-pointer"
+                          className="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2 py-1.5 text-xs font-semibold text-rose-800 transition hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 cursor-pointer dark:bg-rose-950/40 dark:text-rose-200 dark:hover:bg-rose-900"
                           title="Pratinjau Dokumen Obsolete (Watermarked)"
                         >
                           <Eye className="w-3.5 h-3.5" />

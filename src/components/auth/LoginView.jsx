@@ -25,13 +25,19 @@ export default function LoginView() {
     { nik: 'DJI042211', name: 'AHMAD FAUZI', companyCode: 'DJI', department: 'PRODUKSI', position: 'OPERATOR PRODUKSI', email: 'ahmad.fauzi@dji-indonesia.com', role: 'viewer' },
     { nik: 'DJI052219', name: 'NURUL HIDAYAH', companyCode: 'DJI', department: 'FAT', position: 'OPERATOR ADM KEUANGAN', email: 'nurul.hidayah@dji-indonesia.com', role: 'viewer' },
     // UMI
+    { nik: 'UMI00001', name: 'DIMAS SETIAWAN', companyCode: 'UMI', department: 'IT', position: 'IT & SYSTEM ADMIN (UMI)', email: 'dimas.setiawan@ultimo-moda.com', role: 'admin' },
     { nik: 'UMI01001', name: 'RATNA SARI', companyCode: 'UMI', department: 'HRGA', position: 'MANAGER HRGA & MR (UMI)', email: 'ratna.sari@ultimo-moda.com', role: 'approver' },
+    { nik: 'UMI04004', name: 'SITI LESTARI', companyCode: 'UMI', department: 'PRODUKSI', position: 'KEPALA BAGIAN DYEING & FINISHING', email: 'siti.lestari@ultimo-moda.com', role: 'reviewer' },
     { nik: 'UMI02002', name: 'HENDRA PRASETYA', companyCode: 'UMI', department: 'FAT', position: 'DOCUMENT CONTROL OFFICER (UMI)', email: 'hendra.prasetya@ultimo-moda.com', role: 'doc_control' },
     { nik: 'UMI03003', name: 'MAYA ANGGRAENI', companyCode: 'UMI', department: 'PRODUKSI', position: 'STAFF PRODUKSI & QC (UMI)', email: 'maya.anggraeni@ultimo-moda.com', role: 'staff' },
+    { nik: 'UMI05005', name: 'BAGUS KURNIAWAN', companyCode: 'UMI', department: 'PRODUKSI', position: 'OPERATOR DYEING & LAB', email: 'bagus.kurniawan@ultimo-moda.com', role: 'viewer' },
     // IMK
+    { nik: 'IMK00001', name: 'ARIF BUDIMAN', companyCode: 'IMK', department: 'IT', position: 'IT & SYSTEM ADMIN (IMK)', email: 'arif.budiman@imk-textile.com', role: 'admin' },
     { nik: 'IMK01001', name: 'BAMBANG WIJAYA', companyCode: 'IMK', department: 'HRGA', position: 'MANAGER HRGA & MR (IMK)', email: 'bambang.wijaya@imk-textile.com', role: 'approver' },
+    { nik: 'IMK04004', name: 'FAJAR NUGRAHA', companyCode: 'IMK', department: 'PRODUKSI', position: 'KEPALA BAGIAN KNITTING', email: 'fajar.nugraha@imk-textile.com', role: 'reviewer' },
     { nik: 'IMK02002', name: 'TIARA KUSUMA', companyCode: 'IMK', department: 'FAT', position: 'DOCUMENT CONTROL OFFICER (IMK)', email: 'tiara.kusuma@imk-textile.com', role: 'doc_control' },
-    { nik: 'IMK03003', name: 'RIZKY PRATAMA', companyCode: 'IMK', department: 'PRODUKSI', position: 'STAFF PRODUKSI & KNITTING (IMK)', email: 'rizky.pratama@imk-textile.com', role: 'staff' }
+    { nik: 'IMK03003', name: 'RIZKY PRATAMA', companyCode: 'IMK', department: 'PRODUKSI', position: 'STAFF PRODUKSI & KNITTING (IMK)', email: 'rizky.pratama@imk-textile.com', role: 'staff' },
+    { nik: 'IMK05005', name: 'ANISA FITRIANI', companyCode: 'IMK', department: 'PRODUKSI', position: 'OPERATOR KNITTING & QC', email: 'anisa.fitriani@imk-textile.com', role: 'viewer' }
   ];
 
   // Exclude legacy dummy demo NIKs to ensure only 100% real accounts are shown

@@ -1,20 +1,35 @@
 import React, { useState } from 'react';
 import { XCircle, Eye, RefreshCw, AlertCircle, Search, Trash2, AlertTriangle } from 'lucide-react';
-import Badge from '../common/Badge';
+import Badge, { CompanyBadge } from '../common/Badge';
 import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
 
 export default function RejectedListView() {
-  const { documents, setViewingDocument, setActiveMenu, setBreadcrumbs, saveDraft, deleteDocument, currentUser, isAdmin } = useDocumentControl();
+  const {
+    documents = [],
+    selectedCompanyFilter = 'ALL',
+    setViewingDocument,
+    setActiveMenu,
+    setBreadcrumbs,
+    saveDraft,
+    deleteDocument,
+    currentUser,
+    isAdmin,
+    canUserViewRejectedDoc
+  } = useDocumentControl();
   const [searchTerm, setSearchTerm] = useState('');
   const [docToDelete, setDocToDelete] = useState(null);
 
-  const rejectedDocs = documents.filter(d => d.status === 'DITOLAK');
+  const rejectedDocs = documents.filter(d =>
+    d.status === 'DITOLAK' &&
+    (canUserViewRejectedDoc ? canUserViewRejectedDoc(d) : true)
+  );
+  const withReasonCount = rejectedDocs.filter(doc => doc.rejectionReason).length;
 
   const filteredDocs = rejectedDocs.filter(doc => {
     return doc.docNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           (doc.rejectionReason && doc.rejectionReason.toLowerCase().includes(searchTerm.toLowerCase()));
+      doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (doc.rejectionReason && doc.rejectionReason.toLowerCase().includes(searchTerm.toLowerCase()));
   });
 
   const handleResubmitAsDraft = (doc) => {
@@ -36,29 +51,54 @@ export default function RejectedListView() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 p-5 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <XCircle className="w-5 h-5 text-rose-600" />
-            Dokumen Ditolak Verifikator
-          </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Daftar pengajuan dokumen yang memerlukan perbaikan berdasarkan catatan evaluasi tim verifikasi.
-          </p>
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
+            <XCircle className="h-5 w-5" aria-hidden="true" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              Dokumen Ditolak Verifikator
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Daftar pengajuan dokumen yang memerlukan perbaikan berdasarkan catatan evaluasi tim verifikasi.
+            </p>
+          </div>
         </div>
-        <div className="text-xs font-semibold px-3 py-1.5 bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 rounded-lg border border-rose-200 dark:border-rose-800">
+        <div className="text-xs font-bold px-3 py-2 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-md border border-slate-200 dark:border-slate-700">
           {rejectedDocs.length} Dokumen Ditolak
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 overflow-hidden">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
+          <p className="text-xs font-medium text-slate-600 dark:text-slate-300">Pengajuan ditolak</p>
+          <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{rejectedDocs.length}</p>
+        </div>
+        <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
+          <p className="text-xs font-medium text-slate-600 dark:text-slate-300">Memiliki catatan verifikator</p>
+          <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{withReasonCount}</p>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Riwayat pengajuan ditolak</h3>
+            <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-300">Menampilkan {filteredDocs.length} dari {rejectedDocs.length} pengajuan</p>
+          </div>
+          <label className="relative w-full sm:w-80">
+            <span className="sr-only">Cari nomor, judul, atau alasan penolakan</span>
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" aria-hidden="true" />
+            <input type="search" placeholder="Cari nomor, judul, atau alasan" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full rounded-md border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-white" />
+          </label>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-[#102a4e] text-white uppercase text-[10px] tracking-wider">
+              <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 text-[11px] font-bold">
                 <th className="py-3 px-4 text-center whitespace-nowrap w-12">No.</th>
                 <th className="py-3 px-4 whitespace-nowrap">No. Dokumen</th>
                 <th className="py-3 px-4 min-w-[180px]">Judul Dokumen</th>
@@ -73,16 +113,32 @@ export default function RejectedListView() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filteredDocs.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-8 text-center text-slate-400">
-                    Tidak ada dokumen yang ditolak.
+                  <td colSpan={9} className="px-6 py-12 text-center">
+                    <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                      {rejectedDocs.length === 0 ? <XCircle className="h-5 w-5" aria-hidden="true" /> : <Search className="h-5 w-5" aria-hidden="true" />}
+                    </div>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white">
+                      {rejectedDocs.length === 0 ? 'Belum ada pengajuan yang ditolak' : 'Tidak ada dokumen yang cocok'}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                      {rejectedDocs.length === 0 ? 'Pengajuan yang ditolak beserta catatan verifikator akan tercatat di sini.' : 'Coba kata kunci lain untuk mencari nomor, judul, atau alasan penolakan.'}
+                    </p>
+                    {rejectedDocs.length > 0 && searchTerm && (
+                      <button type="button" onClick={() => setSearchTerm('')} className="mt-3 rounded-md px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:text-blue-300 dark:hover:bg-slate-800 cursor-pointer">
+                        Hapus pencarian
+                      </button>
+                    )}
                   </td>
                 </tr>
               ) : (
                 filteredDocs.map((doc, idx) => (
-                  <tr key={doc.id} className="hover:bg-rose-50/30 dark:hover:bg-slate-800/50 transition">
+                  <tr key={doc.id} className="transition-colors hover:bg-rose-50/40 dark:hover:bg-slate-800/70">
                     <td className="py-3.5 px-4 text-center text-slate-400 whitespace-nowrap">{idx + 1}</td>
                     <td className="py-3.5 px-4 font-bold font-mono text-slate-900 dark:text-white whitespace-nowrap">
-                      {doc.docNumber}
+                      <div className="flex items-center gap-1.5">
+                        <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
+                        <span>{doc.docNumber}</span>
+                      </div>
                     </td>
                     <td className="py-3.5 px-4 font-medium text-slate-800 dark:text-slate-200 min-w-[180px]" title={doc.title}>
                       {doc.title}
@@ -105,14 +161,14 @@ export default function RejectedListView() {
                       <div className="flex items-center justify-center gap-1.5">
                         <button
                           onClick={() => setViewingDocument(doc)}
-                          className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded"
+                          className="p-1.5 text-slate-600 hover:text-blue-700 hover:bg-blue-50 rounded cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:text-slate-300 dark:hover:bg-slate-700"
                           title="Pratinjau Dokumen"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleResubmitAsDraft(doc)}
-                          className="px-2.5 py-1 text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-md transition flex items-center gap-1"
+                          className="px-2.5 py-1 text-xs font-bold text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-md transition flex items-center gap-1 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
                           title="Perbaiki & Simpan Sebagai Draft"
                         >
                           <RefreshCw className="w-3.5 h-3.5" />
@@ -123,7 +179,7 @@ export default function RejectedListView() {
                         {(isAdmin || (currentUser && (currentUser.name === doc.creator || currentUser.nik === doc.creatorNik))) && (
                           <button
                             onClick={() => setDocToDelete(doc)}
-                            className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded transition"
+                            className="p-1.5 text-rose-700 hover:text-rose-800 hover:bg-rose-50 rounded transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600"
                             title="Hapus Pengajuan Ditolak"
                           >
                             <Trash2 className="w-4 h-4" />

@@ -16,7 +16,6 @@ import {
   Layers,
   FileText,
   Building2,
-  Sparkles,
   Info,
   Eye
 } from 'lucide-react';
@@ -267,14 +266,16 @@ export default function RoleMasterView() {
     }
   ];
 
+  const permissionFeatureCount = permissionFeatures.reduce((total, category) => total + category.features.length, 0);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-card border border-slate-100 dark:border-slate-700">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-lg border border-slate-200 dark:border-slate-800">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2.5 bg-blue-600/10 text-blue-600 rounded-xl">
-              <ShieldCheck className="w-6 h-6" />
+            <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300">
+              <ShieldCheck className="h-5 w-5" aria-hidden="true" />
             </div>
             <div>
               <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
@@ -289,8 +290,8 @@ export default function RoleMasterView() {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setActiveMenu('master-emp')}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 transition active:scale-95"
+            type="button" onClick={() => setActiveMenu('master-emp')}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-bold transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
           >
             <Users className="w-4 h-4" />
             <span>Kelola Karyawan & Role</span>
@@ -300,19 +301,19 @@ export default function RoleMasterView() {
       </div>
 
       {/* Summary KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-card border border-slate-100 dark:border-slate-700">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-slate-500">Total Role Sistem</span>
             <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-slate-700 text-blue-600 flex items-center justify-center">
               <Shield className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-slate-900 dark:text-white">5</div>
-          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Standar Matriks Wewenang</div>
+          <div className="text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{roleDefinitions.length}</div>
+          <div className="text-[11px] text-slate-600 dark:text-slate-300 mt-1">Role yang didefinisikan</div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-card border border-slate-100 dark:border-slate-700">
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-slate-500">Pengguna Terpetakan</span>
             <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-slate-700 text-emerald-600 flex items-center justify-center">
@@ -322,36 +323,37 @@ export default function RoleMasterView() {
           <div className="text-2xl font-black text-slate-900 dark:text-white">
             {safeEmployees.filter(e => e.status !== 'Nonaktif').length}
           </div>
-          <div className="text-[11px] text-emerald-600 font-semibold mt-1">Karyawan Aktif Terdaftar</div>
+          <div className="text-[11px] text-slate-600 dark:text-slate-300 mt-1">Karyawan aktif terdaftar</div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-card border border-slate-100 dark:border-slate-700">
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-slate-500">Alur Verifikasi</span>
+            <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Kelompok kapabilitas</span>
             <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-slate-700 text-amber-600 flex items-center justify-center">
               <Layers className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-slate-900 dark:text-white">4 Tahap</div>
-          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Staff ➔ Rev ➔ DCO ➔ App</div>
+          <div className="text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{permissionFeatures.length}</div>
+          <div className="text-[11px] text-slate-600 dark:text-slate-300 mt-1">Kategori hak akses</div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-card border border-slate-100 dark:border-slate-700">
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-slate-500">Kepatuhan ISO 9001</span>
-            <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-slate-700 text-purple-600 flex items-center justify-center">
-              <Sparkles className="w-4 h-4" />
+            <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Kapabilitas terdaftar</span>
+            <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center">
+              <Layers className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-purple-600">100%</div>
-          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Controlled Copy Guaranteed</div>
+          <div className="text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{permissionFeatureCount}</div>
+          <div className="text-[11px] text-slate-600 dark:text-slate-300 mt-1">Butir dalam matriks hak akses</div>
         </div>
       </div>
 
       {/* Navigation Tabs & Search */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white dark:bg-slate-800 p-3 rounded-xl shadow-card border border-slate-100 dark:border-slate-700">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800">
         <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-900/60 rounded-lg">
           <button
+            type="button" aria-pressed={activeTab === 'cards'}
             onClick={() => setActiveTab('cards')}
             className={`px-3.5 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-2 ${activeTab === 'cards'
               ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm'
@@ -362,6 +364,7 @@ export default function RoleMasterView() {
             <span>Daftar Role ({roleDefinitions.length})</span>
           </button>
           <button
+            type="button" aria-pressed={activeTab === 'matrix'}
             onClick={() => setActiveTab('matrix')}
             className={`px-3.5 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-2 ${activeTab === 'matrix'
               ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm'
@@ -372,6 +375,7 @@ export default function RoleMasterView() {
             <span>Matriks Hak Akses (Matrix RACI)</span>
           </button>
           <button
+            type="button" aria-pressed={activeTab === 'workflow'}
             onClick={() => setActiveTab('workflow')}
             className={`px-3.5 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-2 ${activeTab === 'workflow'
               ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm'
@@ -391,7 +395,7 @@ export default function RoleMasterView() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Cari role atau personil..."
-              className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              className="w-full pl-9 pr-3 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-slate-900 dark:text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-600"
             />
           </div>
         )}
@@ -407,7 +411,7 @@ export default function RoleMasterView() {
             return (
               <div
                 key={role.id}
-                className={`bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-card border transition-all duration-200 flex flex-col justify-between ${role.accentBorder}`}
+                className={`bg-white dark:bg-slate-900 rounded-lg p-5 border transition-colors flex flex-col justify-between ${role.accentBorder}`}
               >
                 <div>
                   {/* Card Header */}
@@ -431,7 +435,7 @@ export default function RoleMasterView() {
                       </div>
                     </div>
 
-                    <button
+                    <button type="button"
                       onClick={() => setSelectedRoleDetail(role)}
                       className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 hover:underline shrink-0"
                     >
@@ -509,7 +513,7 @@ export default function RoleMasterView() {
                     </div>
                   </div>
 
-                  <button
+                  <button type="button"
                     onClick={() => setSelectedRoleDetail(role)}
                     className="text-xs text-slate-500 hover:text-blue-600 font-medium"
                   >
@@ -524,7 +528,7 @@ export default function RoleMasterView() {
 
       {/* TAB 2: PERMISSION MATRIX RACI TABLE */}
       {activeTab === 'matrix' && (
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-card border border-slate-100 dark:border-slate-700 overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
           <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <h2 className="text-base font-black text-slate-900 dark:text-white">
@@ -648,7 +652,7 @@ export default function RoleMasterView() {
 
       {/* TAB 3: WORKFLOW ISO 9001 */}
       {activeTab === 'workflow' && (
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-card border border-slate-100 dark:border-slate-700 space-y-6">
+        <div className="bg-white dark:bg-slate-900 rounded-lg p-5 border border-slate-200 dark:border-slate-800 space-y-6">
           <div>
             <h2 className="text-base font-black text-slate-900 dark:text-white">
               Alur Otorisasi & Perjalanan Dokumen Terkendali ISO 9001:2015

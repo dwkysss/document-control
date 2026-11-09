@@ -23,6 +23,13 @@ import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
 import { exportToExcel, exportToCSV, exportMasterRegisterPDF } from '../../utils/exportUtils';
 
+const formatRegisterDate = (value) => {
+  if (!value) return 'Belum tercatat';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Jakarta' }).format(date);
+};
+
 export default function AllDocumentsView() {
   const {
     documents,
@@ -228,57 +235,47 @@ export default function AllDocumentsView() {
       {/* Main Master Table */}
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full min-w-[1120px] table-fixed text-left border-collapse text-sm">
+            <colgroup><col className="w-[32%]" /><col className="w-[8%]" /><col className="w-[10%]" /><col className="w-[15%]" /><col className="w-[7%]" /><col className="w-[10%]" /><col className="w-[10%]" /><col className="w-[8%]" /></colgroup>
             <thead>
-              <tr className="bg-[#102a4e] text-white uppercase text-[10px] tracking-wider">
-                <th className="py-3 px-3.5 text-center">No.</th>
-                <th className="py-3 px-3.5">No. Dokumen</th>
-                <th className="py-3 px-3.5">Judul Dokumen</th>
-                <th className="py-3 px-3.5">Jenis</th>
-                <th className="py-3 px-3.5">Dept</th>
-                <th className="py-3 px-3.5">Pembuat</th>
-                <th className="py-3 px-3.5 text-center">Revisi</th>
-                <th className="py-3 px-3.5 text-center">Status</th>
-                <th className="py-3 px-3.5 text-center">Tgl. Registrasi</th>
-                <th className="py-3 px-3.5 text-center">Aksi</th>
+              <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                <th className="py-3 px-4">Dokumen</th><th className="py-3 px-3">Jenis</th><th className="py-3 px-3">Dept.</th><th className="py-3 px-3">Pembuat</th><th className="py-3 px-3 text-center">Rev.</th><th className="py-3 px-3">Status</th><th className="py-3 px-3">Tgl. registrasi</th><th className="py-3 px-3 text-right">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {paginatedDocs.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-8 text-center text-slate-400">
+                  <td colSpan={8} className="py-8 text-center text-slate-500">
                     Tidak ada dokumen yang sesuai dengan kriteria filter.
                   </td>
                 </tr>
               ) : (
                 paginatedDocs.map((doc, idx) => (
                   <tr key={doc.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
-                    <td className="py-3 px-3.5 text-center text-slate-400 font-medium">{startIndex + idx + 1}</td>
-                    <td className="py-3 px-3.5 font-bold font-mono text-slate-900 dark:text-white whitespace-nowrap">
-                      <div className="flex items-center gap-1.5">
+                    <td className="py-3.5 px-4">
+                      <div className="flex min-w-0 items-start gap-2.5">
                         <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
-                        <span>{doc.docNumber}</span>
+                        <div className="min-w-0"><div className="truncate font-mono text-xs font-bold text-slate-900 dark:text-white" title={doc.docNumber}>{doc.docNumber}</div><div className="mt-1 truncate text-xs text-slate-700 dark:text-slate-300" title={doc.title}>{doc.title}</div></div>
                       </div>
                     </td>
-                    <td className="py-3 px-3.5 font-medium text-slate-800 dark:text-slate-200 max-w-[200px] truncate" title={doc.title}>
-                      {doc.title}
-                    </td>
-                    <td className="py-3 px-3.5 font-semibold text-slate-600 dark:text-slate-400">{doc.type}</td>
-                    <td className="py-3 px-3.5 font-semibold text-slate-600 dark:text-slate-400">{doc.department}</td>
-                    <td className="py-3 px-3.5 text-slate-600 dark:text-slate-400 whitespace-nowrap">{doc.creator}</td>
-                    <td className="py-3 px-3.5 text-center font-mono font-bold">{doc.revision}</td>
-                    <td className="py-3 px-3.5 text-center">
+                    <td className="py-3.5 px-3 text-xs font-semibold text-slate-700 dark:text-slate-300">{doc.type}</td>
+                    <td className="py-3.5 px-3 text-xs text-slate-700 dark:text-slate-300">{doc.department}</td>
+                    <td className="py-3.5 px-3 text-xs text-slate-700 dark:text-slate-300"><span className="block truncate" title={doc.creator}>{doc.creator}</span></td>
+                    <td className="py-3.5 px-3 text-center font-mono text-xs font-bold tabular-nums">{doc.revision}</td>
+                    <td className="py-3.5 px-3">
                       <Badge status={doc.status} size="sm" />
                     </td>
-                    <td className="py-3 px-3.5 text-center text-slate-500 whitespace-nowrap font-mono text-[11px]">
-                      {doc.createdDate}
+                    <td className="py-3.5 px-3 whitespace-nowrap text-xs text-slate-700 dark:text-slate-300">
+                      {formatRegisterDate(doc.createdDate)}
                     </td>
-                    <td className="py-3 px-3.5 text-center">
-                      <div className="flex items-center justify-center gap-1">
+                    <td className="py-3.5 px-3">
+                      <div className="flex flex-wrap items-center justify-end gap-1">
                         <button
+                          type="button"
                           onClick={() => setViewingDocument(doc)}
-                          className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-700 hover:bg-blue-50 hover:text-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 cursor-pointer dark:text-slate-300 dark:hover:bg-slate-700"
                           title="Pratinjau Dokumen Terkendali"
+                          aria-label={`Pratinjau ${doc.docNumber}`}
                         >
                           <Eye className="w-4 h-4" />
                         </button>
