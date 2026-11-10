@@ -29,17 +29,9 @@ export default function ActionCenterTabs({
       {/* Header & Tabs */}
       <div className="px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-800/30">
         <div>
-          <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <span>Pusat Tindakan & Pengawasan</span>
-            {pendingDocs.length > 0 && !isViewer && (
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
-                {pendingDocs.length} Perlu Review
-              </span>
-            )}
+          <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+            Pusat Tindakan & Pengawasan
           </h2>
-          <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-            Daftar tugas prioritas, jatuh tempo evaluasi berkala, dan rekam audit terkini.
-          </p>
         </div>
 
         {/* Tab Switcher */}
