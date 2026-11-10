@@ -80,15 +80,9 @@ export default function DocumentLifecyclePipeline({
       {/* Industrial Pipeline Header */}
       <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 dark:border-slate-800">
         <div>
-          <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <span>Alur Siklus Hidup Dokumen</span>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-semibold border border-slate-200 dark:border-slate-700">
-              ISO 9001:2015 Klausul 7.5
-            </span>
+          <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+            Alur Siklus Hidup Dokumen
           </h2>
-          <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-            Tahapan penelusuran status berkas dari rancangan awal hingga arsip resmi.
-          </p>
         </div>
         <span className="text-xs font-mono font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700">
           {documents.length} Dokumen Total

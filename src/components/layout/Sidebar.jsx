@@ -136,7 +136,7 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
 
       <aside
         className={`fixed lg:sticky top-0 left-0 h-screen bg-[#0a1628] text-slate-300 border-r border-[#1b2d49] z-40 transition-all duration-300 flex flex-col ${
-          isCollapsed ? 'w-20' : 'w-72'
+          isCollapsed ? 'w-20' : 'w-64 xl:w-72'
         } ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
         {/* Brand Header (Dynamic per Active Unit / Holding) */}
@@ -174,14 +174,14 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
           };
 
           return (
-            <div className="p-4 border-b border-[#172740] flex items-center gap-3 bg-[#07101e]">
+            <div className="p-3.5 sm:p-4 border-b border-[#172740] flex items-center gap-3 bg-[#07101e] min-w-0">
               {renderCompanyIcon()}
               {!isCollapsed && (
-                <div className="overflow-hidden min-w-0">
-                  <h2 className="font-extrabold text-sm tracking-wider text-white truncate font-sans" title={displayCompanyName}>
+                <div className="overflow-hidden min-w-0 flex-1">
+                  <h2 className="font-extrabold text-xs sm:text-[13px] tracking-tight text-white leading-snug line-clamp-2 font-sans" title={displayCompanyName}>
                     {displayCompanyName}
                   </h2>
-                  <p className="text-[10px] text-sky-400 font-semibold tracking-widest uppercase truncate mt-0.5">
+                  <p className="text-[10px] text-sky-400 font-semibold tracking-wider uppercase truncate mt-0.5">
                     {displaySubtitle}
                   </p>
                 </div>
