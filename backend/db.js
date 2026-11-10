@@ -29,12 +29,25 @@ async function initDatabase() {
       console.log('[Database] Schema verified successfully.');
     }
 
-    // 2. Ensure company_code & company_name exist on documents and employees
+    // 2. Ensure company_code & company_name exist on documents and employees, and migrate NIK to NIP
     await client.query(`
       ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS company_code TEXT DEFAULT 'DJI';
       ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS company_name TEXT DEFAULT 'PT Dentelle Jaya Infinitex';
       ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS company_code TEXT DEFAULT 'DJI';
       ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS company_name TEXT DEFAULT 'PT Dentelle Jaya Infinitex';
+
+      DO $$
+      BEGIN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'employees' AND column_name = 'nik') THEN
+          ALTER TABLE public.employees RENAME COLUMN nik TO nip;
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'documents' AND column_name = 'creator_nik') THEN
+          ALTER TABLE public.documents RENAME COLUMN creator_nik TO creator_nip;
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'audit_logs' AND column_name = 'nik') THEN
+          ALTER TABLE public.audit_logs RENAME COLUMN nik TO nip;
+        END IF;
+      END $$;
     `);
 
     // 3. Ensure Companies Master Seeded

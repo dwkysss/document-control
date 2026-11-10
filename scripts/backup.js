@@ -94,7 +94,7 @@ async function runBackup() {
           const keys = Object.keys(row);
           const cols = keys.map(k => `"${k}"`).join(', ');
           const vals = keys.map(k => escapeSqlValue(row[k])).join(', ');
-          const conflictCol = keys.includes('id') ? 'id' : (keys.includes('code') ? 'code' : 'nik');
+          const conflictCol = keys.includes('id') ? 'id' : (keys.includes('code') ? 'code' : (keys.includes('nip') ? 'nip' : 'nik'));
           const updates = keys
             .filter(k => k !== conflictCol && k !== 'created_at')
             .map(k => `"${k}" = EXCLUDED."${k}"`)

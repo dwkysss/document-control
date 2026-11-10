@@ -95,13 +95,14 @@ export function DocumentControlProvider({ children }) {
           'DJI042211', 'DJI052212', 'DJI062213'
         ];
         let cleaned = parsed
-          .filter(e => !dummyNiks.includes(String(e.nik || '').trim()))
+          .filter(e => !dummyNiks.includes(String(e.nip || e.nik || '').trim()))
           .map(e => {
-            const forcedComp = e.nik?.startsWith('UMI')
+            const empIdVal = e.nip || e.nik || '';
+            const forcedComp = empIdVal.startsWith('UMI')
               ? 'UMI'
-              : e.nik?.startsWith('IMK')
+              : empIdVal.startsWith('IMK')
               ? 'IMK'
-              : e.nik === '123463'
+              : empIdVal === '123463'
               ? 'ALL'
               : (e.companyCode || 'DJI');
             const forcedCompName = forcedComp === 'UMI'
@@ -113,16 +114,20 @@ export function DocumentControlProvider({ children }) {
               : 'PT Dentelle Jaya Infinitex';
             return {
               ...e,
+              nip: e.nip || e.nik,
+              nik: e.nik || e.nip,
               companyCode: forcedComp,
               companyName: forcedCompName
             };
           });
 
         initialEmployees.forEach(initEmp => {
-          const existingIdx = cleaned.findIndex(e => String(e?.nik || '').trim() === String(initEmp.nik).trim());
+          const existingIdx = cleaned.findIndex(e => String(e?.nip || e?.nik || '').trim() === String(initEmp.nip || initEmp.nik).trim());
           if (existingIdx >= 0) {
             cleaned[existingIdx] = {
               ...cleaned[existingIdx],
+              nip: initEmp.nip || cleaned[existingIdx].nip || initEmp.nik,
+              nik: initEmp.nik || cleaned[existingIdx].nik || initEmp.nip,
               companyCode: initEmp.companyCode,
               companyName: initEmp.companyName,
               role: cleaned[existingIdx].role || initEmp.role,
@@ -151,18 +156,19 @@ export function DocumentControlProvider({ children }) {
     const logs = [];
     (docsList || []).forEach((doc, idx) => {
       const creatorName = doc.creator || 'Staff Pemohon';
-      const creatorNik = doc.creatorNik || 'DJI032207';
+      const creatorNip = doc.creatorNip || doc.creatorNik || 'DJI032207';
       const createdDate = doc.createdDate || '2026-09-20';
       const docNum = doc.docNumber || '-';
       const title = doc.title || '-';
-      const docComp = doc.companyCode || (docNum.includes('-') ? docNum.split('-')[0] : (creatorNik.startsWith('UMI') ? 'UMI' : creatorNik.startsWith('IMK') ? 'IMK' : 'DJI'));
+      const docComp = doc.companyCode || (docNum.includes('-') ? docNum.split('-')[0] : (creatorNip.startsWith('UMI') ? 'UMI' : creatorNip.startsWith('IMK') ? 'IMK' : 'DJI'));
 
       // 1. Log Registrasi / Usulan Awal
       logs.push({
         id: `log-reg-${doc.id || idx}-1`,
         timestamp: `${createdDate} 08:30:00`,
         user: creatorName,
-        nik: creatorNik,
+        nip: creatorNip,
+        nik: creatorNip,
         companyCode: docComp,
         action: doc.status === 'DRAFT' ? 'SAVE_DRAFT' : 'SUBMIT_VERIFICATION',
         docNumber: docNum,
@@ -176,11 +182,13 @@ export function DocumentControlProvider({ children }) {
       if (doc.status === 'AKTIF') {
         const approverName = doc.approvedBy || doc.targetApprover || doc.approverName || 'BABAN RACHMAT SUBAGJA';
         const effectiveDate = doc.effectiveDate || createdDate;
+        const appNip = approverName.includes('BABAN') ? 'DJI012548' : (approverName.includes('DENI') ? 'DJI092115' : 'DJI012548');
         logs.push({
           id: `log-app-${doc.id || idx}-2`,
           timestamp: `${effectiveDate} 14:15:00`,
           user: approverName,
-          nik: approverName.includes('BABAN') ? 'DJI012548' : (approverName.includes('DENI') ? 'DJI092115' : 'DJI012548'),
+          nip: appNip,
+          nik: appNip,
           companyCode: docComp,
           action: 'APPROVE_DOCUMENT',
           docNumber: docNum,
@@ -192,6 +200,7 @@ export function DocumentControlProvider({ children }) {
           id: `log-rej-${doc.id || idx}-3`,
           timestamp: `${createdDate} 16:45:00`,
           user: 'BABAN RACHMAT SUBAGJA',
+          nip: 'DJI012548',
           nik: 'DJI012548',
           companyCode: docComp,
           action: 'REJECT_DOCUMENT',
@@ -204,6 +213,7 @@ export function DocumentControlProvider({ children }) {
           id: `log-obs-${doc.id || idx}-4`,
           timestamp: `${createdDate} 11:20:00`,
           user: 'SYAHLA NOVIYANA',
+          nip: 'DJI022550',
           nik: 'DJI022550',
           companyCode: docComp,
           action: 'CANCEL_DOCUMENT',
@@ -263,7 +273,8 @@ export function DocumentControlProvider({ children }) {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (!parsed.companyCode) {
-          parsed.companyCode = parsed.nik?.startsWith('UMI') ? 'UMI' : parsed.nik?.startsWith('IMK') ? 'IMK' : (parsed.nik === '123463' ? 'ALL' : 'DJI');
+          const empId = parsed.nip || parsed.nik;
+          parsed.companyCode = empId?.startsWith('UMI') ? 'UMI' : empId?.startsWith('IMK') ? 'IMK' : (empId === '123463' ? 'ALL' : 'DJI');
         }
         return parsed;
       }
@@ -278,11 +289,12 @@ export function DocumentControlProvider({ children }) {
     setRawEmployees(prev => {
       let changed = false;
       const updated = (prev || []).map(e => {
-        const canonicalComp = e.nik?.startsWith('UMI')
+        const empId = e.nip || e.nik;
+        const canonicalComp = empId?.startsWith('UMI')
           ? 'UMI'
-          : e.nik?.startsWith('IMK')
+          : empId?.startsWith('IMK')
           ? 'IMK'
-          : e.nik === '123463'
+          : empId === '123463'
           ? 'ALL'
           : (e.companyCode || 'DJI');
         if (e.companyCode !== canonicalComp) {
@@ -297,7 +309,7 @@ export function DocumentControlProvider({ children }) {
       });
 
       initialEmployees.forEach(initEmp => {
-        const found = updated.find(e => String(e?.nik || '').trim() === String(initEmp.nik).trim());
+        const found = updated.find(e => String(e?.nip || e?.nik || '').trim() === String(initEmp.nip || initEmp.nik).trim());
         if (!found) {
           updated.push(initEmp);
           changed = true;
@@ -393,7 +405,8 @@ export function DocumentControlProvider({ children }) {
     if (currentUser?.companyCode && currentUser.companyCode !== 'ALL') {
       const userCompany = currentUser.companyCode.toUpperCase();
       return rawAuditLogs.filter(log => {
-        const logComp = (log.companyCode || (log.docNumber?.split('-')[0]) || (log.nik?.startsWith('UMI') ? 'UMI' : log.nik?.startsWith('IMK') ? 'IMK' : 'DJI')).toUpperCase();
+        const logNip = log.nip || log.nik;
+        const logComp = (log.companyCode || (log.docNumber?.split('-')[0]) || (logNip?.startsWith('UMI') ? 'UMI' : logNip?.startsWith('IMK') ? 'IMK' : 'DJI')).toUpperCase();
         return logComp === userCompany;
       });
     }
@@ -401,7 +414,8 @@ export function DocumentControlProvider({ children }) {
     if (selectedCompanyFilter !== 'ALL') {
       const targetCompany = selectedCompanyFilter.toUpperCase();
       return rawAuditLogs.filter(log => {
-        const logComp = (log.companyCode || (log.docNumber?.split('-')[0]) || (log.nik?.startsWith('UMI') ? 'UMI' : log.nik?.startsWith('IMK') ? 'IMK' : 'DJI')).toUpperCase();
+        const logNip = log.nip || log.nik;
+        const logComp = (log.companyCode || (log.docNumber?.split('-')[0]) || (logNip?.startsWith('UMI') ? 'UMI' : logNip?.startsWith('IMK') ? 'IMK' : 'DJI')).toUpperCase();
         return logComp === targetCompany;
       });
     }
@@ -423,12 +437,12 @@ export function DocumentControlProvider({ children }) {
   const login = (identifier, password = '') => {
     const cleanId = String(identifier || '').trim().toLowerCase();
     if (!cleanId) {
-      showToast('Harap masukkan Email atau NIP karyawan!', 'danger');
+      showToast('Harap masukkan Email atau NIP pegawai!', 'danger');
       return { success: false, message: 'Identitas akun wajib diisi.' };
     }
 
     const foundEmp = rawEmployees.find(
-      e => String(e.nik || '').trim().toLowerCase() === cleanId ||
+      e => String(e.nip || e.nik || '').trim().toLowerCase() === cleanId ||
            String(e.id || '').trim().toLowerCase() === cleanId ||
            String(e.email || '').trim().toLowerCase() === cleanId ||
            String(e.name || '').trim().toLowerCase() === cleanId
@@ -528,7 +542,7 @@ export function DocumentControlProvider({ children }) {
     const userDept = (currentUser.department || '').toUpperCase().trim();
     const docDept = (doc.department || '').toUpperCase().trim();
     const userName = (currentUser.name || '').toUpperCase().trim();
-    const userNik = (currentUser.nik || '').toUpperCase().trim();
+    const userNip = (currentUser.nip || currentUser.nik || '').toUpperCase().trim();
 
     // 1. Super Admin, Approver (MR), dan Document Control Officer (DCO) dapat melihat seluruh antrean verifikasi
     if (userRole === 'admin' || userRole === 'approver' || userRole === 'doc_control') {
@@ -550,7 +564,8 @@ export function DocumentControlProvider({ children }) {
       if (isHeadOfDocDept) return true;
 
       // Ditunjuk secara spesifik sebagai target reviewer
-      const isDesignatedReviewer = (doc.reviewerNik && doc.reviewerNik.toUpperCase().trim() === userNik) ||
+      const reviewerIdentifier = (doc.reviewerNip || doc.reviewerNik || '').toUpperCase().trim();
+      const isDesignatedReviewer = (reviewerIdentifier && reviewerIdentifier === userNip) ||
                                    (doc.targetReviewer && doc.targetReviewer.toUpperCase().trim() === userName) ||
                                    (doc.targetReviewer && doc.targetReviewer.toUpperCase().includes(userName)) ||
                                    (userName && doc.targetReviewer && userName.includes(doc.targetReviewer.toUpperCase()));
@@ -561,7 +576,8 @@ export function DocumentControlProvider({ children }) {
     }
 
     // 3. Staff: Hanya melihat dokumen yang diajukan sendiri
-    const isOwner = (doc.creatorNik && doc.creatorNik.toUpperCase().trim() === userNik) ||
+    const docCreatorNip = (doc.creatorNip || doc.creatorNik || '').toUpperCase().trim();
+    const isOwner = (docCreatorNip && docCreatorNip === userNip) ||
                     (doc.creator && doc.creator.toUpperCase().trim() === userName);
     return Boolean(isOwner);
   };
@@ -588,8 +604,9 @@ export function DocumentControlProvider({ children }) {
 
     // 2. Staff / Reviewer: HANYA dapat melihat draft miliknya sendiri (Personal Draft)
     const userName = (currentUser.name || '').toUpperCase().trim();
-    const userNik = (currentUser.nik || '').toUpperCase().trim();
-    const isOwner = (doc.creatorNik && doc.creatorNik.toUpperCase().trim() === userNik) ||
+    const userNip = (currentUser.nip || currentUser.nik || '').toUpperCase().trim();
+    const docCreatorNip = (doc.creatorNip || doc.creatorNik || '').toUpperCase().trim();
+    const isOwner = (docCreatorNip && docCreatorNip === userNip) ||
                     (doc.creator && doc.creator.toUpperCase().trim() === userName);
     return Boolean(isOwner);
   };
@@ -623,8 +640,9 @@ export function DocumentControlProvider({ children }) {
 
     // 3. Staff: Hanya dokumen ditolak yang diajukan oleh dirinya sendiri
     const userName = (currentUser.name || '').toUpperCase().trim();
-    const userNik = (currentUser.nik || '').toUpperCase().trim();
-    const isOwner = (doc.creatorNik && doc.creatorNik.toUpperCase().trim() === userNik) ||
+    const userNip = (currentUser.nip || currentUser.nik || '').toUpperCase().trim();
+    const docCreatorNip = (doc.creatorNip || doc.creatorNik || '').toUpperCase().trim();
+    const isOwner = (docCreatorNip && docCreatorNip === userNip) ||
                     (doc.creator && doc.creator.toUpperCase().trim() === userName);
     return Boolean(isOwner);
   };
@@ -790,7 +808,7 @@ export function DocumentControlProvider({ children }) {
       type_name: d.typeName || d.type || 'SOP',
       department: d.department || 'HRGA',
       creator: d.creator || 'Staff',
-      creator_nik: d.creatorNik || null,
+      creator_nip: d.creatorNip || d.creatorNik || null,
       creator_position: d.creatorPosition || null,
       seq_number: d.seqNumber || '01',
       revision: d.revision || '00',
@@ -834,7 +852,8 @@ export function DocumentControlProvider({ children }) {
       typeName: d.type_name,
       department: d.department,
       creator: d.creator,
-      creatorNik: d.creator_nik,
+      creatorNip: d.creator_nip || d.creator_nik,
+      creatorNik: d.creator_nip || d.creator_nik,
       creatorPosition: d.creator_position,
       seqNumber: d.seq_number,
       revision: d.revision,
@@ -922,49 +941,57 @@ export function DocumentControlProvider({ children }) {
         }
         if (cloudTypes && !typesErr) setDocumentTypes(cloudTypes);
         if (cloudEmps && !empsErr) {
-          const dummyNiks = ['123456', '123457', '123458', '123459', '123460', '123461', '123462'];
+          const dummyNips = ['123456', '123457', '123458', '123459', '123460', '123461', '123462'];
           const cleanedEmps = cloudEmps
-            .filter(e => !dummyNiks.includes(String(e.nik || '').trim()))
+            .filter(e => !dummyNips.includes(String(e.nip || e.nik || '').trim()))
             .map(e => {
-              const nik = String(e.nik || '').trim().toUpperCase();
+              const nip = String(e.nip || e.nik || '').trim().toUpperCase();
               const companyCode = String(
-                nik.startsWith('UMI') ? 'UMI' : nik.startsWith('IMK') ? 'IMK' : nik === '123463' ? 'ALL' : (e.company_code || e.companyCode || 'DJI')
+                nip.startsWith('UMI') ? 'UMI' : nip.startsWith('IMK') ? 'IMK' : nip === '123463' ? 'ALL' : (e.company_code || e.companyCode || 'DJI')
               ).toUpperCase();
               return {
                 ...e,
+                nip: e.nip || e.nik,
+                nik: e.nip || e.nik,
                 companyCode,
                 companyName: e.company_name || e.companyName || (
                   companyCode === 'UMI' ? 'PT Ultimo Moda Indotex' : companyCode === 'IMK' ? 'PT IMK' : companyCode === 'ALL' ? 'Holding (Multi-Company)' : 'PT Dentelle Jaya Infinitex'
                 )
               };
             });
-          const employeesByNik = new Map(
-            cleanedEmps.map(employee => [String(employee.nik || '').trim().toUpperCase(), employee])
+          const employeesByNip = new Map(
+            cleanedEmps.map(employee => [String(employee.nip || employee.nik || '').trim().toUpperCase(), employee])
           );
           initialEmployees.forEach(employee => {
-            const nik = String(employee.nik || '').trim().toUpperCase();
-            if (nik && !employeesByNik.has(nik)) employeesByNik.set(nik, employee);
+            const nip = String(employee.nip || employee.nik || '').trim().toUpperCase();
+            if (nip && !employeesByNip.has(nip)) employeesByNip.set(nip, employee);
           });
-          const sortedEmps = [...employeesByNik.values()].sort((a, b) => {
-            if (a.department === 'MGMT' || a.nik === 'DJI000001') return -1;
-            if (b.department === 'MGMT' || b.nik === 'DJI000001') return 1;
+          const sortedEmps = [...employeesByNip.values()].sort((a, b) => {
+            const aNip = a.nip || a.nik;
+            const bNip = b.nip || b.nik;
+            if (a.department === 'MGMT' || aNip === 'DJI000001') return -1;
+            if (b.department === 'MGMT' || bNip === 'DJI000001') return 1;
             return 0;
           });
           setEmployees(sortedEmps);
         }
         if (cloudTeams && !teamsErr) setVerifierTeams(cloudTeams);
         if (cloudLogs && !logsErr) {
-          setRawAuditLogs(cloudLogs.map(l => ({
-            id: l.id,
-            timestamp: l.timestamp,
-            user: l.user_name,
-            nik: l.nik,
-            companyCode: l.company_code || (l.doc_number?.split('-')[0]) || (l.nik?.startsWith('UMI') ? 'UMI' : l.nik?.startsWith('IMK') ? 'IMK' : 'DJI'),
-            action: l.action,
-            docNumber: l.doc_number,
-            docTitle: l.doc_title,
-            details: l.details
-          })));
+          setRawAuditLogs(cloudLogs.map(l => {
+            const logNip = l.nip || l.nik;
+            return {
+              id: l.id,
+              timestamp: l.timestamp,
+              user: l.user_name,
+              nip: logNip,
+              nik: logNip,
+              companyCode: l.company_code || (l.doc_number?.split('-')[0]) || (logNip?.startsWith('UMI') ? 'UMI' : logNip?.startsWith('IMK') ? 'IMK' : 'DJI'),
+              action: l.action,
+              docNumber: l.doc_number,
+              docTitle: l.doc_title,
+              details: l.details
+            };
+          }));
         }
         if (cloudSettings && cloudSettings.length > 0) {
           const s = cloudSettings[0];
@@ -1037,25 +1064,26 @@ export function DocumentControlProvider({ children }) {
   // Sinkronisasi otomatis agar akun resmi PT DJI tersedia dan dummy lama dibersihkan
   useEffect(() => {
     setEmployees(prev => {
-      const dummyNiks = new Set([
+      const dummyNips = new Set([
         '123456', '123457', '123458', '123459', '123460', '123461', '123462', 'DJI000001',
         'DJI042211', 'DJI052212', 'DJI062213'
       ]);
       let changed = false;
-      let list = (prev || []).filter(e => !dummyNiks.has(String(e?.nik || '').trim()));
+      let list = (prev || []).filter(e => !dummyNips.has(String(e?.nip || e?.nik || '').trim()));
       if (list.length !== (prev || []).length) {
         changed = true;
       }
 
       initialEmployees.forEach(initEmp => {
-        if (!list.some(e => String(e?.nik || '').trim() === String(initEmp.nik).trim())) {
+        if (!list.some(e => String(e?.nip || e?.nik || '').trim() === String(initEmp.nip || initEmp.nik).trim())) {
           list.push(initEmp);
           changed = true;
         }
       });
 
       list = list.map(e => {
-        if (e.nik === 'DJI092115' && e.role !== 'reviewer') {
+        const empId = e.nip || e.nik;
+        if (empId === 'DJI092115' && e.role !== 'reviewer') {
           changed = true;
           return { ...e, role: 'reviewer' };
         }
@@ -1119,15 +1147,17 @@ export function DocumentControlProvider({ children }) {
   // Helper to log audit trail
   const addAuditLog = (action, docNumber, docTitle, details, userOverride = null) => {
     const now = new Date();
-    const activeUser = userOverride || currentUser || { name: 'Sistem', nik: '-' };
-    const userCompany = activeUser.companyCode || (activeUser.nik?.startsWith('UMI') ? 'UMI' : activeUser.nik?.startsWith('IMK') ? 'IMK' : 'DJI');
+    const activeUser = userOverride || currentUser || { name: 'Sistem', nip: '-', nik: '-' };
+    const empId = activeUser.nip || activeUser.nik || '';
+    const userCompany = activeUser.companyCode || (empId.startsWith('UMI') ? 'UMI' : empId.startsWith('IMK') ? 'IMK' : 'DJI');
     const docCompany = (docNumber && docNumber.includes('-') && docNumber !== '-') ? docNumber.split('-')[0] : userCompany;
 
     const newLog = {
       id: `log-${Date.now()}`,
       timestamp: `${now.toISOString().slice(0, 10)} ${now.toLocaleTimeString('id-ID')}`,
       user: activeUser.name || 'Sistem',
-      nik: activeUser.nik || '-',
+      nip: activeUser.nip || activeUser.nik || '-',
+      nik: activeUser.nip || activeUser.nik || '-',
       companyCode: docCompany || userCompany || 'DJI',
       action,
       docNumber,
@@ -1141,7 +1171,7 @@ export function DocumentControlProvider({ children }) {
         id: newLog.id,
         timestamp: newLog.timestamp,
         user_name: newLog.user,
-        nik: newLog.nik,
+        nip: newLog.nip,
         company_code: newLog.companyCode,
         action: newLog.action,
         doc_number: newLog.docNumber,
@@ -1213,7 +1243,8 @@ export function DocumentControlProvider({ children }) {
       typeName: documentTypes.find(t => t.code === docData.type)?.name || docData.type,
       department: docData.department,
       creator: docData.creator || currentUser.name,
-      creatorNik: docData.creatorNik || currentUser.nik,
+      creatorNip: docData.creatorNip || docData.creatorNik || currentUser.nip || currentUser.nik,
+      creatorNik: docData.creatorNip || docData.creatorNik || currentUser.nip || currentUser.nik,
       creatorPosition: docData.creatorPosition || currentUser.position,
       seqNumber,
       revision,
@@ -1221,10 +1252,13 @@ export function DocumentControlProvider({ children }) {
       createdDate: docData.createdDate || createdDate,
       createdTime: docData.createdTime || createdTime,
       effectiveDate: null,
+      targetReviewer: docData.targetReviewer || null,
+      reviewerNip: docData.reviewerNip || docData.reviewerNik || null,
+      reviewerNik: docData.reviewerNip || docData.reviewerNik || null,
       verifierTeam: docData.verifierTeam || 'Document Control Team',
       targetApprover: docData.targetApprover || docData.approverName || null,
-      approverNik: docData.approverNik || null,
-      approverPosition: docData.approverPosition || null,
+      approverNip: docData.approverNip || docData.approverNik || null,
+      approverNik: docData.approverNip || docData.approverNik || null,
       notes: docData.notes || '',
       content: docData.content || `1. TUJUAN\nDokumen ${docData.title} dibuat untuk standardisasi operasional.\n\n2. RUANG LINGKUP\nBerlaku di lingkungan departemen ${docData.department}.\n\n3. PROSEDUR PELAKSANAAN\n3.1 Pelaksanaan standar operasional sesuai kaidah ISO 9001.`,
       fileName: docData.fileName || (docData.fileUrl ? `${docNumber}.pdf` : null),
@@ -1309,8 +1343,10 @@ export function DocumentControlProvider({ children }) {
       docData.revisionRequestedStage
     );
 
+    const docCreatorId = (docData.creatorNip || docData.creatorNik || '').trim().toUpperCase();
+    const currentUserId = (currentUser?.nip || currentUser?.nik || '').trim().toUpperCase();
     const isDifferentCreator = Boolean(
-      (docData.creatorNik && currentUser?.nik && (docData.creatorNik.trim().toUpperCase() !== currentUser.nik.trim().toUpperCase())) ||
+      (docCreatorId && currentUserId && (docCreatorId !== currentUserId)) ||
       (docData.creator && currentUser?.name && (docData.creator.trim().toLowerCase() !== currentUser.name.trim().toLowerCase()))
     );
 
@@ -1457,7 +1493,8 @@ export function DocumentControlProvider({ children }) {
       typeName: documentTypes.find(t => t.code === docData.type)?.name || docData.type,
       department: docData.department,
       creator: docData.creator || currentUser.name,
-      creatorNik: docData.creatorNik || currentUser.nik,
+      creatorNip: docData.creatorNip || docData.creatorNik || currentUser.nip || currentUser.nik,
+      creatorNik: docData.creatorNip || docData.creatorNik || currentUser.nip || currentUser.nik,
       creatorPosition: docData.creatorPosition || currentUser.position,
       seqNumber,
       revision,
@@ -1475,10 +1512,12 @@ export function DocumentControlProvider({ children }) {
       approvedDate,
       approvalNotes,
       targetReviewer: docData.targetReviewer || null,
-      reviewerNik: docData.reviewerNik || null,
+      reviewerNip: docData.reviewerNip || docData.reviewerNik || null,
+      reviewerNik: docData.reviewerNip || docData.reviewerNik || null,
       verifierTeam: docData.verifierTeam || 'Document Control Team',
       targetApprover: docData.targetApprover || docData.approverName || null,
-      approverNik: docData.approverNik || null,
+      approverNip: docData.approverNip || docData.approverNik || null,
+      approverNik: docData.approverNip || docData.approverNik || null,
       approverPosition: docData.approverPosition || null,
       notes: docData.notes || '',
       content: docData.content || `1. TUJUAN\nDokumen ${docData.title} dibuat untuk standardisasi operasional.\n\n2. RUANG LINGKUP\nBerlaku di lingkungan departemen ${docData.department}.\n\n3. PROSEDUR PELAKSANAAN\n3.1 Pelaksanaan standar operasional sesuai kaidah ISO 9001.`,
@@ -2176,7 +2215,8 @@ export function DocumentControlProvider({ children }) {
       typeName: originalDoc.typeName,
       department: originalDoc.department,
       creator: currentUser.name,
-      creatorNik: currentUser.nik,
+      creatorNip: currentUser.nip || currentUser.nik,
+      creatorNik: currentUser.nip || currentUser.nik,
       creatorPosition: currentUser.position,
       seqNumber: originalDoc.seqNumber,
       revision: nextRev,
@@ -2185,7 +2225,8 @@ export function DocumentControlProvider({ children }) {
       createdTime,
       effectiveDate,
       targetReviewer: revisionData.targetReviewer || originalDoc.targetReviewer || null,
-      reviewerNik: revisionData.reviewerNik || originalDoc.reviewerNik || null,
+      reviewerNip: revisionData.reviewerNip || originalDoc.reviewerNip || revisionData.reviewerNik || originalDoc.reviewerNik || null,
+      reviewerNik: revisionData.reviewerNip || originalDoc.reviewerNip || revisionData.reviewerNik || originalDoc.reviewerNik || null,
       reviewerName: revisionData.reviewerName || originalDoc.reviewerName || null,
       reviewerPosition: revisionData.reviewerPosition || originalDoc.reviewerPosition || null,
       reviewedBy,
@@ -2199,7 +2240,8 @@ export function DocumentControlProvider({ children }) {
       approvalNotes,
       verifierTeam: revisionData.verifierTeam || originalDoc.verifierTeam || 'Document Control Team',
       targetApprover: revisionData.targetApprover || originalDoc.targetApprover || null,
-      approverNik: revisionData.approverNik || originalDoc.approverNik || null,
+      approverNip: revisionData.approverNip || originalDoc.approverNip || revisionData.approverNik || originalDoc.approverNik || null,
+      approverNik: revisionData.approverNip || originalDoc.approverNip || revisionData.approverNik || originalDoc.approverNik || null,
       approverPosition: revisionData.approverPosition || originalDoc.approverPosition || null,
       notes: revisionData.changeReason || `Pengajuan Revisi ${nextRev} dari dokumen ${originalDoc.docNumber}`,
       changeReason: revisionData.changeReason,
@@ -2379,9 +2421,11 @@ export function DocumentControlProvider({ children }) {
       }
     }
 
+    const userNip = (currentUser?.nip || currentUser?.nik || '').trim().toUpperCase();
+    const docCreatorNip = (docToDelete.creatorNip || docToDelete.creatorNik || '').trim().toUpperCase();
     const isCreator = currentUser && (
-      currentUser.name === docToDelete.creator ||
-      currentUser.nik === docToDelete.creatorNik
+      (currentUser.name && docToDelete.creator && currentUser.name.trim().toLowerCase() === docToDelete.creator.trim().toLowerCase()) ||
+      (userNip && docCreatorNip && userNip === docCreatorNip)
     );
 
     // Permission check
@@ -2595,12 +2639,12 @@ export function DocumentControlProvider({ children }) {
   const addEmployee = (emp) => {
     const newEmp = { ...emp, id: `emp-${Date.now()}` };
     setEmployees(prev => [...prev, newEmp]);
-    addAuditLog('CREATE_EMPLOYEE', newEmp.nik, newEmp.name, `Menambahkan karyawan baru: ${newEmp.name} (NIK: ${newEmp.nik}, Dept: ${newEmp.department}, Jabatan: ${newEmp.position}, Role: ${newEmp.role})`);
+    addAuditLog('CREATE_EMPLOYEE', newEmp.nip || newEmp.nik, newEmp.name, `Menambahkan pegawai baru: ${newEmp.name} (NIP: ${newEmp.nip || newEmp.nik}, Dept: ${newEmp.department}, Jabatan: ${newEmp.position}, Role: ${newEmp.role})`);
 
     if (isSupabaseConfigured && supabase) {
       supabase.from('employees').upsert([{
         id: newEmp.id,
-        nik: newEmp.nik,
+        nip: newEmp.nip || newEmp.nik,
         company_code: newEmp.companyCode || 'DJI',
         company_name: newEmp.companyName || null,
         name: newEmp.name,
@@ -2614,17 +2658,18 @@ export function DocumentControlProvider({ children }) {
       });
     }
 
-    showToast(`Karyawan ${newEmp.name} berhasil ditambahkan!`, 'success');
+    showToast(`Pegawai ${newEmp.name} berhasil ditambahkan!`, 'success');
   };
 
   const updateEmployee = (id, updatedData) => {
     const prevEmp = employees.find(e => e.id === id);
     setEmployees(prev => prev.map(e => e.id === id ? { ...e, ...updatedData } : e));
-    addAuditLog('UPDATE_EMPLOYEE', updatedData.nik || prevEmp?.nik || id, updatedData.name || prevEmp?.name || 'Karyawan', `Memperbarui data karyawan: ${updatedData.name || prevEmp?.name} (NIK: ${updatedData.nik || prevEmp?.nik}, Dept: ${updatedData.department || '-'}, Role: ${updatedData.role || '-'})`);
+    const effectiveNip = updatedData.nip || updatedData.nik || prevEmp?.nip || prevEmp?.nik;
+    addAuditLog('UPDATE_EMPLOYEE', effectiveNip || id, updatedData.name || prevEmp?.name || 'Pegawai', `Memperbarui data pegawai: ${updatedData.name || prevEmp?.name} (NIP: ${effectiveNip}, Dept: ${updatedData.department || '-'}, Role: ${updatedData.role || '-'})`);
 
     if (isSupabaseConfigured && supabase) {
       supabase.from('employees').update({
-        nik: updatedData.nik,
+        nip: updatedData.nip || updatedData.nik,
         company_code: updatedData.companyCode || prevEmp?.companyCode || 'DJI',
         company_name: updatedData.companyName || prevEmp?.companyName || null,
         name: updatedData.name,
@@ -2638,13 +2683,13 @@ export function DocumentControlProvider({ children }) {
       });
     }
 
-    showToast('Data Karyawan berhasil diperbarui!', 'success');
+    showToast('Data Pegawai berhasil diperbarui!', 'success');
   };
 
   const deleteEmployee = (id) => {
     const emp = employees.find(e => e.id === id);
     setEmployees(prev => prev.filter(e => e.id !== id));
-    addAuditLog('DELETE_EMPLOYEE', emp?.nik || id, emp?.name || 'Karyawan', `Menghapus karyawan: ${emp?.name || id} (NIK: ${emp?.nik || '-'})`);
+    addAuditLog('DELETE_EMPLOYEE', emp?.nip || emp?.nik || id, emp?.name || 'Pegawai', `Menghapus pegawai: ${emp?.name || id} (NIP: ${emp?.nip || emp?.nik || '-'})`);
 
     if (isSupabaseConfigured && supabase) {
       supabase.from('employees').delete().eq('id', id).then(({ error }) => {
@@ -2652,7 +2697,7 @@ export function DocumentControlProvider({ children }) {
       });
     }
 
-    showToast('Data Karyawan berhasil dihapus.', 'info');
+    showToast('Data Pegawai berhasil dihapus.', 'info');
   };
 
   const addVerifierTeam = (team) => {

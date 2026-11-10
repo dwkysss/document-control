@@ -14,36 +14,36 @@ export default function LoginView() {
 
   // Fallback list of PT DJI actual registered employees
   const fallbackRealEmployees = [
-    { nik: 'DJI092115', name: 'DENI RAMDAN', companyCode: 'DJI', department: 'MGMT', position: 'GENERAL MANAGER', email: 'deni.ramdan@dji-indonesia.com', role: 'approver' },
-    { nik: 'DJI022203', name: 'DEDE SUHENDA', companyCode: 'DJI', department: 'PRODUKSI', position: 'KEPALA BAGIAN PRODUKSI', email: 'dede.suhenda@dji-indonesia.com', role: 'reviewer' },
-    { nik: 'DJI012548', name: 'BABAN RACHMAT SUBAGJA', companyCode: 'DJI', department: 'HRGA', position: 'MANAGER HRGA & MR', email: 'baban.rachmat.subagja@dji-indonesia.com', role: 'approver' },
-    { nik: '123463', name: 'Dwiky Sumarlin', companyCode: 'ALL', department: 'IT', position: 'Lead Systems Engineer', email: 'dwiky.sumarlin@dji-indonesia.com', role: 'admin' },
-    { nik: 'DJI022550', name: 'SYAHLA NOVIYANA', companyCode: 'DJI', department: 'FAT', position: 'DOCUMENT CONTROL OFFICER', email: 'syahla.noviyana@dji-indonesia.com', role: 'doc_control' },
-    { nik: 'DJI102216', name: 'ZARRAH ALI MARIFAH', companyCode: 'DJI', department: 'FAT', position: 'STAFF ACCOUNTING FINANCE', email: 'zarrah.ali.marifah@dji-indonesia.com', role: 'staff' },
-    { nik: 'DJI032207', name: 'SITI NURDIANTI', companyCode: 'DJI', department: 'PRODUKSI', position: 'STAFF PPIC', email: 'siti.nurdianti@dji-indonesia.com', role: 'staff' },
-    { nik: 'DJI012202', name: 'ASIVA SITI FAUJIAH', companyCode: 'DJI', department: 'PRODUKSI', position: 'STAFF ADM PRODUKSI', email: 'asiva.siti.faujiah@dji-indonesia.com', role: 'staff' },
-    { nik: 'DJI042211', name: 'AHMAD FAUZI', companyCode: 'DJI', department: 'PRODUKSI', position: 'OPERATOR PRODUKSI', email: 'ahmad.fauzi@dji-indonesia.com', role: 'viewer' },
-    { nik: 'DJI052219', name: 'NURUL HIDAYAH', companyCode: 'DJI', department: 'FAT', position: 'OPERATOR ADM KEUANGAN', email: 'nurul.hidayah@dji-indonesia.com', role: 'viewer' },
+    { nip: 'DJI092115', name: 'DENI RAMDAN', companyCode: 'DJI', department: 'MGMT', position: 'GENERAL MANAGER', email: 'deni.ramdan@dji-indonesia.com', role: 'approver' },
+    { nip: 'DJI022203', name: 'DEDE SUHENDA', companyCode: 'DJI', department: 'PRODUKSI', position: 'KEPALA BAGIAN PRODUKSI', email: 'dede.suhenda@dji-indonesia.com', role: 'reviewer' },
+    { nip: 'DJI012548', name: 'BABAN RACHMAT SUBAGJA', companyCode: 'DJI', department: 'HRGA', position: 'MANAGER HRGA & MR', email: 'baban.rachmat.subagja@dji-indonesia.com', role: 'approver' },
+    { nip: '123463', name: 'Dwiky Sumarlin', companyCode: 'ALL', department: 'IT', position: 'Lead Systems Engineer', email: 'dwiky.sumarlin@dji-indonesia.com', role: 'admin' },
+    { nip: 'DJI022550', name: 'SYAHLA NOVIYANA', companyCode: 'DJI', department: 'FAT', position: 'DOCUMENT CONTROL OFFICER', email: 'syahla.noviyana@dji-indonesia.com', role: 'doc_control' },
+    { nip: 'DJI102216', name: 'ZARRAH ALI MARIFAH', companyCode: 'DJI', department: 'FAT', position: 'STAFF ACCOUNTING FINANCE', email: 'zarrah.ali.marifah@dji-indonesia.com', role: 'staff' },
+    { nip: 'DJI032207', name: 'SITI NURDIANTI', companyCode: 'DJI', department: 'PRODUKSI', position: 'STAFF PPIC', email: 'siti.nurdianti@dji-indonesia.com', role: 'staff' },
+    { nip: 'DJI012202', name: 'ASIVA SITI FAUJIAH', companyCode: 'DJI', department: 'PRODUKSI', position: 'STAFF ADM PRODUKSI', email: 'asiva.siti.faujiah@dji-indonesia.com', role: 'staff' },
+    { nip: 'DJI042211', name: 'AHMAD FAUZI', companyCode: 'DJI', department: 'PRODUKSI', position: 'OPERATOR PRODUKSI', email: 'ahmad.fauzi@dji-indonesia.com', role: 'viewer' },
+    { nip: 'DJI052219', name: 'NURUL HIDAYAH', companyCode: 'DJI', department: 'FAT', position: 'OPERATOR ADM KEUANGAN', email: 'nurul.hidayah@dji-indonesia.com', role: 'viewer' },
     // UMI
-    { nik: 'UMI00001', name: 'DIMAS SETIAWAN', companyCode: 'UMI', department: 'IT', position: 'IT & SYSTEM ADMIN (UMI)', email: 'dimas.setiawan@ultimo-moda.com', role: 'admin' },
-    { nik: 'UMI01001', name: 'RATNA SARI', companyCode: 'UMI', department: 'HRGA', position: 'MANAGER HRGA & MR (UMI)', email: 'ratna.sari@ultimo-moda.com', role: 'approver' },
-    { nik: 'UMI04004', name: 'SITI LESTARI', companyCode: 'UMI', department: 'PRODUKSI', position: 'KEPALA BAGIAN DYEING & FINISHING', email: 'siti.lestari@ultimo-moda.com', role: 'reviewer' },
-    { nik: 'UMI02002', name: 'HENDRA PRASETYA', companyCode: 'UMI', department: 'FAT', position: 'DOCUMENT CONTROL OFFICER (UMI)', email: 'hendra.prasetya@ultimo-moda.com', role: 'doc_control' },
-    { nik: 'UMI03003', name: 'MAYA ANGGRAENI', companyCode: 'UMI', department: 'PRODUKSI', position: 'STAFF PRODUKSI & QC (UMI)', email: 'maya.anggraeni@ultimo-moda.com', role: 'staff' },
-    { nik: 'UMI05005', name: 'BAGUS KURNIAWAN', companyCode: 'UMI', department: 'PRODUKSI', position: 'OPERATOR DYEING & LAB', email: 'bagus.kurniawan@ultimo-moda.com', role: 'viewer' },
+    { nip: 'UMI00001', name: 'DIMAS SETIAWAN', companyCode: 'UMI', department: 'IT', position: 'IT & SYSTEM ADMIN (UMI)', email: 'dimas.setiawan@ultimo-moda.com', role: 'admin' },
+    { nip: 'UMI01001', name: 'RATNA SARI', companyCode: 'UMI', department: 'HRGA', position: 'MANAGER HRGA & MR (UMI)', email: 'ratna.sari@ultimo-moda.com', role: 'approver' },
+    { nip: 'UMI04004', name: 'SITI LESTARI', companyCode: 'UMI', department: 'PRODUKSI', position: 'KEPALA BAGIAN DYEING & FINISHING', email: 'siti.lestari@ultimo-moda.com', role: 'reviewer' },
+    { nip: 'UMI02002', name: 'HENDRA PRASETYA', companyCode: 'UMI', department: 'FAT', position: 'DOCUMENT CONTROL OFFICER (UMI)', email: 'hendra.prasetya@ultimo-moda.com', role: 'doc_control' },
+    { nip: 'UMI03003', name: 'MAYA ANGGRAENI', companyCode: 'UMI', department: 'PRODUKSI', position: 'STAFF PRODUKSI & QC (UMI)', email: 'maya.anggraeni@ultimo-moda.com', role: 'staff' },
+    { nip: 'UMI05005', name: 'BAGUS KURNIAWAN', companyCode: 'UMI', department: 'PRODUKSI', position: 'OPERATOR DYEING & LAB', email: 'bagus.kurniawan@ultimo-moda.com', role: 'viewer' },
     // IMK
-    { nik: 'IMK00001', name: 'ARIF BUDIMAN', companyCode: 'IMK', department: 'IT', position: 'IT & SYSTEM ADMIN (IMK)', email: 'arif.budiman@imk-textile.com', role: 'admin' },
-    { nik: 'IMK01001', name: 'BAMBANG WIJAYA', companyCode: 'IMK', department: 'HRGA', position: 'MANAGER HRGA & MR (IMK)', email: 'bambang.wijaya@imk-textile.com', role: 'approver' },
-    { nik: 'IMK04004', name: 'FAJAR NUGRAHA', companyCode: 'IMK', department: 'PRODUKSI', position: 'KEPALA BAGIAN KNITTING', email: 'fajar.nugraha@imk-textile.com', role: 'reviewer' },
-    { nik: 'IMK02002', name: 'TIARA KUSUMA', companyCode: 'IMK', department: 'FAT', position: 'DOCUMENT CONTROL OFFICER (IMK)', email: 'tiara.kusuma@imk-textile.com', role: 'doc_control' },
-    { nik: 'IMK03003', name: 'RIZKY PRATAMA', companyCode: 'IMK', department: 'PRODUKSI', position: 'STAFF PRODUKSI & KNITTING (IMK)', email: 'rizky.pratama@imk-textile.com', role: 'staff' },
-    { nik: 'IMK05005', name: 'ANISA FITRIANI', companyCode: 'IMK', department: 'PRODUKSI', position: 'OPERATOR KNITTING & QC', email: 'anisa.fitriani@imk-textile.com', role: 'viewer' }
+    { nip: 'IMK00001', name: 'ARIF BUDIMAN', companyCode: 'IMK', department: 'IT', position: 'IT & SYSTEM ADMIN (IMK)', email: 'arif.budiman@imk-textile.com', role: 'admin' },
+    { nip: 'IMK01001', name: 'BAMBANG WIJAYA', companyCode: 'IMK', department: 'HRGA', position: 'MANAGER HRGA & MR (IMK)', email: 'bambang.wijaya@imk-textile.com', role: 'approver' },
+    { nip: 'IMK04004', name: 'FAJAR NUGRAHA', companyCode: 'IMK', department: 'PRODUKSI', position: 'KEPALA BAGIAN KNITTING', email: 'fajar.nugraha@imk-textile.com', role: 'reviewer' },
+    { nip: 'IMK02002', name: 'TIARA KUSUMA', companyCode: 'IMK', department: 'FAT', position: 'DOCUMENT CONTROL OFFICER (IMK)', email: 'tiara.kusuma@imk-textile.com', role: 'doc_control' },
+    { nip: 'IMK03003', name: 'RIZKY PRATAMA', companyCode: 'IMK', department: 'PRODUKSI', position: 'STAFF PRODUKSI & KNITTING (IMK)', email: 'rizky.pratama@imk-textile.com', role: 'staff' },
+    { nip: 'IMK05005', name: 'ANISA FITRIANI', companyCode: 'IMK', department: 'PRODUKSI', position: 'OPERATOR KNITTING & QC', email: 'anisa.fitriani@imk-textile.com', role: 'viewer' }
   ];
 
-  // Exclude legacy dummy demo NIKs to ensure only 100% real accounts are shown
-  const dummyNiks = ['123456', '123457', '123458', '123459', '123460', '123461', '123462'];
+  // Exclude legacy dummy demo NIPs to ensure only 100% real accounts are shown
+  const dummyNips = ['123456', '123457', '123458', '123459', '123460', '123461', '123462'];
   const employeeSource = allEmployees && allEmployees.length > 0 ? allEmployees : (employees && employees.length > 0 ? employees : fallbackRealEmployees);
-  const realEmployees = employeeSource.filter(e => e.status !== 'Nonaktif' && !dummyNiks.includes(String(e.nik || '').trim()));
+  const realEmployees = employeeSource.filter(e => e.status !== 'Nonaktif' && !dummyNips.includes(String(e.nip || e.nik || '').trim()));
 
   const quickLoginList = realEmployees.length > 0 ? realEmployees : fallbackRealEmployees;
 
@@ -80,7 +80,7 @@ export default function LoginView() {
     if (e) e.preventDefault();
     const cleanId = identifier.trim();
     if (!cleanId) {
-      showToast('Silakan masukkan Email atau NIP karyawan!', 'danger');
+      showToast('Silakan masukkan Email atau NIP pegawai!', 'danger');
       return;
     }
 
@@ -96,7 +96,7 @@ export default function LoginView() {
     setPassword('••••••••');
     setIsLoading(true);
     setTimeout(() => {
-      login(account.nik);
+      login(account.nip || account.nik);
       setIsLoading(false);
     }, 200);
   };
@@ -237,7 +237,7 @@ export default function LoginView() {
               {/* Email / NIP Field */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Email atau NIP
+                  Email atau NIP (Nomor Induk Pegawai)
                 </label>
                 <div className="relative flex items-center border border-slate-300 focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-100 rounded-xl px-3 py-2 bg-white transition shadow-xs">
                   <Mail className="w-4 h-4 text-slate-400 shrink-0" />
@@ -246,7 +246,7 @@ export default function LoginView() {
                     type="text"
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
-                    placeholder="nama@dji-indonesia.com / 123463"
+                    placeholder="nama@dji-indonesia.com / DJI012548 / 123463"
                     className="w-full text-xs font-medium text-slate-800 placeholder-slate-400 bg-transparent focus:outline-none"
                     autoFocus
                     required
@@ -263,8 +263,9 @@ export default function LoginView() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="text-slate-400 hover:text-slate-600 shrink-0 transition cursor-pointer"
+                    className="text-slate-500 hover:text-slate-700 p-1 rounded transition cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                     title={showPassword ? 'Sembunyikan sandi' : 'Tampilkan sandi'}
+                    aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
                   >
                     {showPassword ? (
                       <EyeOff className="w-4 h-4" />
@@ -317,26 +318,26 @@ export default function LoginView() {
               <button
                 type="button"
                 onClick={() => setShowQuickRoles(!showQuickRoles)}
-                className="text-[10px] font-bold text-slate-400 hover:text-blue-600 focus:outline-none uppercase tracking-wider transition inline-flex items-center gap-1 cursor-pointer"
+                className="text-[10px] font-bold text-slate-500 hover:text-blue-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded px-1.5 py-1 uppercase tracking-wider transition inline-flex items-center gap-1 cursor-pointer"
               >
-                <span>Uji Cepat Role Karyawan ({showQuickRoles ? 'Tutup' : 'Buka'})</span>
+                <span>Uji Cepat Role Pegawai ({showQuickRoles ? 'Tutup' : 'Buka'})</span>
               </button>
 
               {showQuickRoles && (
                 <div className="mt-2 p-2 bg-slate-50/90 rounded-xl border border-slate-200">
                   <div className="flex items-center justify-between px-1 mb-1.5">
-                    <span className="text-[9.5px] font-bold text-slate-500 uppercase tracking-wider">
+                    <span className="text-[9.5px] font-bold text-slate-600 uppercase tracking-wider">
                       Personil Terdaftar ({quickLoginList.length})
                     </span>
-                    <span className="text-[9px] text-slate-400">Pilih untuk login cepat</span>
+                    <span className="text-[9px] text-slate-500">Pilih untuk login cepat</span>
                   </div>
                   <div className="grid grid-cols-2 gap-1.5 max-h-[190px] overflow-y-auto pr-0.5 scrollbar-thin">
                     {quickLoginList.map((acc) => (
                       <button
-                        key={acc.nik}
+                        key={acc.nip || acc.nik}
                         type="button"
                         onClick={() => handleQuickLogin(acc)}
-                        className="p-1.5 rounded-lg bg-white border border-slate-200 hover:border-blue-500 hover:shadow-xs text-left transition group cursor-pointer focus:outline-none"
+                        className="p-1.5 rounded-lg bg-white border border-slate-200 hover:border-blue-500 hover:shadow-xs text-left transition group cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                       >
                         <div className="flex items-center justify-between gap-1 mb-0.5">
                           <div className="flex items-center gap-1">
@@ -344,11 +345,11 @@ export default function LoginView() {
                               {getRoleLabel(acc.role)}
                             </span>
                             <span className="text-[8px] font-bold px-1 rounded bg-slate-100 text-slate-700 border border-slate-200">
-                              {acc.companyCode || (acc.nik?.startsWith('UMI') ? 'UMI' : acc.nik?.startsWith('IMK') ? 'IMK' : (acc.nik === '123463' ? 'ALL' : 'DJI'))}
+                              {acc.companyCode || ((acc.nip || acc.nik)?.startsWith('UMI') ? 'UMI' : (acc.nip || acc.nik)?.startsWith('IMK') ? 'IMK' : ((acc.nip || acc.nik) === '123463' ? 'ALL' : 'DJI'))}
                             </span>
                           </div>
-                          <span className="font-mono text-[8.5px] font-semibold text-slate-400 group-hover:text-blue-600 transition truncate">
-                            {acc.nik}
+                          <span className="font-mono text-[8.5px] font-semibold text-slate-500 group-hover:text-blue-600 transition truncate">
+                            {acc.nip || acc.nik}
                           </span>
                         </div>
                         <div className="text-[10.5px] font-bold text-slate-800 truncate group-hover:text-blue-600 transition">
@@ -414,7 +415,7 @@ export default function LoginView() {
                 </div>
                 <button
                   onClick={() => {
-                    const itAdmin = quickLoginList.find(e => e.nik === '123463') || quickLoginList[0];
+                    const itAdmin = quickLoginList.find(e => (e.nip || e.nik) === '123463') || quickLoginList[0];
                     if (itAdmin) handleQuickLogin(itAdmin);
                     setShowInfoModal(null);
                   }}

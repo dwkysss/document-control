@@ -195,7 +195,7 @@ export default function DepartmentMasterView() {
                 {(employees || [])
                   .filter(e => e.status !== 'Nonaktif')
                   .map(emp => (
-                    <option key={emp.id || emp.nik} value={emp.name}>
+                    <option key={emp.id || emp.nip || emp.nik} value={emp.name}>
                       {emp.name} — {emp.position} ({emp.department})
                     </option>
                   ))}
@@ -203,8 +203,8 @@ export default function DepartmentMasterView() {
                   <option value={head}>{head}</option>
                 )}
               </select>
-              <p className="text-[10px] text-slate-400 mt-1">
-                Nama kepala departemen otomatis terhubung langsung dengan profil Master Data Karyawan.
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                Nama kepala departemen otomatis terhubung langsung dengan profil Master Data Pegawai.
               </p>
             </div>
 

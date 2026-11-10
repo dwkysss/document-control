@@ -11,7 +11,7 @@ export default function EmployeeMasterView() {
   const [editingEmployee, setEditingEmployee] = useState(null);
 
   // Form State
-  const [nik, setNik] = useState('');
+  const [nip, setNip] = useState('');
   const [name, setName] = useState('');
   const [companyCode, setCompanyCode] = useState(() => (
     currentUser?.companyCode && currentUser.companyCode !== 'ALL'
@@ -29,24 +29,24 @@ export default function EmployeeMasterView() {
 
   const filteredEmployees = safeEmployees.filter(e => {
     if (!e) return false;
-    const nik = String(e.nik || '').trim().toUpperCase();
+    const empId = String(e.nip || e.nik || '').trim().toUpperCase();
     const employeeCompany = String(
-      nik.startsWith('UMI') ? 'UMI' : nik.startsWith('IMK') ? 'IMK' : nik === '123463' ? 'ALL' : (e.companyCode || e.company_code || 'DJI')
+      empId.startsWith('UMI') ? 'UMI' : empId.startsWith('IMK') ? 'IMK' : empId === '123463' ? 'ALL' : (e.companyCode || e.company_code || 'DJI')
     ).toUpperCase();
     const selectedCompany = String(selectedCompanyFilter || 'ALL').toUpperCase();
     if (selectedCompany !== 'ALL' && employeeCompany !== selectedCompany && employeeCompany !== 'ALL') return false;
     const term = String(searchTerm || '').toLowerCase().trim();
     if (!term) return true;
     const nameStr = String(e.name || '').toLowerCase();
-    const nikStr = String(e.nik || '').toLowerCase();
+    const nipStr = String(e.nip || e.nik || '').toLowerCase();
     const deptStr = String(e.department || '').toLowerCase();
     const posStr = String(e.position || '').toLowerCase();
-    return nameStr.includes(term) || nikStr.includes(term) || deptStr.includes(term) || posStr.includes(term);
+    return nameStr.includes(term) || nipStr.includes(term) || deptStr.includes(term) || posStr.includes(term);
   });
 
   const handleOpenAddModal = () => {
     setEditingEmployee(null);
-    setNik('');
+    setNip('');
     setName('');
     setCompanyCode(currentUser?.companyCode && currentUser.companyCode !== 'ALL' ? currentUser.companyCode : (selectedCompanyFilter !== 'ALL' ? selectedCompanyFilter : 'DJI'));
     setDepartment('HRGA');
@@ -59,9 +59,9 @@ export default function EmployeeMasterView() {
 
   const handleOpenEditModal = (emp) => {
     setEditingEmployee(emp);
-    setNik(emp.nik);
+    setNip(emp.nip || emp.nik || '');
     setName(emp.name);
-    setCompanyCode(emp.companyCode || (emp.nik?.startsWith('UMI') ? 'UMI' : emp.nik?.startsWith('IMK') ? 'IMK' : (emp.nik === '123463' ? 'ALL' : 'DJI')));
+    setCompanyCode(emp.companyCode || ((emp.nip || emp.nik)?.startsWith('UMI') ? 'UMI' : (emp.nip || emp.nik)?.startsWith('IMK') ? 'IMK' : ((emp.nip || emp.nik) === '123463' ? 'ALL' : 'DJI')));
     setDepartment(emp.department);
     setPosition(emp.position);
     setEmail(emp.email || '');
@@ -72,22 +72,22 @@ export default function EmployeeMasterView() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const cleanNik = nik.trim();
+    const cleanNip = nip.trim();
     const cleanName = name.trim();
     const cleanPosition = position.trim();
 
-    if (!cleanName || !cleanNik || !cleanPosition) {
-      showToast('Harap lengkapi semua kolom wajib (Nama, NIK, Jabatan)!', 'danger');
+    if (!cleanName || !cleanNip || !cleanPosition) {
+      showToast('Harap lengkapi semua kolom wajib (Nama, NIP, Jabatan)!', 'danger');
       return;
     }
 
-    // Check duplicate NIK
-    const isDuplicateNik = employees.some(
-      emp => emp.nik.toLowerCase() === cleanNik.toLowerCase() && emp.id !== editingEmployee?.id
+    // Check duplicate NIP
+    const isDuplicateNip = employees.some(
+      emp => (emp.nip || emp.nik || '').toLowerCase() === cleanNip.toLowerCase() && emp.id !== editingEmployee?.id
     );
 
-    if (isDuplicateNik) {
-      showToast(`NIK ${cleanNik} sudah terdaftar pada karyawan lain!`, 'danger');
+    if (isDuplicateNip) {
+      showToast(`NIP ${cleanNip} sudah terdaftar pada pegawai lain!`, 'danger');
       return;
     }
 
@@ -95,7 +95,8 @@ export default function EmployeeMasterView() {
     const companyName = matchedCompany?.name || (companyCode === 'ALL' ? 'Holding (Multi-Company)' : companyCode === 'UMI' ? 'PT Ultimo Moda Indotex' : companyCode === 'IMK' ? 'PT IMK' : 'PT Dentelle Jaya Infinitex');
 
     const payload = {
-      nik: cleanNik,
+      nip: cleanNip,
+      nik: cleanNip,
       name: cleanName,
       companyCode,
       companyName,
@@ -135,7 +136,7 @@ export default function EmployeeMasterView() {
             className="flex items-center gap-1.5 px-4 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-md transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
           >
             <Plus className="w-4 h-4" />
-            Tambah Karyawan
+            Tambah Pegawai
           </button>
         ) : (
           <span className="text-xs font-bold px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center gap-1.5">
@@ -148,24 +149,24 @@ export default function EmployeeMasterView() {
       {/* Table */}
       <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
         <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
-          <div><h3 className="text-sm font-bold text-slate-900 dark:text-white">Daftar karyawan</h3><p className="mt-0.5 text-xs text-slate-600 dark:text-slate-300">{filteredEmployees.length} karyawan ditampilkan</p></div>
-          <label className="relative w-full sm:w-96"><span className="sr-only">Cari karyawan berdasarkan nama, NIK, atau departemen</span><Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" aria-hidden="true" /><input type="search" placeholder="Cari nama, NIK, departemen, atau jabatan" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full rounded-md border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-white" /></label>
+          <div><h3 className="text-sm font-bold text-slate-900 dark:text-white">Daftar Pegawai</h3><p className="mt-0.5 text-xs text-slate-600 dark:text-slate-300">{filteredEmployees.length} pegawai ditampilkan</p></div>
+          <label className="relative w-full sm:w-96"><span className="sr-only">Cari pegawai berdasarkan nama, NIP, atau departemen</span><Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" aria-hidden="true" /><input type="search" placeholder="Cari nama, NIP, departemen, atau jabatan" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full rounded-md border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-white" /></label>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1180px] table-fixed text-left border-collapse text-sm">
             <colgroup><col className="w-[21%]" /><col className="w-[8%]" /><col className="w-[9%]" /><col className="w-[14%]" /><col className="w-[18%]" /><col className="w-[17%]" /><col className="w-[7%]" /><col className="w-[6%]" /></colgroup>
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                <th className="py-3 px-4">Karyawan</th><th className="py-3 px-3">PT</th><th className="py-3 px-3">Dept.</th><th className="py-3 px-3">Jabatan</th><th className="py-3 px-3">Email</th><th className="py-3 px-3">Role akses</th><th className="py-3 px-3">Status</th><th className="py-3 px-3 text-right">Aksi</th>
+                <th className="py-3 px-4">Pegawai (Nama & NIP)</th><th className="py-3 px-3">PT</th><th className="py-3 px-3">Dept.</th><th className="py-3 px-3">Jabatan</th><th className="py-3 px-3">Email</th><th className="py-3 px-3">Role akses</th><th className="py-3 px-3">Status</th><th className="py-3 px-3 text-right">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {filteredEmployees.length === 0 ? <tr><td colSpan={8} className="px-6 py-12 text-center text-sm text-slate-600 dark:text-slate-300">{searchTerm ? 'Tidak ada karyawan yang cocok dengan pencarian.' : 'Belum ada karyawan untuk perusahaan ini.'}</td></tr> : filteredEmployees.map((emp, idx) => {
-                const empNik = String(emp.nik || '').trim().toUpperCase();
+              {filteredEmployees.length === 0 ? <tr><td colSpan={8} className="px-6 py-12 text-center text-sm text-slate-600 dark:text-slate-300">{searchTerm ? 'Tidak ada pegawai yang cocok dengan pencarian.' : 'Belum ada pegawai untuk perusahaan ini.'}</td></tr> : filteredEmployees.map((emp, idx) => {
+                const empNik = String(emp.nip || emp.nik || '').trim().toUpperCase();
                 const empComp = String(empNik.startsWith('UMI') ? 'UMI' : empNik.startsWith('IMK') ? 'IMK' : empNik === '123463' ? 'ALL' : (emp.companyCode || emp.company_code || 'DJI')).toUpperCase();
                 return (
-                <tr key={emp?.id || emp?.nik || idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
-                  <td className="py-4 px-4"><div className="font-semibold text-slate-900 dark:text-slate-100">{String(emp?.name || '')}</div><div className="mt-1 font-mono text-xs text-slate-600 dark:text-slate-400">{String(emp?.nik || '')}</div></td>
+                <tr key={emp?.id || emp?.nip || emp?.nik || idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                  <td className="py-4 px-4"><div className="font-semibold text-slate-900 dark:text-slate-100">{String(emp?.name || '')}</div><div className="mt-1 font-mono text-xs text-slate-600 dark:text-slate-400">NIP: {String(emp?.nip || emp?.nik || '')}</div></td>
                   <td className="py-4 px-3">
                     <span className={`px-2 py-0.5 rounded font-mono font-bold text-[10px] ${
                       empComp === 'UMI'
@@ -261,20 +262,20 @@ export default function EmployeeMasterView() {
         <Modal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          title={editingEmployee ? "Edit Data Karyawan" : "Tambah Karyawan Baru"}
+          title={editingEmployee ? "Edit Data Pegawai" : "Tambah Pegawai Baru"}
           maxWidth="max-w-lg"
         >
           <form onSubmit={handleSubmit} className="space-y-4 text-xs">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">NIK *</label>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">NIP (Nomor Induk Pegawai) *</label>
                 <input
                   type="text"
                   required
-                  value={nik}
-                  onChange={(e) => setNik(e.target.value)}
+                  value={nip}
+                  onChange={(e) => setNip(e.target.value)}
                   className="w-full p-2.5 border rounded-lg dark:bg-slate-800 font-mono text-xs"
-                  placeholder="DJI012548"
+                  placeholder="Contoh: DJI012548"
                 />
               </div>
               <div>

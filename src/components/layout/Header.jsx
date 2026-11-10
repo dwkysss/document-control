@@ -48,29 +48,30 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
     const sourceMap = new Map();
     // 1. Masukkan semua akun standar (DJI, IMK, UMI, ALL) dari initialData
     (initialEmployees || []).forEach(e => {
-      const canonicalComp = e.nik?.startsWith('UMI')
+      const empNip = e.nip || e.nik;
+      const canonicalComp = empNip?.startsWith('UMI')
         ? 'UMI'
-        : e.nik?.startsWith('IMK')
+        : empNip?.startsWith('IMK')
         ? 'IMK'
-        : e.nik === '123463'
+        : empNip === '123463'
         ? 'ALL'
         : (e.companyCode || 'DJI');
-      sourceMap.set(String(e.nik || '').trim(), { ...e, companyCode: canonicalComp });
+      sourceMap.set(String(empNip || '').trim(), { ...e, companyCode: canonicalComp });
     });
 
     // 2. Tumpuk dengan state allEmployees / employees jika ada personil tambahan
     (allEmployees || employees || []).forEach(e => {
-      const nik = String(e?.nik || '').trim();
-      if (nik) {
-        const canonicalComp = nik.startsWith('UMI')
+      const nip = String(e?.nip || e?.nik || '').trim();
+      if (nip) {
+        const canonicalComp = nip.startsWith('UMI')
           ? 'UMI'
-          : nik.startsWith('IMK')
+          : nip.startsWith('IMK')
           ? 'IMK'
-          : nik === '123463'
+          : nip === '123463'
           ? 'ALL'
           : (e.companyCode || 'DJI');
-        const prev = sourceMap.get(nik) || {};
-        sourceMap.set(nik, { ...prev, ...e, companyCode: canonicalComp });
+        const prev = sourceMap.get(nip) || {};
+        sourceMap.set(nip, { ...prev, ...e, companyCode: canonicalComp });
       }
     });
 
@@ -169,8 +170,9 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <button
             onClick={onToggleSidebar}
-            className="p-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition active:scale-95 border border-slate-200/60 dark:border-slate-700/60 shadow-2xs flex-shrink-0"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition active:scale-95 border border-slate-200/60 dark:border-slate-700/60 shadow-2xs flex-shrink-0"
             title="Toggle Sidebar"
+            aria-label="Toggle Sidebar"
           >
             <Menu className="w-4 h-4" />
           </button>
@@ -181,7 +183,7 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
             <h1 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white tracking-tight font-sans truncate">
               {getPageTitle()}
             </h1>
-            <nav className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-400 font-medium truncate">
+            <nav className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate">
               {breadcrumbs.map((crumb, idx) => (
                 <React.Fragment key={idx}>
                   {idx > 0 && <span className="text-slate-300 dark:text-slate-600">&gt;</span>}
@@ -320,12 +322,13 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
           <div className="relative" ref={notifRef}>
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="relative p-2 text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/50 dark:border-slate-800 transition"
+              className="relative min-w-[44px] min-h-[44px] flex items-center justify-center p-2 text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/50 dark:border-slate-800 transition"
               title="Notifikasi Sistem"
+              aria-label="Notifikasi Sistem"
             >
               <Bell className="w-4 h-4" />
               {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-xs animate-pulse">
+                <span className="absolute 1.5 -top-0.5 -right-0.5 min-w-4 h-4 px-1 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-xs animate-pulse">
                   {unreadCount}
                 </span>
               )}
@@ -461,7 +464,7 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
                   </div>
                   <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400 font-mono">
                     <Shield className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                    <span>NIK: {currentUser.nik}</span>
+                    <span>NIP: {currentUser.nip || currentUser.nik}</span>
                     <span className="text-slate-300 dark:text-slate-700">&bull;</span>
                     <span>Dept: {currentUser.department}</span>
                   </div>
@@ -532,7 +535,8 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
                       </div>
                     ) : (
                       demoEmployeesList.map(emp => {
-                      const empComp = (emp.companyCode || (emp.nik?.startsWith('UMI') ? 'UMI' : emp.nik?.startsWith('IMK') ? 'IMK' : (emp.nik === '123463' ? 'ALL' : 'DJI'))).toUpperCase();
+                      const empId = emp.nip || emp.nik || '';
+                      const empComp = (emp.companyCode || (empId.startsWith('UMI') ? 'UMI' : empId.startsWith('IMK') ? 'IMK' : (empId === '123463' ? 'ALL' : 'DJI'))).toUpperCase();
                       const badgeClass = empComp === 'UMI'
                         ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300'
                         : empComp === 'IMK'
@@ -543,7 +547,7 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
 
                       return (
                         <button
-                          key={emp.id || emp.nik}
+                          key={emp.id || emp.nip || emp.nik}
                           onClick={() => {
                             setCurrentUser(emp);
                             if (empComp && empComp !== 'ALL') {
@@ -558,7 +562,7 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
                             showToast(`Beralih ke ${emp.name} [${empComp}] (${emp.position})`, 'info');
                           }}
                           className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition cursor-pointer ${
-                            currentUser.id === emp.id || currentUser.nik === emp.nik
+                            currentUser.id === emp.id || (currentUser.nip || currentUser.nik) === (emp.nip || emp.nik)
                               ? 'bg-blue-50 text-blue-700 font-bold dark:bg-blue-950 dark:text-blue-300'
                               : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
                           }`}
@@ -570,11 +574,11 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
                               </span>
                               <span className="truncate">{emp.name}</span>
                             </div>
-                            <div className="text-[10px] text-slate-400 font-normal truncate mt-0.5">
-                              NIP: {emp.nik} • {emp.position}
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal truncate mt-0.5">
+                              NIP: {emp.nip || emp.nik} • {emp.position}
                             </div>
                           </div>
-                          {(currentUser.id === emp.id || currentUser.nik === emp.nik) && <Check className="w-4 h-4 text-blue-600 flex-shrink-0" />}
+                          {(currentUser.id === emp.id || (currentUser.nip || currentUser.nik) === (emp.nip || emp.nik)) && <Check className="w-4 h-4 text-blue-600 flex-shrink-0" />}
                         </button>
                       );
                     })

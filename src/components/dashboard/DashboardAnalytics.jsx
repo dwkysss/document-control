@@ -351,7 +351,7 @@ export default function DashboardAnalytics({
                       <span className="text-2xl font-black font-mono text-slate-900 dark:text-white">
                         {totalDocs}
                       </span>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                         Master
                       </span>
                     </div>

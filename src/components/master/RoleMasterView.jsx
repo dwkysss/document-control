@@ -218,7 +218,7 @@ export default function RoleMasterView() {
     const members = getEmployeesForRole(role.id);
     const matchesMember = members.some(m =>
       String(m.name || '').toLowerCase().includes(term) ||
-      String(m.nik || '').toLowerCase().includes(term) ||
+      String(m.nip || m.nik || '').toLowerCase().includes(term) ||
       String(m.department || '').toLowerCase().includes(term)
     );
 
@@ -829,7 +829,7 @@ export default function RoleMasterView() {
                   </div>
                 ) : (
                   getEmployeesForRole(selectedRoleDetail.id).map(emp => (
-                    <div key={emp.id || emp.nik} className="p-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+                    <div key={emp.id || emp.nip || emp.nik} className="p-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800 transition">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center">
                           {String(emp.name || 'U')
@@ -845,7 +845,7 @@ export default function RoleMasterView() {
                             {emp.name}
                           </div>
                           <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                            NIK: <span className="font-mono">{emp.nik}</span> • {emp.position}
+                            NIP: <span className="font-mono">{emp.nip || emp.nik}</span> • {emp.position}
                           </div>
                         </div>
                       </div>

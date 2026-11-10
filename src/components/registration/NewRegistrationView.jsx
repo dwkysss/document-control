@@ -73,7 +73,8 @@ export default function NewRegistrationView() {
 
   // Creator automatically locked to logged-in user session
   const activeCreator = currentUser || employees?.[0] || {
-    name: `Karyawan ${targetCompany}`,
+    name: `Pegawai ${targetCompany}`,
+    nip: '-',
     nik: '-',
     position: 'Staff',
     department: 'PRODUKSI',
@@ -102,10 +103,11 @@ export default function NewRegistrationView() {
     const addedKeys = new Set();
     const sourceEmps = allEmployees?.length > 0 ? allEmployees : (employees || []);
 
-    // Filter seluruh karyawan aktif hanya dari perusahaan yang bersangkutan
+    // Filter seluruh pegawai aktif hanya dari perusahaan yang bersangkutan
     const companyEmps = sourceEmps.filter(e => {
       if (e.status === 'Nonaktif') return false;
-      const empComp = (e.companyCode || (e.nik?.startsWith('UMI') ? 'UMI' : e.nik?.startsWith('IMK') ? 'IMK' : 'DJI')).toUpperCase();
+      const empId = e.nip || e.nik;
+      const empComp = (e.companyCode || (empId?.startsWith('UMI') ? 'UMI' : empId?.startsWith('IMK') ? 'IMK' : 'DJI')).toUpperCase();
       return empComp === targetCompany;
     });
 
@@ -162,7 +164,8 @@ export default function NewRegistrationView() {
 
     const companyEmps = sourceEmps.filter(e => {
       if (e.status === 'Nonaktif') return false;
-      const empComp = (e.companyCode || (e.nik?.startsWith('UMI') ? 'UMI' : e.nik?.startsWith('IMK') ? 'IMK' : 'DJI')).toUpperCase();
+      const empId = e.nip || e.nik;
+      const empComp = (e.companyCode || (empId?.startsWith('UMI') ? 'UMI' : empId?.startsWith('IMK') ? 'IMK' : 'DJI')).toUpperCase();
       if (isLevel1) {
         // Dokumen Level 1 (Policy) mengizinkan MR Unit dan Pengesahan Akhir Direksi Holding
         return empComp === targetCompany || empComp === 'ALL' || empComp === 'DJI';
@@ -183,7 +186,7 @@ export default function NewRegistrationView() {
   }, [allEmployees, employees, targetCompany, selectedType, documentTypes]);
 
   // Smart routing: tentukan Reviewer otomatis berdasarkan Level Dokumen ISO & PT bersangkutan
-  const getDefaultReviewerNik = (deptCode, typeCode) => {
+  const getDefaultReviewerNip = (deptCode, typeCode) => {
     const docType = (documentTypes || []).find(t => t.code === (typeCode || selectedType));
     const level = docType?.level || 2;
     const cleanDept = (deptCode || selectedDept || '').toUpperCase();
@@ -195,12 +198,12 @@ export default function NewRegistrationView() {
           (e.position || '').toUpperCase().includes('MANAGEMENT REPRESENTATIVE') ||
           e.role === 'approver'
       );
-      if (mr) return mr.nik;
+      if (mr) return mr.nip || mr.nik;
     }
 
     // 1. Cari reviewer yang departemennya sesuai dalam PT yang dipilih
     const deptMatch = availableReviewers.find(r => (r.department || '').toUpperCase() === cleanDept);
-    if (deptMatch) return deptMatch.nik;
+    if (deptMatch) return deptMatch.nip || deptMatch.nik;
 
     // 2. Jika belum ada kepala seksi di departemen ini, alihkan ke MR unit terkait
     const mr = availableReviewers.find(r =>
@@ -208,41 +211,41 @@ export default function NewRegistrationView() {
       (r.position || '').toUpperCase().includes('MR') ||
       r.role === 'approver'
     );
-    if (mr) return mr.nik;
+    if (mr) return mr.nip || mr.nik;
 
-    if (availableReviewers.length > 0) return availableReviewers[0].nik;
+    if (availableReviewers.length > 0) return availableReviewers[0].nip || availableReviewers[0].nik;
 
     if (targetCompany === 'UMI') return 'UMI01001';
     if (targetCompany === 'IMK') return 'IMK01001';
     return 'DJI022203';
   };
 
-  const [selectedReviewerNik, setSelectedReviewerNik] = useState(() => getDefaultReviewerNik(selectedDept, selectedType));
+  const [selectedReviewerNip, setSelectedReviewerNip] = useState(() => getDefaultReviewerNip(selectedDept, selectedType));
 
   useEffect(() => {
-    const suggestedNik = getDefaultReviewerNik(selectedDept, selectedType);
-    if (availableReviewers.some(r => r.nik === suggestedNik) || availableApprovers.some(a => a.nik === suggestedNik)) {
-      setSelectedReviewerNik(suggestedNik);
+    const suggestedNip = getDefaultReviewerNip(selectedDept, selectedType);
+    if (availableReviewers.some(r => (r.nip || r.nik) === suggestedNip) || availableApprovers.some(a => (a.nip || a.nik) === suggestedNip)) {
+      setSelectedReviewerNip(suggestedNip);
     } else if (availableReviewers.length > 0) {
-      setSelectedReviewerNik(availableReviewers[0].nik);
+      setSelectedReviewerNip(availableReviewers[0].nip || availableReviewers[0].nik);
     }
   }, [selectedDept, selectedType, availableReviewers, availableApprovers, targetCompany]);
 
-  const activeReviewer = availableReviewers.find(r => r.nik === selectedReviewerNik) ||
-    availableApprovers.find(a => a.nik === selectedReviewerNik) ||
+  const activeReviewer = availableReviewers.find(r => (r.nip || r.nik) === selectedReviewerNip) ||
+    availableApprovers.find(a => (a.nip || a.nik) === selectedReviewerNip) ||
     availableReviewers[0] || (
       targetCompany === 'UMI'
-        ? { name: 'RATNA SARI', nik: 'UMI01001', position: 'MANAGER HRGA & MR (UMI)', department: 'HRGA', role: 'approver' }
+        ? { name: 'RATNA SARI', nip: 'UMI01001', nik: 'UMI01001', position: 'MANAGER HRGA & MR (UMI)', department: 'HRGA', role: 'approver' }
         : targetCompany === 'IMK'
-          ? { name: 'BAMBANG WIJAYA', nik: 'IMK01001', position: 'MANAGER HRGA & MR (IMK)', department: 'HRGA', role: 'approver' }
-          : { name: 'DEDE SUHENDA', nik: 'DJI022203', position: 'KEPALA BAGIAN PRODUKSI', department: 'PRODUKSI', role: 'reviewer' }
+          ? { name: 'BAMBANG WIJAYA', nip: 'IMK01001', nik: 'IMK01001', position: 'MANAGER HRGA & MR (IMK)', department: 'HRGA', role: 'approver' }
+          : { name: 'DEDE SUHENDA', nip: 'DJI022203', nik: 'DJI022203', position: 'KEPALA BAGIAN PRODUKSI', department: 'PRODUKSI', role: 'reviewer' }
     );
 
   // Hierarki Mutu ISO 9001:2015 Clause 7.5:
   // Level 1: General Manager / Direksi Holding
   // Level 2 & 5: Management Representative (MR) Unit Terkait
   // Level 3 & 4: Jalur Cepat (Fast-Track) — Cukup Kepala Departemen & Verifikasi DCO
-  const getDefaultApproverNik = (currentReviewerNik, typeCode) => {
+  const getDefaultApproverNip = (currentReviewerNip, typeCode) => {
     const docType = (documentTypes || []).find(t => t.code === (typeCode || selectedType));
     const level = docType?.level || 2;
 
@@ -253,60 +256,60 @@ export default function NewRegistrationView() {
           (a.position || '').toUpperCase().includes('GENERAL MANAGER') ||
           (a.position || '').toUpperCase().includes('DIREKSI')
       );
-      if (gm) return gm.nik;
+      if (gm) return gm.nip || gm.nik;
     } else if (level === 2 || level === 5) {
       // Level 2 (SOP) & Level 5 (EXT): Management Representative (MR) Unit
       const mr = availableApprovers.find(
         a => (a.position || '').toUpperCase().includes('MR') || a.role === 'approver'
       );
-      if (currentReviewerNik && mr && mr.nik === currentReviewerNik) {
-        const altApprover = availableApprovers.find(e => e.nik !== currentReviewerNik);
-        if (altApprover) return altApprover.nik;
+      if (currentReviewerNip && mr && (mr.nip || mr.nik) === currentReviewerNip) {
+        const altApprover = availableApprovers.find(e => (e.nip || e.nik) !== currentReviewerNip);
+        if (altApprover) return altApprover.nip || altApprover.nik;
       }
-      if (mr) return mr.nik;
+      if (mr) return mr.nip || mr.nik;
     } else if (level === 3 || level === 4) {
       // Level 3 (IK) & Level 4 (Formulir): Pengesahan teknis cukup Kepala Departemen bersangkutan
-      if (currentReviewerNik) return currentReviewerNik;
+      if (currentReviewerNip) return currentReviewerNip;
     }
 
     const mr = availableApprovers.find(
       a => (a.position || '').toUpperCase().includes('MR') || a.role === 'approver'
     );
-    if (currentReviewerNik && mr && mr.nik === currentReviewerNik) {
-      const altApprover = availableApprovers.find(e => e.nik !== currentReviewerNik);
-      if (altApprover) return altApprover.nik;
+    if (currentReviewerNip && mr && (mr.nip || mr.nik) === currentReviewerNip) {
+      const altApprover = availableApprovers.find(e => (e.nip || e.nik) !== currentReviewerNip);
+      if (altApprover) return altApprover.nip || altApprover.nik;
     }
-    if (mr) return mr.nik;
-    if (availableApprovers.length > 0) return availableApprovers[0].nik;
+    if (mr) return mr.nip || mr.nik;
+    if (availableApprovers.length > 0) return availableApprovers[0].nip || availableApprovers[0].nik;
 
     if (targetCompany === 'UMI') return 'UMI01001';
     if (targetCompany === 'IMK') return 'IMK01001';
     return 'DJI012548';
   };
 
-  const [selectedApproverNik, setSelectedApproverNik] = useState(() =>
-    getDefaultApproverNik(getDefaultReviewerNik(selectedDept, selectedType), selectedType)
+  const [selectedApproverNip, setSelectedApproverNip] = useState(() =>
+    getDefaultApproverNip(getDefaultReviewerNip(selectedDept, selectedType), selectedType)
   );
 
   // Sync smart approver default when selected department or document type changes
   useEffect(() => {
-    const reviewerNik = getDefaultReviewerNik(selectedDept, selectedType);
-    const suggestedApproverNik = getDefaultApproverNik(reviewerNik, selectedType);
-    if (availableApprovers.some(a => a.nik === suggestedApproverNik) || availableReviewers.some(r => r.nik === suggestedApproverNik)) {
-      setSelectedApproverNik(suggestedApproverNik);
+    const reviewerNip = getDefaultReviewerNip(selectedDept, selectedType);
+    const suggestedApproverNip = getDefaultApproverNip(reviewerNip, selectedType);
+    if (availableApprovers.some(a => (a.nip || a.nik) === suggestedApproverNip) || availableReviewers.some(r => (r.nip || r.nik) === suggestedApproverNip)) {
+      setSelectedApproverNip(suggestedApproverNip);
     } else if (availableApprovers.length > 0) {
-      setSelectedApproverNik(availableApprovers[0].nik);
+      setSelectedApproverNip(availableApprovers[0].nip || availableApprovers[0].nik);
     }
   }, [selectedDept, selectedType, availableApprovers, availableReviewers, targetCompany]);
 
-  const activeApprover = availableApprovers.find(a => a.nik === selectedApproverNik) ||
-    availableReviewers.find(r => r.nik === selectedApproverNik) ||
+  const activeApprover = availableApprovers.find(a => (a.nip || a.nik) === selectedApproverNip) ||
+    availableReviewers.find(r => (r.nip || r.nik) === selectedApproverNip) ||
     availableApprovers[0] || (
       targetCompany === 'UMI'
-        ? { name: 'RATNA SARI', nik: 'UMI01001', position: 'MANAGER HRGA & MR (UMI)', department: 'HRGA', role: 'approver' }
+        ? { name: 'RATNA SARI', nip: 'UMI01001', nik: 'UMI01001', position: 'MANAGER HRGA & MR (UMI)', department: 'HRGA', role: 'approver' }
         : targetCompany === 'IMK'
-          ? { name: 'BAMBANG WIJAYA', nik: 'IMK01001', position: 'MANAGER HRGA & MR (IMK)', department: 'HRGA', role: 'approver' }
-          : { name: 'BABAN RACHMAT SUBAGJA', nik: 'DJI012548', position: 'MANAGER HRGA & MR (MANAGEMENT REPRESENTATIVE)', department: 'HRGA', role: 'approver' }
+          ? { name: 'BAMBANG WIJAYA', nip: 'IMK01001', nik: 'IMK01001', position: 'MANAGER HRGA & MR (IMK)', department: 'HRGA', role: 'approver' }
+          : { name: 'BABAN RACHMAT SUBAGJA', nip: 'DJI012548', nik: 'DJI012548', position: 'MANAGER HRGA & MR (MANAGEMENT REPRESENTATIVE)', department: 'HRGA', role: 'approver' }
     );
 
   const isDcoOrAdmin = currentUser?.role === 'doc_control' || currentUser?.role === 'admin';
@@ -374,17 +377,20 @@ export default function NewRegistrationView() {
       type: selectedType,
       department: selectedDept,
       creator: activeCreator.name,
-      creatorNik: activeCreator.nik,
+      creatorNip: activeCreator.nip || activeCreator.nik,
+      creatorNik: activeCreator.nip || activeCreator.nik,
       creatorPosition: activeCreator.position,
       seqNumber: nextSeq,
       revision: nextRev,
       verifierTeam: selectedVerifierTeam,
       targetReviewer: activeReviewer.name,
-      reviewerNik: activeReviewer.nik,
+      reviewerNip: activeReviewer.nip || activeReviewer.nik,
+      reviewerNik: activeReviewer.nip || activeReviewer.nik,
       reviewerName: activeReviewer.name,
       reviewerPosition: activeReviewer.position,
       targetApprover: isFastTrack ? activeReviewer.name : activeApprover.name,
-      approverNik: isFastTrack ? activeReviewer.nik : activeApprover.nik,
+      approverNip: isFastTrack ? (activeReviewer.nip || activeReviewer.nik) : (activeApprover.nip || activeApprover.nik),
+      approverNik: isFastTrack ? (activeReviewer.nip || activeReviewer.nik) : (activeApprover.nip || activeApprover.nik),
       approverName: isFastTrack ? activeReviewer.name : activeApprover.name,
       approverPosition: isFastTrack ? activeReviewer.position : activeApprover.position,
       notes: notes,
@@ -423,17 +429,20 @@ export default function NewRegistrationView() {
       type: selectedType,
       department: selectedDept,
       creator: activeCreator.name,
-      creatorNik: activeCreator.nik,
+      creatorNip: activeCreator.nip || activeCreator.nik,
+      creatorNik: activeCreator.nip || activeCreator.nik,
       creatorPosition: activeCreator.position,
       seqNumber: nextSeq,
       revision: nextRev,
       verifierTeam: selectedVerifierTeam,
       targetReviewer: activeReviewer.name,
-      reviewerNik: activeReviewer.nik,
+      reviewerNip: activeReviewer.nip || activeReviewer.nik,
+      reviewerNik: activeReviewer.nip || activeReviewer.nik,
       reviewerName: activeReviewer.name,
       reviewerPosition: activeReviewer.position,
       targetApprover: isFastTrack ? activeReviewer.name : activeApprover.name,
-      approverNik: isFastTrack ? activeReviewer.nik : activeApprover.nik,
+      approverNip: isFastTrack ? (activeReviewer.nip || activeReviewer.nik) : (activeApprover.nip || activeApprover.nik),
+      approverNik: isFastTrack ? (activeReviewer.nip || activeReviewer.nik) : (activeApprover.nip || activeApprover.nik),
       approverName: isFastTrack ? activeReviewer.name : activeApprover.name,
       approverPosition: isFastTrack ? activeReviewer.position : activeApprover.position,
       notes: notes,
@@ -605,7 +614,7 @@ export default function NewRegistrationView() {
                           </span>
                         </div>
                         <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate font-mono">
-                          NIP: {activeCreator.nik} • {activeCreator.department}
+                          NIP: {activeCreator.nip || activeCreator.nik} • {activeCreator.department}
                         </p>
                       </div>
                     </div>
@@ -761,16 +770,16 @@ export default function NewRegistrationView() {
                           </span>
                         </div>
                         <select
-                          value={selectedReviewerNik}
+                          value={selectedReviewerNip}
                           onChange={(e) => {
-                            const newNik = e.target.value;
-                            setSelectedReviewerNik(newNik);
-                            setSelectedApproverNik(newNik);
+                            const newNip = e.target.value;
+                            setSelectedReviewerNip(newNip);
+                            setSelectedApproverNip(newNip);
                           }}
                           className="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition shadow-sm"
                         >
                           {availableReviewers.map((emp) => (
-                            <option key={emp.nik} value={emp.nik}>
+                            <option key={emp.nip || emp.nik} value={emp.nip || emp.nik}>
                               {emp.name} - {emp.position} ({emp.department})
                             </option>
                           ))}
@@ -787,19 +796,19 @@ export default function NewRegistrationView() {
                               : 'Reviewer (Atasan Departemen)'} <span className="text-red-500">*</span>
                           </label>
                           <select
-                            value={selectedReviewerNik}
+                            value={selectedReviewerNip}
                             onChange={(e) => {
-                              const newReviewerNik = e.target.value;
-                              setSelectedReviewerNik(newReviewerNik);
-                              if (selectedApproverNik === newReviewerNik) {
-                                const alt = availableApprovers.find(a => a.nik !== newReviewerNik);
-                                if (alt) setSelectedApproverNik(alt.nik);
+                              const newReviewerNip = e.target.value;
+                              setSelectedReviewerNip(newReviewerNip);
+                              if (selectedApproverNip === newReviewerNip) {
+                                const alt = availableApprovers.find(a => (a.nip || a.nik) !== newReviewerNip);
+                                if (alt) setSelectedApproverNip(alt.nip || alt.nik);
                               }
                             }}
                             className="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition shadow-sm"
                           >
                             {(docLevel === 1 ? availableApprovers : availableReviewers).map((emp) => (
-                              <option key={emp.nik} value={emp.nik}>
+                              <option key={emp.nip || emp.nik} value={emp.nip || emp.nik}>
                                 {emp.name} - {emp.position} ({emp.department})
                               </option>
                             ))}
@@ -814,12 +823,12 @@ export default function NewRegistrationView() {
                               : 'Pengesah (Management Representative / MR)'} <span className="text-red-500">*</span>
                           </label>
                           <select
-                            value={selectedApproverNik}
-                            onChange={(e) => setSelectedApproverNik(e.target.value)}
+                            value={selectedApproverNip}
+                            onChange={(e) => setSelectedApproverNip(e.target.value)}
                             className="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition shadow-sm"
                           >
                             {availableApprovers.map((emp) => (
-                              <option key={emp.nik} value={emp.nik}>
+                              <option key={emp.nip || emp.nik} value={emp.nip || emp.nik}>
                                 {emp.name} - {emp.position} ({emp.department})
                               </option>
                             ))}
@@ -828,7 +837,7 @@ export default function NewRegistrationView() {
                       </div>
                     )}
 
-                    {!isFastTrack && selectedReviewerNik === selectedApproverNik && (
+                    {!isFastTrack && selectedReviewerNip === selectedApproverNip && (
                       <div className="p-2 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-lg flex items-start gap-2 text-xs text-amber-800 dark:text-amber-300">
                         <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-600 mt-0.5" />
                         <p className="leading-relaxed">

@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS public.document_types (
 -- 4. Employees Table (6 ISO Roles)
 CREATE TABLE IF NOT EXISTS public.employees (
   id TEXT PRIMARY KEY,
-  nik TEXT UNIQUE NOT NULL,
+  nip TEXT UNIQUE NOT NULL,
   company_code TEXT DEFAULT 'DJI',
   company_name TEXT DEFAULT 'PT Dentelle Jaya Infinitex',
   name TEXT NOT NULL,
@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS public.documents (
   type_name TEXT,
   department TEXT NOT NULL,
   creator TEXT NOT NULL,
-  creator_nik TEXT,
+  creator_nip TEXT,
   creator_position TEXT,
   seq_number TEXT NOT NULL,
   revision TEXT DEFAULT '00' NOT NULL,
@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
   id TEXT PRIMARY KEY,
   timestamp TEXT NOT NULL,
   user_name TEXT NOT NULL,
-  nik TEXT,
+  nip TEXT,
   company_code TEXT DEFAULT 'DJI',
   action TEXT NOT NULL,
   doc_number TEXT,

@@ -68,7 +68,8 @@ export default function DocumentRevisionFormView() {
 
     const companyEmps = sourceEmps.filter(e => {
       if (e.status === 'Nonaktif') return false;
-      const empComp = (e.companyCode || (e.nik?.startsWith('UMI') ? 'UMI' : e.nik?.startsWith('IMK') ? 'IMK' : 'DJI')).toUpperCase();
+      const empId = e.nip || e.nik;
+      const empComp = (e.companyCode || (empId?.startsWith('UMI') ? 'UMI' : empId?.startsWith('IMK') ? 'IMK' : 'DJI')).toUpperCase();
       return empComp === targetCompany;
     });
 
@@ -121,7 +122,7 @@ export default function DocumentRevisionFormView() {
   const isFastTrack = docLevel === 3 || docLevel === 4;
 
   // Routing otomatis Atasan berdasarkan Level Dokumen ISO & PT bersangkutan
-  const getDefaultReviewerNik = (deptCode, typeCode) => {
+  const getDefaultReviewerNip = (deptCode, typeCode) => {
     const docType = (documentTypes || []).find(t => t.code === (typeCode || currentDoc?.type));
     const level = docType?.level || 2;
     const cleanDept = (deptCode || currentDoc?.department || '').toUpperCase();
@@ -133,20 +134,20 @@ export default function DocumentRevisionFormView() {
              (e.position || '').toUpperCase().includes('MANAGEMENT REPRESENTATIVE') ||
              e.role === 'approver'
       );
-      if (mr) return mr.nik;
+      if (mr) return mr.nip || mr.nik;
     }
 
     const deptMatch = availableReviewers.find(r => (r.department || '').toUpperCase() === cleanDept);
-    if (deptMatch) return deptMatch.nik;
+    if (deptMatch) return deptMatch.nip || deptMatch.nik;
 
     const mr = availableReviewers.find(r =>
       (r.department || '').toUpperCase() === 'HRGA' ||
       (r.position || '').toUpperCase().includes('MR') ||
       r.role === 'approver'
     );
-    if (mr) return mr.nik;
+    if (mr) return mr.nip || mr.nik;
 
-    if (availableReviewers.length > 0) return availableReviewers[0].nik;
+    if (availableReviewers.length > 0) return availableReviewers[0].nip || availableReviewers[0].nik;
 
     if (targetCompany === 'UMI') return 'UMI01001';
     if (targetCompany === 'IMK') return 'IMK01001';
@@ -161,7 +162,8 @@ export default function DocumentRevisionFormView() {
 
     const companyEmps = sourceEmps.filter(e => {
       if (e.status === 'Nonaktif') return false;
-      const empComp = (e.companyCode || (e.nik?.startsWith('UMI') ? 'UMI' : e.nik?.startsWith('IMK') ? 'IMK' : 'DJI')).toUpperCase();
+      const empId = e.nip || e.nik;
+      const empComp = (e.companyCode || (empId?.startsWith('UMI') ? 'UMI' : empId?.startsWith('IMK') ? 'IMK' : 'DJI')).toUpperCase();
       if (isLevel1) {
         return empComp === targetCompany || empComp === 'ALL' || empComp === 'DJI';
       }
@@ -180,7 +182,7 @@ export default function DocumentRevisionFormView() {
     return companyEmps.length > 0 ? companyEmps : (employees || []);
   }, [allEmployees, employees, targetCompany, currentDoc?.type, documentTypes]);
 
-  const getDefaultApproverNik = (currentReviewerNik, typeCode) => {
+  const getDefaultApproverNip = (currentReviewerNip, typeCode) => {
     const docType = (documentTypes || []).find(t => t.code === (typeCode || currentDoc?.type));
     const level = docType?.level || 2;
 
@@ -190,40 +192,40 @@ export default function DocumentRevisionFormView() {
           (a.position || '').toUpperCase().includes('GENERAL MANAGER') ||
           (a.position || '').toUpperCase().includes('DIREKSI')
       );
-      if (gm) return gm.nik;
+      if (gm) return gm.nip || gm.nik;
     } else if (level === 2 || level === 5) {
       const mr = availableApprovers.find(
         a => (a.position || '').toUpperCase().includes('MR') || a.role === 'approver'
       );
-      if (currentReviewerNik && mr && mr.nik === currentReviewerNik) {
-        const altApprover = availableApprovers.find(e => e.nik !== currentReviewerNik);
-        if (altApprover) return altApprover.nik;
+      if (currentReviewerNip && mr && (mr.nip || mr.nik) === currentReviewerNip) {
+        const altApprover = availableApprovers.find(e => (e.nip || e.nik) !== currentReviewerNip);
+        if (altApprover) return altApprover.nip || altApprover.nik;
       }
-      if (mr) return mr.nik;
+      if (mr) return mr.nip || mr.nik;
     } else if (level === 3 || level === 4) {
-      if (currentReviewerNik) return currentReviewerNik;
+      if (currentReviewerNip) return currentReviewerNip;
     }
 
     const mrApprover = availableApprovers.find(e =>
       e.role === 'approver' || (e.position || '').toUpperCase().includes('MR')
     );
 
-    if (currentReviewerNik && mrApprover && mrApprover.nik === currentReviewerNik) {
-      const altApprover = availableApprovers.find(e => e.nik !== currentReviewerNik);
-      if (altApprover) return altApprover.nik;
+    if (currentReviewerNip && mrApprover && (mrApprover.nip || mrApprover.nik) === currentReviewerNip) {
+      const altApprover = availableApprovers.find(e => (e.nip || e.nik) !== currentReviewerNip);
+      if (altApprover) return altApprover.nip || altApprover.nik;
     }
 
-    if (mrApprover) return mrApprover.nik;
-    if (availableApprovers.length > 0) return availableApprovers[0].nik;
+    if (mrApprover) return mrApprover.nip || mrApprover.nik;
+    if (availableApprovers.length > 0) return availableApprovers[0].nip || availableApprovers[0].nik;
 
     if (targetCompany === 'UMI') return 'UMI01001';
     if (targetCompany === 'IMK') return 'IMK01001';
     return 'DJI012548';
   };
 
-  const [selectedReviewerNik, setSelectedReviewerNik] = useState(() => getDefaultReviewerNik(currentDoc?.department, currentDoc?.type));
-  const [selectedApproverNik, setSelectedApproverNik] = useState(() =>
-    getDefaultApproverNik(getDefaultReviewerNik(currentDoc?.department, currentDoc?.type), currentDoc?.type)
+  const [selectedReviewerNip, setSelectedReviewerNip] = useState(() => getDefaultReviewerNip(currentDoc?.department, currentDoc?.type));
+  const [selectedApproverNip, setSelectedApproverNip] = useState(() =>
+    getDefaultApproverNip(getDefaultReviewerNip(currentDoc?.department, currentDoc?.type), currentDoc?.type)
   );
 
   useEffect(() => {
@@ -238,38 +240,38 @@ export default function DocumentRevisionFormView() {
       setRevisedContent(currentDoc.content || '');
       setSelectedVerifierTeam(currentDoc.verifierTeam || systemSettings?.defaultVerifierTeam || 'Document Control Team');
       
-      const suggestedReviewerNik = getDefaultReviewerNik(currentDoc.department, currentDoc.type);
-      if (suggestedReviewerNik) {
-        setSelectedReviewerNik(suggestedReviewerNik);
+      const suggestedReviewerNip = getDefaultReviewerNip(currentDoc.department, currentDoc.type);
+      if (suggestedReviewerNip) {
+        setSelectedReviewerNip(suggestedReviewerNip);
       }
       
-      const suggestedApproverNik = getDefaultApproverNik(suggestedReviewerNik, currentDoc.type);
-      if (availableApprovers.some(a => a.nik === suggestedApproverNik) || availableReviewers.some(r => r.nik === suggestedApproverNik)) {
-        setSelectedApproverNik(suggestedApproverNik);
+      const suggestedApproverNip = getDefaultApproverNip(suggestedReviewerNip, currentDoc.type);
+      if (availableApprovers.some(a => (a.nip || a.nik) === suggestedApproverNip) || availableReviewers.some(r => (r.nip || r.nik) === suggestedApproverNip)) {
+        setSelectedApproverNip(suggestedApproverNip);
       } else if (availableApprovers.length > 0) {
-        setSelectedApproverNik(availableApprovers[0].nik);
+        setSelectedApproverNip(availableApprovers[0].nip || availableApprovers[0].nik);
       }
     }
   }, [targetDocId, currentDoc, availableReviewers, availableApprovers, targetCompany]);
 
-  const activeReviewer = availableReviewers.find(r => r.nik === selectedReviewerNik) ||
-    availableApprovers.find(a => a.nik === selectedReviewerNik) ||
+  const activeReviewer = availableReviewers.find(r => (r.nip || r.nik) === selectedReviewerNip) ||
+    availableApprovers.find(a => (a.nip || a.nik) === selectedReviewerNip) ||
     availableReviewers[0] || (
       targetCompany === 'UMI'
-        ? { name: 'RATNA SARI', nik: 'UMI01001', position: 'MANAGER HRGA & MR (UMI)', department: 'HRGA', role: 'approver' }
+        ? { name: 'RATNA SARI', nip: 'UMI01001', nik: 'UMI01001', position: 'MANAGER HRGA & MR (UMI)', department: 'HRGA', role: 'approver' }
         : targetCompany === 'IMK'
-        ? { name: 'BAMBANG WIJAYA', nik: 'IMK01001', position: 'MANAGER HRGA & MR (IMK)', department: 'HRGA', role: 'approver' }
-        : { name: 'DEDE SUHENDA', nik: 'DJI022203', position: 'KEPALA BAGIAN PRODUKSI', department: 'PRODUKSI', role: 'reviewer' }
+        ? { name: 'BAMBANG WIJAYA', nip: 'IMK01001', nik: 'IMK01001', position: 'MANAGER HRGA & MR (IMK)', department: 'HRGA', role: 'approver' }
+        : { name: 'DEDE SUHENDA', nip: 'DJI022203', nik: 'DJI022203', position: 'KEPALA BAGIAN PRODUKSI', department: 'PRODUKSI', role: 'reviewer' }
     );
 
-  const activeApprover = availableApprovers.find(a => a.nik === selectedApproverNik) ||
-    availableReviewers.find(r => r.nik === selectedApproverNik) ||
+  const activeApprover = availableApprovers.find(a => (a.nip || a.nik) === selectedApproverNip) ||
+    availableReviewers.find(r => (r.nip || r.nik) === selectedApproverNip) ||
     availableApprovers[0] || (
       targetCompany === 'UMI'
-        ? { name: 'RATNA SARI', nik: 'UMI01001', position: 'MANAGER HRGA & MR (UMI)', department: 'HRGA', role: 'approver' }
+        ? { name: 'RATNA SARI', nip: 'UMI01001', nik: 'UMI01001', position: 'MANAGER HRGA & MR (UMI)', department: 'HRGA', role: 'approver' }
         : targetCompany === 'IMK'
-        ? { name: 'BAMBANG WIJAYA', nik: 'IMK01001', position: 'MANAGER HRGA & MR (IMK)', department: 'HRGA', role: 'approver' }
-        : { name: 'BABAN RACHMAT SUBAGJA', nik: 'DJI012548', position: 'MANAGER HRGA & MR', department: 'HRGA', role: 'approver' }
+        ? { name: 'BAMBANG WIJAYA', nip: 'IMK01001', nik: 'IMK01001', position: 'MANAGER HRGA & MR (IMK)', department: 'HRGA', role: 'approver' }
+        : { name: 'BABAN RACHMAT SUBAGJA', nip: 'DJI012548', nik: 'DJI012548', position: 'MANAGER HRGA & MR', department: 'HRGA', role: 'approver' }
     );
 
   if (!currentDoc) {
@@ -302,11 +304,13 @@ export default function DocumentRevisionFormView() {
         changeDescription,
         verifierTeam: selectedVerifierTeam,
         targetReviewer: activeReviewer?.name,
-        reviewerNik: activeReviewer?.nik,
+        reviewerNip: activeReviewer?.nip || activeReviewer?.nik,
+        reviewerNik: activeReviewer?.nip || activeReviewer?.nik,
         reviewerName: activeReviewer?.name,
         reviewerPosition: activeReviewer?.position,
         targetApprover: isFastTrack ? activeReviewer?.name : (activeApprover?.name || 'DENI RAMDAN'),
-        approverNik: isFastTrack ? activeReviewer?.nik : (activeApprover?.nik || 'DJI092115'),
+        approverNip: isFastTrack ? (activeReviewer?.nip || activeReviewer?.nik) : (activeApprover?.nip || activeApprover?.nik || 'DJI092115'),
+        approverNik: isFastTrack ? (activeReviewer?.nip || activeReviewer?.nik) : (activeApprover?.nip || activeApprover?.nik || 'DJI092115'),
         approverName: isFastTrack ? activeReviewer?.name : (activeApprover?.name || 'DENI RAMDAN'),
         approverPosition: isFastTrack ? activeReviewer?.position : (activeApprover?.position || 'GENERAL MANAGER'),
         content: revisedContent,
@@ -510,16 +514,16 @@ export default function DocumentRevisionFormView() {
                           </span>
                         </div>
                         <select
-                          value={selectedReviewerNik}
+                          value={selectedReviewerNip}
                           onChange={(e) => {
-                            const newNik = e.target.value;
-                            setSelectedReviewerNik(newNik);
-                            setSelectedApproverNik(newNik);
+                            const newNip = e.target.value;
+                            setSelectedReviewerNip(newNip);
+                            setSelectedApproverNip(newNip);
                           }}
                           className="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition shadow-xs"
                         >
                           {availableReviewers.map((emp) => (
-                            <option key={emp.nik} value={emp.nik}>
+                            <option key={emp.nip || emp.nik} value={emp.nip || emp.nik}>
                               {emp.name} — {emp.position} ({emp.department})
                             </option>
                           ))}
@@ -535,19 +539,19 @@ export default function DocumentRevisionFormView() {
                               : 'Reviewer (Atasan Departemen)'} <span className="text-red-500">*</span>
                           </label>
                           <select
-                            value={selectedReviewerNik}
+                            value={selectedReviewerNip}
                             onChange={(e) => {
-                              const newReviewerNik = e.target.value;
-                              setSelectedReviewerNik(newReviewerNik);
-                              if (selectedApproverNik === newReviewerNik) {
-                                const alt = availableApprovers.find(a => a.nik !== newReviewerNik);
-                                if (alt) setSelectedApproverNik(alt.nik);
+                              const newReviewerNip = e.target.value;
+                              setSelectedReviewerNip(newReviewerNip);
+                              if (selectedApproverNip === newReviewerNip) {
+                                const alt = availableApprovers.find(a => (a.nip || a.nik) !== newReviewerNip);
+                                if (alt) setSelectedApproverNip(alt.nip || alt.nik);
                               }
                             }}
                             className="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition shadow-xs"
                           >
                             {(docLevel === 1 ? availableApprovers : availableReviewers).map((emp) => (
-                              <option key={emp.nik} value={emp.nik}>
+                              <option key={emp.nip || emp.nik} value={emp.nip || emp.nik}>
                                 {emp.name} — {emp.position} ({emp.department})
                               </option>
                             ))}
@@ -563,12 +567,12 @@ export default function DocumentRevisionFormView() {
                               : 'Pejabat Penyetuju'} <span className="text-red-500">*</span>
                           </label>
                           <select
-                            value={selectedApproverNik}
-                            onChange={(e) => setSelectedApproverNik(e.target.value)}
+                            value={selectedApproverNip}
+                            onChange={(e) => setSelectedApproverNip(e.target.value)}
                             className="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition shadow-xs"
                           >
                             {availableApprovers.map((emp) => (
-                              <option key={emp.nik} value={emp.nik}>
+                              <option key={emp.nip || emp.nik} value={emp.nip || emp.nik}>
                                 {emp.name} — {emp.position} ({emp.department})
                               </option>
                             ))}
@@ -577,7 +581,7 @@ export default function DocumentRevisionFormView() {
                       </div>
                     )}
 
-                    {!isFastTrack && selectedReviewerNik === selectedApproverNik && (
+                    {!isFastTrack && selectedReviewerNip === selectedApproverNip && (
                       <div className="p-2 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-lg flex items-start gap-2 text-xs text-amber-800 dark:text-amber-300">
                         <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
                         <p className="leading-relaxed">
@@ -816,7 +820,7 @@ export default function DocumentRevisionFormView() {
                   )}
                 </div>
 
-                {!isFastTrack && selectedReviewerNik === selectedApproverNik && (
+                {!isFastTrack && selectedReviewerNip === selectedApproverNip && (
                   <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center gap-1.5 text-[10px] text-amber-600 dark:text-amber-400">
                     <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                     <span>Reviewer & Approver sama: {activeReviewer?.name}</span>

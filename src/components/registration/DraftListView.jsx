@@ -53,10 +53,11 @@ export default function DraftListView() {
   // Helper untuk memeriksa kepemilikan berkas (ISO 9001 Segregation of Duties)
   const checkIsOwner = (doc) => {
     if (!currentUser || !doc) return false;
-    const userNik = (currentUser.nik || '').toUpperCase().trim();
+    const userNip = (currentUser.nip || currentUser.nik || '').toUpperCase().trim();
     const userName = (currentUser.name || '').toUpperCase().trim();
+    const docCreatorNip = (doc.creatorNip || doc.creatorNik || '').toUpperCase().trim();
     return Boolean(
-      (doc.creatorNik && doc.creatorNik.toUpperCase().trim() === userNik) ||
+      (docCreatorNip && docCreatorNip === userNip) ||
       (doc.creator && doc.creator.toUpperCase().trim() === userName)
     );
   };

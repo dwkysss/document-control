@@ -12,7 +12,7 @@ export function exportToExcel(data, fileName = 'Master_Document_Register') {
     'Judul Dokumen': doc.title,
     'Jenis Dokumen': doc.typeName || doc.type,
     'Departemen': doc.department,
-    'Pembuat': `${doc.creator} (${doc.creatorNik || '-'})`,
+    'Pembuat': `${doc.creator} (NIP: ${doc.creatorNip || doc.creatorNik || '-'})`,
     'Revisi': doc.revision,
     'Status': doc.status,
     'Tanggal Registrasi': doc.createdDate || '-',

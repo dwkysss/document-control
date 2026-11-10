@@ -216,7 +216,7 @@ export default function RevisionAuditReportView() {
       'No.': idx + 1,
       'Waktu Timestamp': log.timestamp,
       'Nama Pelaksana': log.user,
-      'NIK Pelaksana': log.nik || '-',
+      'NIP Pelaksana': log.nip || log.nik || '-',
       'Tindakan': log.action,
       'Nomor Dokumen': log.docNumber,
       'Judul Dokumen': log.docTitle,
@@ -277,7 +277,7 @@ export default function RevisionAuditReportView() {
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
             <input
               type="text"
-              placeholder="Cari user, NIK, nomor dokumen, judul, atau kata kunci..."
+              placeholder="Cari user, NIP, nomor dokumen, judul, atau kata kunci..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -363,7 +363,7 @@ export default function RevisionAuditReportView() {
                           {log.user}
                         </div>
                         <div className="text-[10px] text-slate-400 font-mono">
-                          NIK: {log.nik || '-'}
+                          NIP: {log.nip || log.nik || '-'}
                         </div>
                       </td>
 

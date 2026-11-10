@@ -176,7 +176,7 @@ export default function RejectedListView() {
                         </button>
 
                         {/* Opsi Hapus untuk Creator atau Admin */}
-                        {(isAdmin || (currentUser && (currentUser.name === doc.creator || currentUser.nik === doc.creatorNik))) && (
+                        {(isAdmin || (currentUser && (currentUser.name === doc.creator || (currentUser.nip || currentUser.nik) === (doc.creatorNip || doc.creatorNik)))) && (
                           <button
                             onClick={() => setDocToDelete(doc)}
                             className="p-1.5 text-rose-700 hover:text-rose-800 hover:bg-rose-50 rounded transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600"
