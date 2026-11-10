@@ -18,7 +18,7 @@ export default function ControlTowerHeader({
 
   const activeCompanyObj = (companies || []).find(c => c.code === activeCompanyCode);
   const activeCompanyName = activeCompanyCode === 'ALL'
-    ? 'Group Holding (Multi-PT)'
+    ? 'Document Control Center'
     : (activeCompanyObj?.name || (activeCompanyCode === 'UMI' ? 'PT Ultimo Moda Indotex' : activeCompanyCode === 'IMK' ? 'PT IMK' : (systemSettings?.companyName || 'PT Dentelle Jaya Infinitex')));
   // Time-based greeting
   const getGreeting = () => {
@@ -57,7 +57,7 @@ export default function ControlTowerHeader({
             {getGreeting()}, {currentUser?.name?.split(' ')[0] || 'Rekan'}!
           </h1>
           <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-            Selamat datang di <strong className="text-white font-semibold">{activeCompanyName} Document Control Center</strong>. 
+            Selamat datang di <strong className="text-white font-semibold">{activeCompanyCode === 'ALL' ? 'Document Control Center' : `${activeCompanyName} Document Control Center`}</strong>. 
             {isViewer
               ? ' Telusuri SOP, Instruksi Kerja, dan formulir operasional terkendali resmi yang berlaku.'
               : ' Pantau integritas siklus dokumen, status verifikasi, dan audit kepatuhan mutu secara real-time.'}

@@ -40,11 +40,6 @@ export default function Badge({ status, size = 'md' }) {
 
   return (
     <span className={`inline-flex items-center justify-center tracking-wider transition-all duration-150 ${sizeClasses[size] || sizeClasses.md} ${getStyle()}`}>
-      {normalized === 'AKTIF' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>}
-      {normalized === 'REVIEW' && <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mr-1.5 animate-ping"></span>}
-      {normalized === 'VERIFIKASI' && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5 animate-ping"></span>}
-      {normalized === 'APPROVAL' && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-1.5 animate-ping"></span>}
-      {(normalized === 'REVISI' || normalized === 'PERLU REVISI') && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5"></span>}
       {status}
     </span>
   );
@@ -66,8 +61,7 @@ export function CompanyBadge({ companyCode, size = 'sm' }) {
   };
 
   return (
-    <span className={`inline-flex items-center gap-1 font-mono font-bold rounded tracking-wider border px-1.5 py-0.5 text-[10px] ${getStyle()}`}>
-      <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70"></span>
+    <span className={`inline-flex items-center font-mono font-bold rounded tracking-wider border px-1.5 py-0.5 text-[10px] ${getStyle()}`}>
       {code}
     </span>
   );

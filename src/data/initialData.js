@@ -5,6 +5,7 @@ export const initialCompanies = [
     name: 'PT Dentelle Jaya Infinitex', 
     tagline: 'Dokumen Terkendali, Proses Lebih Pasti, Mutu Lebih Terjaga', 
     color: 'blue',
+    logoUrl: '/dji-logo.png',
     badgeColor: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800'
   },
   { 
@@ -13,6 +14,7 @@ export const initialCompanies = [
     name: 'PT Ultimo Moda Indotex', 
     tagline: 'Excellence in Fashion & Textile Manufacturing', 
     color: 'indigo',
+    logoUrl: null,
     badgeColor: 'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800'
   },
   { 
@@ -21,6 +23,7 @@ export const initialCompanies = [
     name: 'PT IMK', 
     tagline: 'High Quality Industrial Textile & Knitting', 
     color: 'emerald',
+    logoUrl: null,
     badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
   },
 ];

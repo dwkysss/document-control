@@ -375,6 +375,7 @@ export default function NewRegistrationView() {
       companyName: selectedCompanyObj.name,
       title: title.toUpperCase().trim(),
       type: selectedType,
+      typeName: (documentTypes || []).find(t => t.code === selectedType)?.name || (selectedType === 'IK' ? 'Instruksi Kerja (Work Instruction)' : 'Standar Operasional Prosedur'),
       department: selectedDept,
       creator: activeCreator.name,
       creatorNip: activeCreator.nip || activeCreator.nik,
@@ -427,6 +428,7 @@ export default function NewRegistrationView() {
       companyName: selectedCompanyObj.name,
       title: title.toUpperCase().trim(),
       type: selectedType,
+      typeName: (documentTypes || []).find(t => t.code === selectedType)?.name || (selectedType === 'IK' ? 'Instruksi Kerja (Work Instruction)' : 'Standar Operasional Prosedur'),
       department: selectedDept,
       creator: activeCreator.name,
       creatorNip: activeCreator.nip || activeCreator.nik,
@@ -471,9 +473,6 @@ export default function NewRegistrationView() {
                   <FileText className="w-4 h-4 text-sky-400" />
                   INFORMASI REGISTRASI DOKUMEN
                 </h2>
-                <p className="text-[11px] text-slate-300 mt-0.5">
-                  Standar Pengendalian Informasi Terdokumentasi ISO 9001:2015 Klausul 7.5
-                </p>
               </div>
               <span className="hidden sm:inline-flex text-xs font-mono font-semibold text-sky-200 bg-sky-500/20 border border-sky-400/30 px-3 py-1 rounded-lg">
                 Rev 00

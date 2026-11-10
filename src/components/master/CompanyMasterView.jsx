@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Building2, Plus, Edit, Trash2, Search, FileText, CheckCircle2, Shield } from 'lucide-react';
+import { Building2, Plus, Edit, Trash2, Search, FileText, CheckCircle2, Shield, Upload, Image as ImageIcon } from 'lucide-react';
 import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
 
@@ -12,6 +12,7 @@ export default function CompanyMasterView() {
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
   const [tagline, setTagline] = useState('');
+  const [logoUrl, setLogoUrl] = useState(null);
 
   const filtered = (companies || []).filter(c =>
     (c.code || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -25,6 +26,7 @@ export default function CompanyMasterView() {
     setCode('');
     setName('');
     setTagline('');
+    setLogoUrl(null);
     setIsModalOpen(true);
   };
 
@@ -33,7 +35,25 @@ export default function CompanyMasterView() {
     setCode(comp.code || '');
     setName(comp.name || '');
     setTagline(comp.tagline || '');
+    setLogoUrl(comp.logoUrl || (comp.code === 'DJI' ? '/dji-logo.png' : null));
     setIsModalOpen(true);
+  };
+
+  const handleLogoFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      showToast('Ukuran berkas logo maksimal 2 MB!', 'danger');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setLogoUrl(event.target.result);
+      showToast('Logo berhasil dimuat! Klik Simpan untuk menerapkan.', 'info');
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = (e) => {
@@ -65,14 +85,16 @@ export default function CompanyMasterView() {
       updateCompany(editingCompany.id, {
         code: cleanCode,
         name: cleanName,
-        tagline: tagline.trim()
+        tagline: tagline.trim(),
+        logoUrl: logoUrl || (cleanCode === 'DJI' ? '/dji-logo.png' : null)
       });
     } else {
       addCompany({
         code: cleanCode,
         name: cleanName,
         tagline: tagline.trim(),
-        color: cleanCode === 'DJI' ? 'blue' : cleanCode === 'UMI' ? 'indigo' : 'emerald'
+        color: cleanCode === 'DJI' ? 'blue' : cleanCode === 'UMI' ? 'indigo' : 'emerald',
+        logoUrl: logoUrl || null
       });
     }
 
@@ -160,14 +182,20 @@ export default function CompanyMasterView() {
             >
               <div className="space-y-4">
                 <div className="flex items-start justify-between">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-extrabold text-base text-white shadow-sm ${
-                    comp.code === 'DJI'
-                      ? 'bg-blue-600'
-                      : comp.code === 'UMI'
-                      ? 'bg-indigo-600'
-                      : 'bg-emerald-600'
-                  }`}>
-                    {comp.code}
+                  <div className="w-12 h-12 rounded-xl bg-white dark:bg-slate-800 p-1 flex items-center justify-center shadow-xs border border-slate-200 dark:border-slate-700 overflow-hidden shrink-0">
+                    {comp.logoUrl || (comp.code === 'DJI' ? '/dji-logo.png' : null) ? (
+                      <img
+                        src={comp.logoUrl || '/dji-logo.png'}
+                        alt={comp.name}
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <span className={`w-full h-full rounded-lg flex items-center justify-center font-black text-sm text-white ${
+                        comp.code === 'UMI' ? 'bg-indigo-600' : comp.code === 'IMK' ? 'bg-emerald-600' : 'bg-blue-600'
+                      }`}>
+                        {comp.code}
+                      </span>
+                    )}
                   </div>
 
                   {isAdmin && (
@@ -283,6 +311,48 @@ export default function CompanyMasterView() {
               placeholder="Contoh: Excellence in Textile & Garment Manufacturing"
               className="w-full p-2.5 border rounded-lg dark:bg-slate-800 dark:border-slate-700"
             />
+          </div>
+
+          {/* Logo Resmi Perusahaan */}
+          <div>
+            <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Logo Resmi Perusahaan
+            </label>
+            <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-200 dark:border-slate-700">
+              <div className="w-14 h-14 rounded-lg bg-white p-1 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
+                {logoUrl ? (
+                  <img src={logoUrl} alt="Preview Logo" className="w-full h-full object-contain" />
+                ) : (
+                  <Building2 className="w-6 h-6 text-slate-400" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0 space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-xs font-bold transition cursor-pointer shadow-2xs">
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>{logoUrl ? 'Ganti Logo' : 'Unggah Logo'}</span>
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                      onChange={handleLogoFileChange}
+                      className="hidden"
+                    />
+                  </label>
+                  {logoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setLogoUrl(null)}
+                      className="px-2.5 py-1.5 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-md transition font-semibold cursor-pointer"
+                    >
+                      Hapus
+                    </button>
+                  )}
+                </div>
+                <p className="text-[10px] text-slate-400 leading-tight">
+                  Format PNG, JPG, SVG, atau WebP (Maksimal 2 MB).
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-3 border-t">

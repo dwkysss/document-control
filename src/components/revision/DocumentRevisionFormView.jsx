@@ -54,7 +54,7 @@ export default function DocumentRevisionFormView() {
   const [revisedContent, setRevisedContent] = useState('');
   const [fileAttachment, setFileAttachment] = useState(null);
   const [showCustomApprover, setShowCustomApprover] = useState(false);
-  const isDcoOrAdmin = currentUser?.role === 'doc_control' || currentUser?.role === 'admin' || currentUser?.role === 'approver';
+  const isDcoOrAdmin = currentUser?.role === 'doc_control' || currentUser?.role === 'admin';
 
   const currentDoc = documents.find(d => d.id === targetDocId);
 

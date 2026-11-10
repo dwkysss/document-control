@@ -46,10 +46,64 @@ export function downloadBlobAsFile(blob, fileName) {
 }
 
 /**
+ * Mengubah kode tipe dokumen singkatan menjadi kepanjangan nama resmi standar ISO 9001
+ * Contoh: 'IK' -> 'INSTRUKSI KERJA (IK)', 'SOP' -> 'STANDAR OPERASIONAL PROSEDUR (SOP)'
+ */
+export function getDocumentTypeFullName(docData = {}) {
+  const typeCode = (docData.type || '').toUpperCase().trim();
+  const rawTypeName = (docData.typeName || '').trim();
+
+  // Mapping singkatan resmi ISO ke kepanjangan lengkapnya
+  const standardTypeMap = {
+    'IK': 'INSTRUKSI KERJA (IK)',
+    'SOP': 'STANDAR OPERASIONAL PROSEDUR (SOP)',
+    'FORM': 'FORMULIR KONTROL MUTU (FORM)',
+    'FRM': 'FORMULIR KONTROL MUTU (FRM)',
+    'FM': 'FORMULIR KONTROL MUTU (FM)',
+    'MEM': 'MEMO INTERNAL (MEM)',
+    'POL': 'KEBIJAKAN MUTU (POLICY)',
+    'WI': 'WORK INSTRUCTION (WI)',
+    'EXT': 'DOKUMEN EKSTERNAL (EXT)',
+    'JD': 'JOB DESCRIPTION (JD)',
+    'MM': 'MANUAL MUTU (MM)',
+    'PED': 'PEDOMAN MUTU (PED)',
+    'CP': 'CONTROL PLAN (CP)',
+    'KIK': 'INSTRUKSI KERJA KONTROL (KIK)',
+  };
+
+  // 1. Cek dari mapping kode utama
+  if (typeCode && standardTypeMap[typeCode]) {
+    return standardTypeMap[typeCode];
+  }
+
+  // 2. Jika ada typeName yang sudah panjang (misal 'Instruksi Kerja (Work Instruction)')
+  if (rawTypeName && rawTypeName.length > 3) {
+    const upperName = rawTypeName.toUpperCase();
+    if (typeCode && !upperName.includes(`(${typeCode})`)) {
+      return `${upperName} (${typeCode})`;
+    }
+    return upperName;
+  }
+
+  // 3. Fallback deteksi dari format nomor dokumen ISO (contoh: DJI-IK-IT-02-00)
+  if (docData.docNumber) {
+    const parts = docData.docNumber.split('-');
+    if (parts.length >= 2) {
+      const segmentCode = parts[1].toUpperCase().trim();
+      if (standardTypeMap[segmentCode]) {
+        return standardTypeMap[segmentCode];
+      }
+    }
+  }
+
+  return typeCode ? `${typeCode} — DOKUMEN TERKENDALI` : 'STANDAR OPERASIONAL PROSEDUR (SOP)';
+}
+
+/**
  * Stempel Kop Surat PT DJI, Watermark Keamanan, dan Matriks Tanda Tangan
  * langsung ke atas berkas PDF asli yang diunggah pengguna (mempertahankan seluruh halaman dokumen asli).
  */
-export async function stampOfficialLetterheadOnPDF(docData, systemSettings = {}, qrDataUrl = null) {
+export async function stampOfficialLetterheadOnPDF(docData, systemSettings = {}, qrDataUrl = null, options = {}) {
   const compCode = (docData.companyCode || (docData.docNumber?.startsWith('UMI') ? 'UMI' : docData.docNumber?.startsWith('IMK') ? 'IMK' : 'DJI')).toUpperCase();
   const companyName = docData.companyName || (
     compCode === 'UMI' ? 'PT ULTIMO MODA INDOTEX' :
@@ -63,39 +117,71 @@ export async function stampOfficialLetterheadOnPDF(docData, systemSettings = {},
   const fileTypeLower = (docData.fileType || '').toLowerCase();
   const fileUrl = docData.fileUrl || '';
 
-  // Deteksi apakah berkas adalah PDF asli
+  // Deteksi jenis berkas secara akurat (jangan anggap semua blob: adalah PDF)
+  const isExcel = Boolean(
+    fileTypeLower.includes('spreadsheet') ||
+    fileTypeLower.includes('excel') ||
+    fileTypeLower.includes('csv') ||
+    fileNameLower.endsWith('.xlsx') ||
+    fileNameLower.endsWith('.xls') ||
+    fileNameLower.endsWith('.csv')
+  );
+  const isWord = Boolean(
+    fileTypeLower.includes('word') ||
+    fileTypeLower.includes('document') ||
+    fileNameLower.endsWith('.docx') ||
+    fileNameLower.endsWith('.doc')
+  );
   const isPdf = Boolean(
-    fileUrl && (
+    !isExcel && !isWord && fileUrl && (
       fileUrl.startsWith('data:application/pdf') ||
       fileTypeLower === 'application/pdf' ||
       /\.pdf($|\?)/i.test(fileUrl) ||
-      fileNameLower.endsWith('.pdf') ||
-      fileUrl.startsWith('blob:')
+      fileNameLower.endsWith('.pdf')
     )
   );
 
-  // Jika memang tidak ada berkas PDF yang diunggah, baru buat PDF naskah standar ISO dari nol
+  // Jika memang tidak ada berkas PDF yang diunggah (misal Excel/Word/Text), buat PDF naskah standar ISO dari nol
   if (!isPdf) {
-    exportControlledDocumentPDF(docData, systemSettings, qrDataUrl);
+    const targetLogo = options?.logoUrl || docData.logoUrl || (compCode === 'DJI' ? '/dji-logo.png' : null);
+    const result = await exportControlledDocumentPDF(docData, systemSettings, qrDataUrl, {
+      ...options,
+      excelRows: options?.excelRows || docData.excelRows,
+      excelSheetName: options?.excelSheetName || docData.excelSheetName,
+      logoUrl: targetLogo,
+    });
+    if (options && options.returnBlob) {
+      return result;
+    }
     return officialFileName;
   }
 
   try {
-    // 1. Muat dokumen PDF asli pengguna (seluruh halaman dipertahankan utuh)
+    // 1. Muat dokumen PDF asli pengguna
     const originalPdfBytes = await getPdfBytes(fileUrl);
-    const pdfDoc = await PDFDocument.load(originalPdfBytes);
+    const srcDoc = await PDFDocument.load(originalPdfBytes);
+    const pdfDoc = await PDFDocument.create();
 
     const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-    // 2. Muat Logo Resmi PT DJI untuk Kop Surat HANYA jika dokumen milik PT DJI
+    // 2. Muat Logo Resmi Perusahaan untuk Kop Surat
     let logoImg = null;
-    if (compCode === 'DJI') {
+    const targetLogo = options?.logoUrl || docData.logoUrl || (compCode === 'DJI' ? '/dji-logo.png' : null);
+    if (targetLogo) {
       try {
-        const logoRes = await fetch('/dji-logo.png');
-        if (logoRes.ok) {
-          const logoBytes = await logoRes.arrayBuffer();
-          logoImg = await pdfDoc.embedPng(new Uint8Array(logoBytes));
+        if (targetLogo.startsWith('data:image/png')) {
+          const logoBytes = dataUrlToUint8Array(targetLogo);
+          logoImg = await pdfDoc.embedPng(logoBytes);
+        } else if (targetLogo.startsWith('data:image/jpeg') || targetLogo.startsWith('data:image/jpg')) {
+          const logoBytes = dataUrlToUint8Array(targetLogo);
+          logoImg = await pdfDoc.embedJpg(logoBytes);
+        } else if (targetLogo.startsWith('http') || targetLogo.startsWith('/')) {
+          const logoRes = await fetch(targetLogo);
+          if (logoRes.ok) {
+            const logoBytes = await logoRes.arrayBuffer();
+            logoImg = await pdfDoc.embedPng(new Uint8Array(logoBytes));
+          }
         }
       } catch (err) {
         console.warn('Could not load logo for PDF stamping:', err);
@@ -112,9 +198,6 @@ export async function stampOfficialLetterheadOnPDF(docData, systemSettings = {},
         console.warn('Failed to embed QR code in PDF stamp:', e);
       }
     }
-
-    const pages = pdfDoc.getPages();
-    const totalPages = pages.length;
 
     // Tentukan warna dan teks Watermark Terkendali
     let watermarkText = `CONTROLLED COPY - ${companyName}`;
@@ -133,340 +216,576 @@ export async function stampOfficialLetterheadOnPDF(docData, systemSettings = {},
       wmColor = rgb(0.85, 0.5, 0.1); // Amber
     }
 
-    // Proses SETIAP HALAMAN dari dokumen PDF asli pengguna
-    for (let i = 0; i < totalPages; i++) {
-      const page = pages[i];
-      const { width, height } = page.getSize();
+    // =========================================================================
+    // =========================================================================
+    // DUA PILIHAN TATA LETAK RESMI ISO 9001:
+    // 1. Mode 'cover'  : 1 Lembar Cover Depan ISO formal di Halaman 1, naskah asli di Hal 2+
+    // 2. Mode 'header' : Kop Surat resmi langsung disematkan di atas lembar naskah asli
+    // =========================================================================
+    const isCoverMode = options?.layoutMode === 'cover';
+    const shouldAddLetterhead = docData.includeLetterhead !== false;
+    const totalPages = srcDoc.getPageCount();
+    const finalTotalPages = isCoverMode ? totalPages + 1 : totalPages;
+    const embeddedPages = await pdfDoc.embedPages(srcDoc.getPages());
 
-      // A. Watermark Diagonal Transparan (Proporsional & Presisi di Titik Tengah Halaman)
+    // JIKA MODE COVER: Tambahkan 1 Lembar Halaman Cover Depan Formal ISO di Halaman 1
+    // Sesuai template grafis modern resmi: logo di kiri ujung atas, ornamen geometris sudut,
+    // plakat judul mengambang, nomor dokumen berbingkai, dan identitas perusahaan di kanan bawah.
+    if (isCoverMode) {
+      const firstSrcPage = srcDoc.getPage(0);
+      const { width: covW, height: covH } = firstSrcPage.getSize();
+      const coverPage = pdfDoc.addPage([covW, covH]);
+
+      // 1. Logo Perusahaan di Kiri Ujung Atas Cover
+      if (logoImg) {
+        const logoAspect = logoImg.width / logoImg.height;
+        const maxLogoW = 125;
+        const maxLogoH = 40;
+        let lW = maxLogoW;
+        let lH = lW / logoAspect;
+        if (lH > maxLogoH) {
+          lH = maxLogoH;
+          lW = lH * logoAspect;
+        }
+        coverPage.drawImage(logoImg, {
+          x: 36,
+          y: covH - 28 - lH,
+          width: lW,
+          height: lH,
+        });
+      } else if (compCode === 'UMI') {
+        coverPage.drawRectangle({
+          x: 36,
+          y: covH - 28 - 22,
+          width: 88,
+          height: 22,
+          color: rgb(79 / 255, 70 / 255, 229 / 255),
+        });
+        coverPage.drawText('ULTIMO MODA', {
+          x: 36 + 12,
+          y: covH - 28 - 15,
+          size: 8.5,
+          font: helveticaBold,
+          color: rgb(1, 1, 1),
+        });
+      } else if (compCode === 'IMK') {
+        coverPage.drawRectangle({
+          x: 36,
+          y: covH - 28 - 22,
+          width: 88,
+          height: 22,
+          color: rgb(5 / 255, 150 / 255, 105 / 255),
+        });
+        coverPage.drawText('PT IMK', {
+          x: 36 + 24,
+          y: covH - 28 - 15,
+          size: 8.5,
+          font: helveticaBold,
+          color: rgb(1, 1, 1),
+        });
+      } else {
+        coverPage.drawText(companyName, {
+          x: 36,
+          y: covH - 42,
+          size: 13,
+          font: helveticaBold,
+          color: rgb(16 / 255, 42 / 255, 78 / 255),
+        });
+      }
+
+      // 2. Helper Gambar Bilah Geometris Bersudut 45 Derajat
+      const drawCoverBar = (cx, cy, w, h, angleDeg, color) => {
+        const rad = ((-angleDeg) * Math.PI) / 180;
+        const cos = Math.cos(rad);
+        const sin = Math.sin(rad);
+        const hw = w / 2;
+        const hh = h / 2;
+        const pdfCx = cx;
+        const pdfCy = covH - cy;
+        const p1 = { x: pdfCx - hw * cos + hh * sin, y: pdfCy - hw * sin - hh * cos };
+        const p2 = { x: pdfCx + hw * cos + hh * sin, y: pdfCy + hw * sin - hh * cos };
+        const p3 = { x: pdfCx + hw * cos - hh * sin, y: pdfCy + hw * sin + hh * cos };
+        const p4 = { x: pdfCx - hw * cos - hh * sin, y: pdfCy - hw * sin + hh * cos };
+        const path = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y} L ${p3.x} ${p3.y} L ${p4.x} ${p4.y} Z`;
+        coverPage.drawSvgPath(path, { color });
+      };
+
+      // Ornamen Sudut Kanan Atas (Top-Right Geometric Accents)
+      drawCoverBar(550, 35, 260, 55, 45, rgb(0 / 255, 164 / 255, 228 / 255)); // Cyan Wedge
+      drawCoverBar(505, 80, 280, 20, 45, rgb(245 / 255, 166 / 255, 35 / 255)); // Gold/Amber Stripe
+      drawCoverBar(485, 155, 270, 76, 45, rgb(11 / 255, 37 / 255, 69 / 255)); // Dark Navy Block
+      drawCoverBar(440, 215, 220, 18, 45, rgb(0 / 255, 164 / 255, 228 / 255)); // Cyan Accent
+      drawCoverBar(535, 210, 120, 24, 45, rgb(0 / 255, 82 / 255, 155 / 255)); // Deep Blue Strip
+
+      // Ornamen Sudut Kiri Bawah (Bottom-Left Geometric Accents)
+      drawCoverBar(35, 805, 200, 60, 45, rgb(0 / 255, 82 / 255, 155 / 255)); // Deep Blue Base
+      drawCoverBar(85, 765, 260, 32, 45, rgb(0 / 255, 164 / 255, 228 / 255)); // Cyan Under-Bar
+      drawCoverBar(80, 695, 280, 82, 45, rgb(11 / 255, 37 / 255, 69 / 255)); // Dark Navy Block
+      drawCoverBar(95, 615, 310, 20, 45, rgb(245 / 255, 166 / 255, 35 / 255)); // Gold/Amber Stripe
+      drawCoverBar(45, 575, 230, 16, 45, rgb(0 / 255, 164 / 255, 228 / 255)); // Cyan Outer Stripe
+
+      // 3. Plakat Judul Mengambang di Tengah Halaman (Central Title Plaque)
+      const cardW = 430;
+      const cardH = 76;
+      const cardX = (covW - cardW) / 2;
+      const cardY = covH - 372 - cardH;
+
+      // Drop shadow halus di bawah plakat
+      coverPage.drawRectangle({
+        x: cardX + 2,
+        y: cardY - 2,
+        width: cardW,
+        height: cardH,
+        color: rgb(241 / 255, 245 / 255, 249 / 255),
+      });
+
+      // Plakat Putih Utama
+      coverPage.drawRectangle({
+        x: cardX,
+        y: cardY,
+        width: cardW,
+        height: cardH,
+        color: rgb(1, 1, 1),
+        borderColor: rgb(203 / 255, 213 / 255, 225 / 255),
+        borderWidth: 1.0,
+      });
+
+      // Bevel garis dalam halus
+      coverPage.drawRectangle({
+        x: cardX + 2.5,
+        y: cardY + 2.5,
+        width: cardW - 5,
+        height: cardH - 5,
+        borderColor: rgb(226 / 255, 232 / 255, 240 / 255),
+        borderWidth: 0.6,
+      });
+
+      // Tipe Dokumen (Bold, Underlined)
+      const typeFullName = getDocumentTypeFullName(docData).toUpperCase();
+      const typeW = helveticaBold.widthOfTextAtSize(typeFullName, 14);
+      coverPage.drawText(typeFullName, {
+        x: (covW - typeW) / 2,
+        y: cardY + cardH - 26,
+        size: 14,
+        font: helveticaBold,
+        color: rgb(15 / 255, 23 / 255, 42 / 255),
+      });
+
+      coverPage.drawLine({
+        start: { x: (covW - typeW) / 2, y: cardY + cardH - 29 },
+        end: { x: (covW + typeW) / 2, y: cardY + cardH - 29 },
+        color: rgb(15 / 255, 23 / 255, 42 / 255),
+        thickness: 1.2,
+      });
+
+      // Judul Dokumen (Bold)
+      const titleStr = (docData.title || 'DOKUMEN TERKENDALI').toUpperCase();
+      const titleW = helveticaBold.widthOfTextAtSize(titleStr, 16);
+      coverPage.drawText(titleStr, {
+        x: Math.max(cardX + 12, (covW - titleW) / 2),
+        y: cardY + cardH - 54,
+        size: 16,
+        font: helveticaBold,
+        color: rgb(30 / 255, 41 / 255, 59 / 255),
+      });
+
+      // 4. Kotak Nomor Dokumen Berbingkai (Framed Pill Box)
+      const pillW = 190;
+      const pillH = 36;
+      const pillX = (covW - pillW) / 2;
+      const pillY = cardY - 16 - pillH;
+
+      coverPage.drawRectangle({
+        x: pillX + 2,
+        y: pillY - 2,
+        width: pillW,
+        height: pillH,
+        color: rgb(241 / 255, 245 / 255, 249 / 255),
+      });
+
+      coverPage.drawRectangle({
+        x: pillX,
+        y: pillY,
+        width: pillW,
+        height: pillH,
+        color: rgb(1, 1, 1),
+        borderColor: rgb(203 / 255, 213 / 255, 225 / 255),
+        borderWidth: 1.0,
+      });
+
+      coverPage.drawRectangle({
+        x: pillX + 2,
+        y: pillY + 2,
+        width: pillW - 4,
+        height: pillH - 4,
+        borderColor: rgb(226 / 255, 232 / 255, 240 / 255),
+        borderWidth: 0.6,
+      });
+
+      const docNumStr = String(docData.docNumber || '-');
+      const docNumW = helveticaBold.widthOfTextAtSize(docNumStr, 14);
+      coverPage.drawText(docNumStr, {
+        x: (covW - docNumW) / 2,
+        y: pillY + 11,
+        size: 14,
+        font: helveticaBold,
+        color: rgb(15 / 255, 23 / 255, 42 / 255),
+      });
+
+      // 5. Nama Perusahaan di Kanan Bawah Cover
+      const compText = companyName.toUpperCase();
+      const compW = helvetica.widthOfTextAtSize(compText, 11);
+      coverPage.drawText(compText, {
+        x: covW - 36 - compW,
+        y: 38,
+        size: 11,
+        font: helvetica,
+        color: rgb(51 / 255, 65 / 255, 85 / 255),
+      });
+    }
+
+    for (let i = 0; i < totalPages; i++) {
+      const srcPage = srcDoc.getPage(i);
+      const { width, height } = srcPage.getSize();
+      const embeddedPage = embeddedPages[i];
+
+      const newPage = pdfDoc.addPage([width, height]);
+
+      const headerH = 62;
+      const footerH = 18;
+      const marginT = 12;
+      const marginB = 10;
+      const gap = 8;
+
+      let scale = 1.0;
+      let offsetX = 0;
+      let offsetY = 0;
+
+      if (isCoverMode) {
+        // Mode Cover: Naskah asli di halaman 2+ diberi running header tipis & footer rapi
+        const topLimit = height - 26;
+        const bottomLimit = marginB + footerH + gap;
+        const availH = topLimit - bottomLimit;
+        const availW = width - 24;
+
+        scale = Math.min(availW / width, availH / height);
+        const scaledW = width * scale;
+        const scaledH = height * scale;
+        offsetX = (width - scaledW) / 2;
+        offsetY = bottomLimit + (availH - scaledH) / 2;
+      } else if (shouldAddLetterhead) {
+        // Mode Header: Geser naskah asli ke bawah area Kop Surat
+        const topLimit = height - marginT - headerH - gap;
+        const bottomLimit = marginB + footerH + gap;
+        const availH = topLimit - bottomLimit;
+        const availW = width - 36;
+
+        scale = Math.min(availW / width, availH / height);
+        const scaledW = width * scale;
+        const scaledH = height * scale;
+        offsetX = (width - scaledW) / 2;
+        offsetY = bottomLimit + (availH - scaledH) / 2;
+      } else {
+        // Hanya beri sedikit margin bawah untuk footer
+        scale = (height - marginB - footerH - gap) / height;
+        const scaledW = width * scale;
+        const scaledH = height * scale;
+        offsetX = (width - scaledW) / 2;
+        offsetY = marginB + footerH + gap;
+      }
+
+      // 1. Gambar Naskah Asli yang telah diskalakan dan digeser secara proporsional
+      newPage.drawPage(embeddedPage, {
+        x: offsetX,
+        y: offsetY,
+        xScale: scale,
+        yScale: scale,
+      });
+
+      // 2. Watermark Pengendalian Mutu (Diagonal Transparan)
       const wmFontSize = Math.min(width, height) * 0.045;
       const wmTextWidth = helveticaBold.widthOfTextAtSize(watermarkText, wmFontSize);
-      // Proyeksi diagonal 45 derajat (cos(45) = sin(45) = ~0.7071)
       const halfDiagonalProj = (wmTextWidth * 0.7071) / 2;
       const wmX = width / 2 - halfDiagonalProj;
       const wmY = height / 2 - halfDiagonalProj;
 
-      page.drawText(watermarkText, {
+      newPage.drawText(watermarkText, {
         x: wmX,
         y: wmY,
         size: wmFontSize,
         font: helveticaBold,
         color: wmColor,
-        opacity: 0.08, // Dibuat halus/transparan agar teks dokumen tetap terbaca jernih
+        opacity: 0.07,
         rotate: degrees(45),
       });
 
-      // B. Footer Bar Kendali Mutu ISO (pada setiap halaman)
-      page.drawRectangle({
-        x: 18,
-        y: 10,
-        width: width - 36,
-        height: 18,
-        color: rgb(0.97, 0.98, 0.99),
-        borderColor: rgb(0.82, 0.88, 0.94),
-        borderWidth: 0.5,
-      });
-
-      page.drawText(`Dokumen Terkendali ${companyName} | No: ${docData.docNumber} | Rev: ${docData.revision} | Standar Mutu ISO 9001:2015`, {
-        x: 26,
-        y: 15.5,
-        size: 7,
-        font: helvetica,
-        color: rgb(0.4, 0.45, 0.55),
-      });
-
-      page.drawText(`Hal ${i + 1} dari ${totalPages}`, {
-        x: width - 82,
-        y: 15.5,
-        size: 7,
-        font: helveticaBold,
-        color: rgb(0.3, 0.35, 0.45),
-      });
-
-      // C. Kop Surat Terkendali Resmi PT DJI (Disematkan di Halaman 1)
-      if (i === 0) {
-        const headerH = 72;
-        const headerY = height - headerH - 10;
-        const headerW = width - 36;
-
-        // Masking putih solid untuk menutup total header/teks lama bawaan dokumen asli di area atas
-        page.drawRectangle({
-          x: 12,
-          y: headerY - 8,
-          width: width - 24,
-          height: height - (headerY - 8),
-          color: rgb(1, 1, 1),
+      // 3. JIKA MODE COVER: Running Header Tipis di Halaman 2+
+      if (isCoverMode) {
+        const runHeaderX = 18;
+        const runHeaderW = width - 36;
+        newPage.drawLine({
+          start: { x: runHeaderX, y: height - 20 },
+          end: { x: runHeaderX + runHeaderW, y: height - 20 },
+          color: rgb(0.88, 0.91, 0.96),
+          thickness: 0.6,
         });
+        newPage.drawText(`${companyName} | ${docData.docNumber} (Rev: ${docData.revision || '00'})`, {
+          x: runHeaderX,
+          y: height - 16,
+          size: 7,
+          font: helveticaBold,
+          color: rgb(0.39, 0.45, 0.55),
+        });
+        const titleSnippet = String(docData.title || '').toUpperCase().substring(0, 45);
+        const titleSnippetW = helvetica.widthOfTextAtSize(titleSnippet, 7);
+        newPage.drawText(titleSnippet, {
+          x: runHeaderX + runHeaderW - titleSnippetW,
+          y: height - 16,
+          size: 7,
+          font: helvetica,
+          color: rgb(0.39, 0.45, 0.55),
+        });
+      } else if (shouldAddLetterhead) {
+        // JIKA MODE HEADER: KOP SURAT RESMI DI ATAS DOKUMEN
+        const boxX = 18;
+        const boxY = height - marginT - headerH;
+        const boxW = width - 36;
 
-        // Bingkai Kotak Kop Surat Resmi
-        page.drawRectangle({
-          x: 18,
-          y: headerY,
-          width: headerW,
+        // Kop Surat Bersih & Modern (Borderless — tanpa kurungan kotak dan tanpa garis-garis vertikal)
+        newPage.drawRectangle({
+          x: boxX,
+          y: boxY,
+          width: boxW,
           height: headerH,
           color: rgb(1, 1, 1),
-          borderColor: rgb(0.06, 0.16, 0.3),
-          borderWidth: 1.2,
         });
 
-        // Vertical dividers (Kolom 1: Logo, Kolom 2: Judul, Kolom 3: Metadata + QR)
-        const col1W = 112;
-        const col2W = 246;
-        const col3W = headerW - col1W - col2W;
-
-        // Divider Kolom 1 & 2
-        page.drawLine({
-          start: { x: 18 + col1W, y: headerY },
-          end: { x: 18 + col1W, y: headerY + headerH },
-          color: rgb(0.06, 0.16, 0.3),
-          thickness: 1,
+        // Satu garis pemisah horizontal tipis dan bersih di bawah Kop Surat
+        newPage.drawLine({
+          start: { x: boxX, y: boxY - 2 },
+          end: { x: boxX + boxW, y: boxY - 2 },
+          color: rgb(0.88, 0.91, 0.96),
+          thickness: 0.8,
         });
 
-        // Divider Kolom 2 & 3
-        page.drawLine({
-          start: { x: 18 + col1W + col2W, y: headerY },
-          end: { x: 18 + col1W + col2W, y: headerY + headerH },
-          color: rgb(0.06, 0.16, 0.3),
-          thickness: 1,
-        });
+        const logoColW = 115;
+        const qrColW = 56;
+        const metaColW = 155;
+        const titleColW = boxW - logoColW - qrColW - metaColW;
 
-        // ================= KOLOM 1: IDENTITAS PERUSAHAAN (LOGO / BADGE RESMI) =================
+        // --- KOLOM 1: LOGO PERUSAHAAN ---
         if (logoImg) {
           const logoAspect = logoImg.width / logoImg.height;
-          const logoH = 34;
-          const logoW = Math.min(col1W - 16, logoH * logoAspect);
-          const logoX = 18 + (col1W - logoW) / 2;
-          const logoY = headerY + (headerH - logoH) / 2;
-
-          page.drawImage(logoImg, {
-            x: logoX,
-            y: logoY,
-            width: logoW,
-            height: logoH,
+          const maxLogoH = headerH - 16;
+          const maxLogoW = logoColW - 16;
+          let lW = maxLogoW;
+          let lH = lW / logoAspect;
+          if (lH > maxLogoH) {
+            lH = maxLogoH;
+            lW = lH * logoAspect;
+          }
+          newPage.drawImage(logoImg, {
+            x: boxX + (logoColW - lW) / 2,
+            y: boxY + (headerH - lH) / 2,
+            width: lW,
+            height: lH,
           });
-        } else if (compCode === 'IMK') {
-          // Badge Resmi PT IMK (Emerald)
-          const badgeW = 76;
-          const badgeH = 22;
-          const badgeX = 18 + (col1W - badgeW) / 2;
-          const badgeY = headerY + 36;
-
-          page.drawRectangle({
-            x: badgeX,
-            y: badgeY,
-            width: badgeW,
-            height: badgeH,
-            color: rgb(0.02, 0.58, 0.41),
-          });
-
-          const codeText = 'PT IMK';
-          const codeW = helveticaBold.widthOfTextAtSize(codeText, 11);
-          page.drawText(codeText, {
-            x: badgeX + (badgeW - codeW) / 2,
-            y: badgeY + 6.5,
-            size: 11,
-            font: helveticaBold,
-            color: rgb(1, 1, 1),
-          });
-
-          const subText = 'KNITTING & TEXTILE';
-          const subW = helvetica.widthOfTextAtSize(subText, 6.5);
-          page.drawText(subText, {
-            x: 18 + (col1W - subW) / 2,
-            y: headerY + 18,
-            size: 6.5,
-            font: helveticaBold,
-            color: rgb(0.06, 0.16, 0.3),
-          });
-        } else if (compCode === 'UMI') {
-          // Badge Resmi PT Ultimo Moda Indotex (Indigo)
-          const badgeW = 88;
-          const badgeH = 22;
-          const badgeX = 18 + (col1W - badgeW) / 2;
-          const badgeY = headerY + 36;
-
-          page.drawRectangle({
-            x: badgeX,
-            y: badgeY,
-            width: badgeW,
-            height: badgeH,
+        } else if (compCode === "UMI") {
+          newPage.drawRectangle({
+            x: boxX + 16,
+            y: boxY + headerH - 28,
+            width: 82,
+            height: 18,
             color: rgb(0.31, 0.27, 0.90),
           });
-
-          const codeText = 'ULTIMO MODA';
-          const codeW = helveticaBold.widthOfTextAtSize(codeText, 9.5);
-          page.drawText(codeText, {
-            x: badgeX + (badgeW - codeW) / 2,
-            y: badgeY + 6.5,
-            size: 9.5,
+          newPage.drawText("ULTIMO MODA", {
+            x: boxX + 22,
+            y: boxY + headerH - 22,
+            size: 8,
             font: helveticaBold,
             color: rgb(1, 1, 1),
           });
-
-          const subText = 'PT ULTIMO MODA INDOTEX';
-          const subW = helvetica.widthOfTextAtSize(subText, 6);
-          page.drawText(subText, {
-            x: 18 + (col1W - subW) / 2,
-            y: headerY + 18,
-            size: 6,
-            font: helveticaBold,
-            color: rgb(0.06, 0.16, 0.3),
+          newPage.drawText("PT Ultimo Moda Indotex", {
+            x: boxX + 16,
+            y: boxY + 12,
+            size: 6.5,
+            font: helvetica,
+            color: rgb(0.35, 0.42, 0.52),
           });
-        } else {
-          // Default / Holding
-          const badgeW = 84;
-          const badgeH = 22;
-          const badgeX = 18 + (col1W - badgeW) / 2;
-          const badgeY = headerY + 36;
-
-          page.drawRectangle({
-            x: badgeX,
-            y: badgeY,
-            width: badgeW,
-            height: badgeH,
-            color: rgb(0.12, 0.23, 0.38),
+        } else if (compCode === "IMK") {
+          newPage.drawRectangle({
+            x: boxX + 16,
+            y: boxY + headerH - 28,
+            width: 82,
+            height: 18,
+            color: rgb(0.02, 0.58, 0.41),
           });
-
-          const codeText = companyName.substring(0, 16);
-          const codeW = helveticaBold.widthOfTextAtSize(codeText, 8.5);
-          page.drawText(codeText, {
-            x: badgeX + (badgeW - codeW) / 2,
-            y: badgeY + 7,
+          newPage.drawText("PT IMK", {
+            x: boxX + 34,
+            y: boxY + headerH - 22,
             size: 8.5,
             font: helveticaBold,
             color: rgb(1, 1, 1),
           });
-
-          const subText = 'DOCUMENT CONTROL';
-          const subW = helvetica.widthOfTextAtSize(subText, 6);
-          page.drawText(subText, {
-            x: 18 + (col1W - subW) / 2,
-            y: headerY + 18,
-            size: 6,
-            font: helveticaBold,
+          newPage.drawText("PT Inti Mulia Knitting", {
+            x: boxX + 16,
+            y: boxY + 12,
+            size: 6.5,
+            font: helvetica,
             color: rgb(0.35, 0.42, 0.52),
+          });
+        } else {
+          newPage.drawText(compCode || "DMS", {
+            x: boxX + 24,
+            y: boxY + headerH / 2 - 4,
+            size: 14,
+            font: helveticaBold,
+            color: rgb(0.12, 0.25, 0.45),
           });
         }
 
-        // ================= KOLOM 2: JUDUL DOKUMEN & TIPE PROSEDUR (CENTERED & RAPI) =================
-        const typeText = (docData.typeName || docData.type || 'PROSEDUR TERKENDALI').toUpperCase();
-        const typeW = helveticaBold.widthOfTextAtSize(typeText, 7);
-        page.drawText(typeText, {
-          x: 18 + col1W + (col2W - typeW) / 2,
-          y: headerY + headerH - 19,
-          size: 7,
+        // --- KOLOM 2: KLASIFIKASI DOKUMEN & JUDUL (TENGAH) ---
+        const titleAreaX = boxX + logoColW;
+        const typeStr = getDocumentTypeFullName(docData);
+        let typeFontSize = 7.5;
+        let typeTextW = helveticaBold.widthOfTextAtSize(typeStr, typeFontSize);
+        if (typeTextW > titleColW - 16) {
+          typeFontSize = 6.5;
+          typeTextW = helveticaBold.widthOfTextAtSize(typeStr, typeFontSize);
+        }
+        newPage.drawText(typeStr, {
+          x: titleAreaX + Math.max(8, (titleColW - typeTextW) / 2),
+          y: boxY + headerH - 18,
+          size: typeFontSize,
           font: helveticaBold,
           color: rgb(0.35, 0.42, 0.52),
         });
 
-        const titleText = (docData.title || '').toUpperCase();
-        const displayTitle = titleText.length > 46 ? titleText.substring(0, 44) + '...' : titleText;
-        const titleW = helveticaBold.widthOfTextAtSize(displayTitle, 10);
-        page.drawText(displayTitle, {
-          x: 18 + col1W + (col2W - titleW) / 2,
-          y: headerY + headerH - 36,
-          size: 10,
+        // Judul Dokumen Utama
+        let rawTitle = String(docData.title || "-");
+        if (rawTitle.length > 40) rawTitle = rawTitle.substring(0, 38) + "...";
+        const titleW = helveticaBold.widthOfTextAtSize(rawTitle, 8.5);
+        newPage.drawText(rawTitle, {
+          x: titleAreaX + Math.max(8, (titleColW - titleW) / 2),
+          y: boxY + headerH - 33,
+          size: 8.5,
           font: helveticaBold,
-          color: rgb(0.05, 0.12, 0.25),
+          color: rgb(0.06, 0.12, 0.25),
         });
 
-        const statusText = `Status Dokumen: ${docData.status}  •  Salinan Terkendali Resmi`;
-        const statusW = helvetica.widthOfTextAtSize(statusText, 6.8);
-        page.drawText(statusText, {
-          x: 18 + col1W + (col2W - statusW) / 2,
-          y: headerY + headerH - 53,
-          size: 6.8,
-          font: helvetica,
-          color: rgb(0.08, 0.45, 0.78),
+        // Baris Status & Ketentuan
+        const statusColor = docData.status === "AKTIF"
+          ? rgb(0.02, 0.55, 0.35)
+          : docData.status === "OBSOLETE"
+          ? rgb(0.85, 0.20, 0.20)
+          : rgb(0.85, 0.45, 0.08);
+
+        const statusStr = "Status: " + (docData.status || "AKTIF") + " | Salinan Terkendali Resmi";
+        const statusW = helvetica.widthOfTextAtSize(statusStr, 6.5);
+        newPage.drawText(statusStr, {
+          x: titleAreaX + Math.max(8, (titleColW - statusW) / 2),
+          y: boxY + 12,
+          size: 6.5,
+          font: helveticaBold,
+          color: statusColor,
         });
 
-        // ================= KOLOM 3: METADATA & QR CODE VERIFIKASI =================
-        const c3StartX = 18 + col1W + col2W;
-        const qrDividerX = c3StartX + 138;
-
-        // Garis Pembatas Vertikal antara Metadata dan QR Code
-        page.drawLine({
-          start: { x: qrDividerX, y: headerY },
-          end: { x: qrDividerX, y: headerY + headerH },
-          color: rgb(0.82, 0.88, 0.94),
-          thickness: 0.8,
-        });
-
-        // Data Baris Metadata (Label, Titik Dua ':', dan Nilai yang Rapi Lurus)
-        const c3X = c3StartX + 8;
-        const colonX = c3X + 46;
-        const valX = colonX + 6;
-
+        // --- KOLOM 3: TABEL METADATA RESMI (KANAN) ---
+        const metaX = boxX + logoColW + titleColW;
         const metaRows = [
-          { label: 'No. Dokumen', val: docData.docNumber, y: headerY + headerH - 18 },
-          { label: 'Revisi', val: docData.revision, y: headerY + headerH - 31 },
-          { label: 'Departemen', val: docData.department, y: headerY + headerH - 44 },
-          { label: 'Tgl. Terbit', val: docData.effectiveDate || docData.createdDate || '-', y: headerY + headerH - 57 },
+          { label: "No. Dokumen", val: String(docData.docNumber || "-"), y: boxY + headerH - 16 },
+          { label: "Revisi", val: String(docData.revision || "00"), y: boxY + headerH - 28 },
+          { label: "Departemen", val: String(docData.department || "-"), y: boxY + headerH - 40 },
+          { label: "Tgl. Terbit", val: String(docData.effectiveDate || docData.createdDate || "-"), y: boxY + headerH - 52 },
         ];
 
         metaRows.forEach(row => {
-          // Label Kiri
-          page.drawText(row.label, {
-            x: c3X,
+          newPage.drawText(row.label, {
+            x: metaX + 8,
             y: row.y,
             size: 6.8,
             font: helvetica,
-            color: rgb(0.4, 0.45, 0.55),
+            color: rgb(0.40, 0.46, 0.56),
           });
-          // Titik Dua Lurus Presisi
-          page.drawText(':', {
-            x: colonX,
+          newPage.drawText(":", {
+            x: metaX + 54,
             y: row.y,
             size: 6.8,
             font: helveticaBold,
-            color: rgb(0.4, 0.45, 0.55),
+            color: rgb(0.40, 0.46, 0.56),
           });
-          // Nilai Sejajar Sempurna
-          page.drawText(String(row.val), {
-            x: valX,
+          const valStr = row.val.length > 18 ? row.val.substring(0, 16) + "..." : row.val;
+          newPage.drawText(valStr, {
+            x: metaX + 62,
             y: row.y,
             size: 7,
             font: helveticaBold,
-            color: rgb(0.06, 0.16, 0.3),
+            color: rgb(0.06, 0.15, 0.28),
           });
         });
 
-        // QR Code Seal (Terpusat Rapi di Sub-Kolom Kanan)
+        // --- KOLOM 4: QR CODE VALIDASI DIGITAL (FAR RIGHT) ---
+        const qrColX = boxX + boxW - qrColW;
         if (qrImage) {
-          const qrAreaW = (18 + headerW) - qrDividerX;
           const qrSize = 44;
-          const qrX = qrDividerX + (qrAreaW - qrSize) / 2;
-          const qrY = headerY + (headerH - qrSize) / 2;
-
-          // Bingkai Kartu QR Code yang Halus
-          page.drawRectangle({
-            x: qrX - 2,
-            y: qrY - 2,
-            width: qrSize + 4,
-            height: qrSize + 4,
-            color: rgb(1, 1, 1),
-            borderColor: rgb(0.85, 0.88, 0.92),
-            borderWidth: 0.5,
-          });
-
-          page.drawImage(qrImage, {
-            x: qrX,
-            y: qrY,
+          newPage.drawImage(qrImage, {
+            x: qrColX + (qrColW - qrSize) / 2,
+            y: boxY + (headerH - qrSize) / 2,
             width: qrSize,
             height: qrSize,
           });
         }
       }
+
+      // 4. FOOTER RESMI ISO & PENOMORAN HALAMAN (Bersih tanpa kotak kurungan)
+      const footerBoxX = 18;
+      const footerBoxW = width - 36;
+
+      // Garis pemisah horizontal tipis di atas footer
+      newPage.drawLine({
+        start: { x: footerBoxX, y: marginB + footerH + 4 },
+        end: { x: footerBoxX + footerBoxW, y: marginB + footerH + 4 },
+        color: rgb(0.88, 0.91, 0.96),
+        thickness: 0.6,
+      });
+
+      const footerLeft = "DOKUMEN RESMI TERKENDALI — " + companyName + " | NO: " + docData.docNumber + " | REV: " + (docData.revision || "00");
+      newPage.drawText(footerLeft, {
+        x: footerBoxX + 10,
+        y: marginB + 5.5,
+        size: 6.8,
+        font: helvetica,
+        color: rgb(0.35, 0.42, 0.52),
+      });
+
+      // Penomoran Halaman Otomatis Presisi di Kanan Bawah
+      const pageNumStr = "Halaman " + (i + 1) + " dari " + totalPages;
+      const pageNumW = helveticaBold.widthOfTextAtSize(pageNumStr, 7.2);
+      newPage.drawText(pageNumStr, {
+        x: footerBoxX + footerBoxW - pageNumW - 10,
+        y: marginB + 5.5,
+        size: 7.2,
+        font: helveticaBold,
+        color: rgb(0.08, 0.18, 0.35),
+      });
     }
 
-    // 4. Simpan hasil stempel PDF dan unduh ke perangkat pengguna
+    // 5. Simpan hasil stempel PDF dan unduh ke perangkat pengguna
     const stampedPdfBytes = await pdfDoc.save();
-    const stampedBlob = new Blob([stampedPdfBytes], { type: 'application/pdf' });
+    const stampedBlob = new Blob([stampedPdfBytes], { type: "application/pdf" });
+
+    if (options && options.returnBlob) {
+      return stampedBlob;
+    }
+
     downloadBlobAsFile(stampedBlob, officialFileName);
 
     return officialFileName;
   } catch (error) {
     console.error('Error stamping letterhead on PDF:', error);
+    if (options && options.returnBlob) {
+      return null;
+    }
     // Jika format PDF terenkripsi atau error, fallback unduh berkas asli secara langsung
     if (fileUrl) {
       const link = document.createElement('a');
@@ -477,7 +796,12 @@ export async function stampOfficialLetterheadOnPDF(docData, systemSettings = {},
       setTimeout(() => document.body.removeChild(link), 300);
       return officialFileName;
     }
-    exportControlledDocumentPDF(docData, systemSettings, qrDataUrl);
+    await exportControlledDocumentPDF(docData, systemSettings, qrDataUrl, {
+      ...options,
+      excelRows: options?.excelRows || docData.excelRows,
+      excelSheetName: options?.excelSheetName || docData.excelSheetName,
+      logoUrl: options?.logoUrl || docData.logoUrl || (compCode === 'DJI' ? '/dji-logo.png' : null),
+    });
     return officialFileName;
   }
 }

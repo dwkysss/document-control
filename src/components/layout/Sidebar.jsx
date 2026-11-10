@@ -62,11 +62,11 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
   const activeCompanyObj = (companies || []).find(c => c.code === activeCompanyCode);
 
   const displayCompanyName = activeCompanyCode === 'ALL'
-    ? 'HOLDING GROUP (MULTI-PT)'
+    ? 'DOCUMENT CONTROL CENTER'
     : (activeCompanyObj?.name || (activeCompanyCode === 'UMI' ? 'PT ULTIMO MODA INDOTEX' : activeCompanyCode === 'IMK' ? 'PT IMK' : (systemSettings.companyName || 'PT DENTELLE JAYA INFINITEX')));
 
   const displaySubtitle = activeCompanyCode === 'ALL'
-    ? 'CONTROL TOWER (3 PT)'
+    ? ''
     : `UNIT ${activeCompanyCode} - SISTEM TERKENDALI`;
 
   // Accordion open/close state
@@ -142,33 +142,29 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
         {/* Brand Header (Dynamic per Active Unit / Holding) */}
         {(() => {
           const renderCompanyIcon = () => {
-            if (activeCompanyCode === 'DJI') {
+            if (activeCompanyCode === 'ALL') {
               return (
-                <div className="w-11 h-11 rounded-xl bg-white p-1 flex items-center justify-center shadow-md shadow-blue-500/20 flex-shrink-0 overflow-hidden ring-1 ring-white/20">
-                  <img src="/dji-logo.png" alt="PT DJI Logo" className="w-full h-full object-contain" />
+                <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-xs flex-shrink-0">
+                  <FileText className="w-5 h-5" strokeWidth={2.2} />
                 </div>
               );
             }
-            if (activeCompanyCode === 'UMI') {
+
+            const compLogo = activeCompanyObj?.logoUrl || (activeCompanyCode === 'DJI' ? '/dji-logo.png' : null);
+
+            if (compLogo) {
               return (
-                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-blue-800 p-1 flex flex-col items-center justify-center shadow-md shadow-indigo-500/30 flex-shrink-0 ring-1 ring-white/20">
-                  <span className="font-black text-white text-sm tracking-wider font-sans">UMI</span>
-                  <span className="text-[7px] text-indigo-200 font-bold uppercase tracking-tighter">TEXTILE</span>
+                <div className="w-10 h-10 rounded-lg bg-white p-1 flex items-center justify-center shadow-xs flex-shrink-0 overflow-hidden border border-slate-200">
+                  <img src={compLogo} alt={`${activeCompanyCode} Logo`} className="w-full h-full object-contain" />
                 </div>
               );
             }
-            if (activeCompanyCode === 'IMK') {
-              return (
-                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-600 via-teal-700 to-slate-900 p-1 flex flex-col items-center justify-center shadow-md shadow-emerald-500/30 flex-shrink-0 ring-1 ring-white/20">
-                  <span className="font-black text-white text-sm tracking-wider font-sans">IMK</span>
-                  <span className="text-[7px] text-emerald-200 font-bold uppercase tracking-tighter">KNITTING</span>
-                </div>
-              );
-            }
+
             return (
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-700 via-slate-800 to-indigo-900 p-1 flex flex-col items-center justify-center shadow-md shadow-blue-500/30 flex-shrink-0 ring-1 ring-white/20">
-                <Building2 className="w-5 h-5 text-sky-300" />
-                <span className="text-[7px] text-sky-200 font-extrabold uppercase tracking-tight">HOLDING</span>
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center shadow-xs flex-shrink-0 font-bold text-white text-xs tracking-wider ${
+                activeCompanyCode === 'UMI' ? 'bg-indigo-600' : activeCompanyCode === 'IMK' ? 'bg-emerald-600' : 'bg-blue-600'
+              }`}>
+                {activeCompanyCode}
               </div>
             );
           };
@@ -178,12 +174,14 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
               {renderCompanyIcon()}
               {!isCollapsed && (
                 <div className="overflow-hidden min-w-0 flex-1">
-                  <h2 className="font-extrabold text-xs sm:text-[13px] tracking-tight text-white leading-snug line-clamp-2 font-sans" title={displayCompanyName}>
+                  <h2 className="font-bold text-xs sm:text-[13px] tracking-tight text-white leading-tight font-sans" title={displayCompanyName}>
                     {displayCompanyName}
                   </h2>
-                  <p className="text-[10px] text-sky-400 font-semibold tracking-wider uppercase truncate mt-0.5">
-                    {displaySubtitle}
-                  </p>
+                  {displaySubtitle ? (
+                    <p className="text-[10px] text-sky-400 font-semibold tracking-wider uppercase truncate mt-0.5">
+                      {displaySubtitle}
+                    </p>
+                  ) : null}
                 </div>
               )}
             </div>
@@ -571,7 +569,7 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
                 <div className="flex items-center justify-between w-full">
                   <span>Setting</span>
                   <span className="text-[8px] font-extrabold uppercase px-1 py-0.2 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40">
-                    Holding
+                    Multi-PT
                   </span>
                 </div>
               )}
@@ -583,7 +581,7 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
         {!isCollapsed && (
           <div className="p-3 border-t border-[#172740] bg-[#07101e] text-center text-[10px] text-slate-500">
             <div className="font-medium text-slate-400">
-              © 2026 {activeCompanyCode === 'ALL' ? 'Holding Group (Multi-PT)' : (activeCompanyObj?.name || `PT ${activeCompanyCode}`)}
+              © 2026 {activeCompanyCode === 'ALL' ? 'Document Control Center' : (activeCompanyObj?.name || `PT ${activeCompanyCode}`)}
             </div>
             <div className="text-[9px] text-slate-600">Document Control System v2.4</div>
           </div>

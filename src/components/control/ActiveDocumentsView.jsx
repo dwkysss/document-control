@@ -681,7 +681,7 @@ export default function ActiveDocumentsView() {
                             <button
                               onClick={() => handleOpenReviewModal(doc)}
                               className="px-2 py-1 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/40 dark:text-teal-300 rounded-md transition flex items-center gap-1"
-                              title="Monitoring & Peninjauan Berkala (Klausul 7.5)"
+                              title="Monitoring & Peninjauan Berkala"
                             >
                               <ClipboardCheck className="w-3.5 h-3.5" />
                               Tinjau

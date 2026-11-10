@@ -227,22 +227,13 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
                     key={comp.id}
                     type="button"
                     onClick={() => setSelectedCompanyFilter(comp.code)}
-                    className={`px-1.5 xl:px-2 py-1 rounded-lg font-bold text-[11px] transition flex items-center gap-1 ${
+                    className={`px-1.5 xl:px-2 py-1 rounded-lg font-bold text-[11px] transition ${
                       isActive
                         ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
                         : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
                     }`}
                     title={comp.name}
                   >
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                        comp.code === 'DJI'
-                          ? 'bg-blue-500'
-                          : comp.code === 'UMI'
-                          ? 'bg-indigo-500'
-                          : 'bg-emerald-500'
-                      }`}
-                    />
                     <span>{comp.code}</span>
                   </button>
                 );
@@ -494,37 +485,34 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
                     <button
                       type="button"
                       onClick={() => setDemoCompanyTab('IMK')}
-                      className={`flex-1 py-1 rounded transition text-center flex items-center justify-center gap-1 cursor-pointer ${
+                      className={`flex-1 py-1 rounded transition text-center flex items-center justify-center cursor-pointer ${
                         demoCompanyTab === 'IMK'
                           ? 'bg-emerald-600 text-white shadow-2xs font-extrabold'
                           : 'text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
                       }`}
                     >
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                       IMK
                     </button>
                     <button
                       type="button"
                       onClick={() => setDemoCompanyTab('UMI')}
-                      className={`flex-1 py-1 rounded transition text-center flex items-center justify-center gap-1 cursor-pointer ${
+                      className={`flex-1 py-1 rounded transition text-center flex items-center justify-center cursor-pointer ${
                         demoCompanyTab === 'UMI'
                           ? 'bg-indigo-600 text-white shadow-2xs font-extrabold'
                           : 'text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40'
                       }`}
                     >
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
                       UMI
                     </button>
                     <button
                       type="button"
                       onClick={() => setDemoCompanyTab('DJI')}
-                      className={`flex-1 py-1 rounded transition text-center flex items-center justify-center gap-1 cursor-pointer ${
+                      className={`flex-1 py-1 rounded transition text-center flex items-center justify-center cursor-pointer ${
                         demoCompanyTab === 'DJI'
                           ? 'bg-blue-600 text-white shadow-2xs font-extrabold'
                           : 'text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40'
                       }`}
                     >
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
                       DJI
                     </button>
                   </div>

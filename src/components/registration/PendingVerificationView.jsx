@@ -12,7 +12,6 @@ import {
   RotateCcw,
   Search
 } from 'lucide-react';
-import Badge, { CompanyBadge } from '../common/Badge';
 import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
 
@@ -293,7 +292,6 @@ export default function PendingVerificationView() {
                   : 'border-transparent text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800'
               }`}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
               <span>Tahap 1: Review Atasan</span>
               <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] tabular-nums text-slate-700 dark:bg-slate-700 dark:text-slate-200">
                 {stage1Count}
@@ -310,7 +308,6 @@ export default function PendingVerificationView() {
                   : 'border-transparent text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800'
               }`}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
               <span>Tahap 2: Verifikasi DCO</span>
               <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] tabular-nums text-slate-700 dark:bg-slate-700 dark:text-slate-200">
                 {stage2Count}
@@ -327,7 +324,6 @@ export default function PendingVerificationView() {
                   : 'border-transparent text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800'
               }`}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
               <span>Tahap 3: Pengesahan MR</span>
               <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] tabular-nums text-slate-700 dark:bg-slate-700 dark:text-slate-200">
                 {stage3Count}
@@ -338,13 +334,13 @@ export default function PendingVerificationView() {
 
         {/* Clean Table */}
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] table-fixed text-left border-collapse text-sm">
+          <table className="w-full min-w-[1100px] table-fixed text-left border-collapse text-sm">
             <colgroup>
-              <col className="w-[34%]" />
-              <col className="w-[10%]" />
-              <col className="w-[15%]" />
-              <col className="w-[21%]" />
-              <col className="w-[20%]" />
+              <col className="w-[29%]" />
+              <col className="w-[9%]" />
+              <col className="w-[13%]" />
+              <col className="w-[22%]" />
+              <col className="w-[27%]" />
             </colgroup>
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold">
@@ -391,15 +387,12 @@ export default function PendingVerificationView() {
                   return (
                     <tr key={doc.id} className="transition-colors hover:bg-blue-50/40 dark:hover:bg-slate-800/70">
                       <td className="py-4 px-4">
-                        <div className="flex min-w-0 items-start gap-2.5">
-                          <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
-                          <div className="min-w-0">
-                            <div className="flex min-w-0 items-center gap-2">
-                              <button type="button" onClick={() => setViewingDocument(doc)} className="truncate text-left font-mono text-xs font-bold text-blue-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:text-blue-300 cursor-pointer" title="Buka pratinjau dokumen">{doc.docNumber}</button>
-                              <span className="shrink-0 rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">{doc.type || 'SOP'}</span>
-                            </div>
-                            <p className="mt-1 truncate text-xs font-medium text-slate-800 dark:text-slate-200" title={doc.title}>{doc.title}</p>
+                        <div className="min-w-0">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <button type="button" onClick={() => setViewingDocument(doc)} className="truncate text-left font-mono text-xs font-bold text-blue-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:text-blue-300 cursor-pointer" title="Buka pratinjau dokumen">{doc.docNumber}</button>
+                            <span className="shrink-0 rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">{doc.type || 'SOP'}</span>
                           </div>
+                          <p className="mt-1 truncate text-xs font-medium text-slate-800 dark:text-slate-200" title={doc.title}>{doc.title}</p>
                         </div>
                       </td>
 
@@ -414,18 +407,16 @@ export default function PendingVerificationView() {
 
                       <td className="py-4 px-3">
                         {isStage1 && (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-                            <span className="w-1.5 h-1.5 rounded-full bg-purple-600"></span>
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
                             {docLevel === 1 ? 'Tahap 3: Telaah Mutu (MR)' : 'Tahap 1: Review Atasan'}
                           </span>
                         )}
                         {isStage2 && (
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold border ${
                             isFastTrack
                               ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
                               : 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
                           }`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${isFastTrack ? 'bg-emerald-600' : 'bg-amber-600'}`}></span>
                             {docLevel === 1
                               ? 'Tahap 2: Verifikasi Format DCO'
                               : isFastTrack
@@ -434,8 +425,7 @@ export default function PendingVerificationView() {
                           </span>
                         )}
                         {isStage3 && (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                             {docLevel === 1 ? 'Tahap 4: Pengesahan GM / Direksi' : 'Tahap 3: Pengesahan MR'}
                           </span>
                         )}
@@ -443,7 +433,7 @@ export default function PendingVerificationView() {
 
                       {/* 7. Tindakan / Aksi */}
                       <td className="py-4 px-3">
-                        <div className="flex flex-wrap items-center justify-end gap-1.5">
+                        <div className="flex min-w-max flex-nowrap items-center justify-end gap-1.5">
                           {/* Quick Preview Button */}
                           <button
                             type="button"

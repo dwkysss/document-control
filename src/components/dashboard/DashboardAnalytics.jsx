@@ -14,9 +14,7 @@ import {
   PieChart,
   Building2,
   ArrowUpRight,
-  Layers,
-  ShieldCheck,
-  Info
+  Layers
 } from 'lucide-react';
 
 // Register Chart.js components
@@ -250,7 +248,6 @@ export default function DashboardAnalytics({
                 <h3 className="text-xs font-bold text-slate-900 dark:text-white">
                   Hierarki Dokumen Mutu ISO
                 </h3>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400">Piramida dokumen Klausul 7.5</p>
               </div>
             </div>
 
@@ -260,8 +257,8 @@ export default function DashboardAnalytics({
                   type="button"
                   onClick={() => setHierarchyMode('pyramid')}
                   className={`px-2 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${hierarchyMode === 'pyramid'
-                      ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 font-bold shadow-2xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 font-bold shadow-2xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   title="Piramida Mutu ISO 4 Tingkat"
                 >
@@ -272,8 +269,8 @@ export default function DashboardAnalytics({
                   type="button"
                   onClick={() => setHierarchyMode('chart')}
                   className={`px-2 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${hierarchyMode === 'chart'
-                      ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 font-bold shadow-2xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 font-bold shadow-2xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   title="Grafik Donat Dokumen"
                 >
@@ -328,13 +325,6 @@ export default function DashboardAnalytics({
                 ))}
               </div>
 
-              {/* Assessment Footer for ISO Pyramid Health */}
-              <div className="mt-3 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 text-[10.5px] flex items-start gap-2 text-slate-700 dark:text-slate-300">
-                <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-                <p className="leading-relaxed">
-                  <strong>Struktur ISO 9001:2015 Sehat:</strong> Piramida dokumen didukung fondasi <strong>{pyramidTiers[2].count + pyramidTiers[3].count} dokumen operasional</strong> (Level 3 & 4), menjamin ketertelusuran SOP dan Kebijakan Mutu.
-                </p>
-              </div>
             </div>
           ) : (
             /* Donut Chart Visual */
@@ -395,7 +385,6 @@ export default function DashboardAnalytics({
                 <h3 className="text-xs font-bold text-slate-900 dark:text-white">
                   Distribusi Dokumen per Unit Kerja
                 </h3>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400">Sebaran SOP & IK pada masing-masing divisi</p>
               </div>
             </div>
 
@@ -405,8 +394,8 @@ export default function DashboardAnalytics({
                   type="button"
                   onClick={() => setViewMode('chart')}
                   className={`px-2 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${viewMode === 'chart'
-                      ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-2xs font-bold'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-2xs font-bold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                 >
                   Grafik
@@ -415,8 +404,8 @@ export default function DashboardAnalytics({
                   type="button"
                   onClick={() => setViewMode('table')}
                   className={`px-2 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${viewMode === 'table'
-                      ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-2xs font-bold'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-2xs font-bold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                 >
                   Tabel

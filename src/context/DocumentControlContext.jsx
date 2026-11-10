@@ -597,12 +597,7 @@ export function DocumentControlProvider({ children }) {
     const userRole = currentUser.role || 'staff';
     if (userRole === 'viewer') return false;
 
-    // 1. Super Admin, Approver (MR), dan Document Control Officer (DCO) dapat memantau seluruh draft sistem
-    if (userRole === 'admin' || userRole === 'approver' || userRole === 'doc_control') {
-      return true;
-    }
-
-    // 2. Staff / Reviewer: HANYA dapat melihat draft miliknya sendiri (Personal Draft)
+    // Draft adalah 100% dokumen privat per-akun pembuat (No Sharing antar akun)
     const userName = (currentUser.name || '').toUpperCase().trim();
     const userNip = (currentUser.nip || currentUser.nik || '').toUpperCase().trim();
     const docCreatorNip = (doc.creatorNip || doc.creatorNik || '').toUpperCase().trim();

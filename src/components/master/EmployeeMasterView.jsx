@@ -204,14 +204,14 @@ export default function EmployeeMasterView() {
                         : emp.role === 'admin'
                         ? 'System Admin'
                         : emp.role === 'approver'
-                        ? '04. APPROVER (MR)'
+                        ? 'Approver (MR)'
                         : emp.role === 'doc_control'
-                        ? '03. DOC CONTROL'
+                        ? 'Doc Control'
                         : emp.role === 'reviewer'
-                        ? '02. REVIEWER (Atasan)'
+                        ? 'Reviewer (Atasan)'
                         : emp.role === 'viewer'
-                        ? '00. KARYAWAN (Viewer)'
-                        : '01. USER (Staff)'}
+                        ? 'Karyawan (Viewer)'
+                        : 'User (Staff)'}
                     </span>
                   </td>
                   <td className="py-4 px-3">
@@ -351,11 +351,11 @@ export default function EmployeeMasterView() {
                   onChange={(e) => setRole(e.target.value)}
                   className="w-full p-2.5 border rounded-lg dark:bg-slate-800 text-xs font-semibold"
                 >
-                  <option value="viewer">00. KARYAWAN (Viewer - Hanya Baca Dokumen Aktif)</option>
-                  <option value="staff">01. USER (Staff Pemohon - Inisiator Dokumen)</option>
-                  <option value="reviewer">02. REVIEWER (Atasan / Kepala Departemen)</option>
-                  <option value="doc_control">03. DOCUMENT CONTROL (DCO - Pengendali Format & Nomor)</option>
-                  <option value="approver">04. APPROVER (Management Representative / MR)</option>
+                  <option value="viewer">Karyawan (Viewer - Hanya Baca Dokumen Aktif)</option>
+                  <option value="staff">User (Staff Pemohon - Inisiator Dokumen)</option>
+                  <option value="reviewer">Reviewer (Atasan / Kepala Departemen)</option>
+                  <option value="doc_control">Document Control (DCO - Pengendali Format & Nomor)</option>
+                  <option value="approver">Approver (Management Representative / MR)</option>
                   <option value="admin">System Administrator (Otoritas Sistem & Pengaturan)</option>
                 </select>
               </div>

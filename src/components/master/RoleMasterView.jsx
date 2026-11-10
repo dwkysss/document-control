@@ -281,9 +281,6 @@ export default function RoleMasterView() {
               <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
                 Master Data Role & Hak Akses
               </h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Struktur Role-Based Access Control (RBAC) & Wewenang Dokumen ISO 9001:2015 Clause 7.5
-              </p>
             </div>
           </div>
         </div>
@@ -457,8 +454,8 @@ export default function RoleMasterView() {
                     </h4>
                     <ul className="space-y-1.5">
                       {role.responsibilities.slice(0, 3).map((resp, idx) => (
-                        <li key={idx} className="text-xs text-slate-600 dark:text-slate-400 flex items-start gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 mt-1.5" />
+                        <li key={idx} className="text-xs text-slate-600 dark:text-slate-400 flex items-start gap-1.5">
+                          <span className="text-blue-500 font-bold shrink-0">—</span>
                           <span>{resp}</span>
                         </li>
                       ))}

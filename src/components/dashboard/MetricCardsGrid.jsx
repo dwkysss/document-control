@@ -127,8 +127,7 @@ export default function MetricCardsGrid({
           <div className="text-2xl sm:text-3xl font-extrabold font-mono text-emerald-950 dark:text-emerald-100">
             {activeDocs}
           </div>
-          <div className="flex items-center gap-1.5 mt-1 text-[11px] text-emerald-700 dark:text-emerald-400 font-medium">
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+          <div className="mt-1 text-[11px] text-emerald-700 dark:text-emerald-400 font-medium">
             <span>{complianceRate}% Terkendali</span>
           </div>
         </div>

@@ -138,7 +138,7 @@ export default function AllDocumentsView() {
             Master Document Control Register
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Daftar induk seluruh dokumen terkendali perusahaan sesuai klausul 7.5 ISO 9001:2015.
+            Daftar induk seluruh dokumen terkendali perusahaan.
           </p>
         </div>
 

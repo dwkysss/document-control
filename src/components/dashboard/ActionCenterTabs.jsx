@@ -9,7 +9,6 @@ import {
   FileCheck2,
   RefreshCw
 } from 'lucide-react';
-import Badge from '../common/Badge';
 
 export default function ActionCenterTabs({
   pendingDocs = [],
@@ -27,10 +26,10 @@ export default function ActionCenterTabs({
   return (
     <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
       {/* Header & Tabs */}
-      <div className="px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-800/30">
+      <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-            Pusat Tindakan & Pengawasan
+          <h2 className="text-base font-bold text-slate-900 dark:text-white">
+            Antrian tindakan
           </h2>
         </div>
 
@@ -39,11 +38,10 @@ export default function ActionCenterTabs({
           {!isViewer && (
             <button
               onClick={() => setActiveTab('pending')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md whitespace-nowrap transition cursor-pointer ${
-                activeTab === 'pending'
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md whitespace-nowrap transition cursor-pointer ${activeTab === 'pending'
                   ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-2xs font-bold'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
+                }`}
             >
               <Clock className="w-3.5 h-3.5" />
               <span>Verifikasi</span>
@@ -57,11 +55,10 @@ export default function ActionCenterTabs({
 
           <button
             onClick={() => setActiveTab('review')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md whitespace-nowrap transition cursor-pointer ${
-              activeTab === 'review'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md whitespace-nowrap transition cursor-pointer ${activeTab === 'review'
                 ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-2xs font-bold'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
+              }`}
           >
             <CalendarClock className="w-3.5 h-3.5" />
             <span>Tinjauan ISO</span>
@@ -74,11 +71,10 @@ export default function ActionCenterTabs({
 
           <button
             onClick={() => setActiveTab('activity')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md whitespace-nowrap transition cursor-pointer ${
-              activeTab === 'activity'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md whitespace-nowrap transition cursor-pointer ${activeTab === 'activity'
                 ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-2xs font-bold'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
+              }`}
           >
             <History className="w-3.5 h-3.5" />
             <span>Audit Trail</span>
@@ -88,7 +84,7 @@ export default function ActionCenterTabs({
 
       {/* Tab 1: Antrian Verifikasi */}
       {activeTab === 'pending' && !isViewer && (
-        <div className="p-4 sm:p-5 space-y-3">
+        <div className="p-4 sm:p-5 space-y-4">
           {pendingDocs.length === 0 ? (
             <div className="py-8 px-4 text-center max-w-sm mx-auto space-y-2">
               <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center mx-auto">
@@ -102,16 +98,16 @@ export default function ActionCenterTabs({
               </p>
             </div>
           ) : (
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between text-xs pb-1">
-                <span className="text-slate-600 dark:text-slate-400 font-medium">
-                  Menampilkan {Math.min(pendingDocs.length, 5)} dari {pendingDocs.length} dokumen dalam proses
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-3 text-xs">
+                <span className="text-slate-700 dark:text-slate-300 font-medium">
+                  {pendingDocs.length === 1 ? '1 dokumen menunggu verifikasi' : `${pendingDocs.length} dokumen menunggu verifikasi`}
                 </span>
                 <button
                   onClick={() => navigateTo('reg-pending', ['Dashboard', 'Registrasi Dokumen', 'Menunggu Verifikasi'])}
-                  className="text-blue-600 dark:text-blue-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                  className="text-blue-700 dark:text-blue-300 font-semibold hover:underline flex items-center gap-1 cursor-pointer"
                 >
-                  <span>Buka Semua Antrian</span>
+                  <span>Lihat semua</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -119,39 +115,32 @@ export default function ActionCenterTabs({
               {pendingDocs.slice(0, 5).map(doc => (
                 <div
                   key={doc.id}
-                  className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-850 hover:border-blue-400 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                  className="p-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-850 hover:border-blue-400 transition flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs"
                 >
-                  <div className="space-y-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono font-bold text-slate-900 dark:text-white text-xs">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="font-mono font-semibold text-slate-600 dark:text-slate-400 text-[11px]">
                         {doc.docNumber}
                       </span>
-                      <Badge status={doc.status} size="sm" />
-                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                        {doc.department}
-                      </span>
-                      {doc.companyCode && (
-                        <span className="font-mono text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-                          {doc.companyCode}
-                        </span>
-                      )}
+                      <span className="text-slate-300 dark:text-slate-600">/</span>
+                      <span className="font-medium text-slate-600 dark:text-slate-400">{doc.department}</span>
                     </div>
 
-                    <h4 className="font-bold text-slate-900 dark:text-slate-100 truncate text-xs" title={doc.title}>
+                    <h4 className="mt-1 font-bold text-slate-900 dark:text-slate-100 truncate text-sm" title={doc.title}>
                       {doc.title}
                     </h4>
 
-                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-600 dark:text-slate-400">
-                      <span>Pemohon: <strong className="text-slate-800 dark:text-slate-200">{doc.creator}</strong></span>
-                      <span>&bull;</span>
-                      <span>Target: <strong className="text-blue-700 dark:text-blue-400">{doc.verifierTeam || 'Document Control'}</strong></span>
+                    <div className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] text-slate-600 dark:text-slate-400">
+                      <span>Diajukan oleh <strong className="font-semibold text-slate-800 dark:text-slate-200">{doc.creator}</strong></span>
+                      <span className="text-slate-300 dark:text-slate-600">&bull;</span>
+                      <span>untuk <strong className="font-semibold text-slate-800 dark:text-slate-200">{doc.verifierTeam || 'Document Control'}</strong></span>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
                     <button
                       onClick={() => setViewingDocument && setViewingDocument(doc)}
-                      className="px-3 py-1.5 text-xs font-semibold text-blue-700 hover:text-white bg-blue-50 hover:bg-blue-600 dark:bg-blue-950/60 dark:text-blue-300 dark:hover:bg-blue-600 dark:hover:text-white border border-blue-200 dark:border-blue-900 rounded-lg transition flex items-center gap-1.5 cursor-pointer"
+                      className="px-3 py-1.5 text-xs font-semibold text-blue-700 hover:text-white bg-blue-50 hover:bg-blue-600 dark:bg-blue-950/60 dark:text-blue-300 dark:hover:bg-blue-600 dark:hover:text-white border border-blue-200 dark:border-blue-900 rounded-md transition flex items-center gap-1.5 cursor-pointer"
                     >
                       <Eye className="w-3.5 h-3.5" />
                       <span>Tinjau</span>
@@ -186,7 +175,7 @@ export default function ActionCenterTabs({
                   {reviewDueDocs.length} dokumen mendekati atau melebihi batas waktu peninjauan tahunan
                 </span>
                 <span className="text-[11px] font-mono font-bold text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/60 px-2 py-0.5 rounded border border-orange-200 dark:border-orange-800">
-                  ISO Klausul 7.5.3
+                  Evaluasi Berkala
                 </span>
               </div>
 

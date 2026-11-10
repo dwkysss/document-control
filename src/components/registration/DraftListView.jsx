@@ -36,8 +36,6 @@ export default function DraftListView() {
     showToast
   } = useDocumentControl();
 
-  const isDcoOrAdmin = currentUser?.role === 'doc_control' || currentUser?.role === 'admin' || currentUser?.role === 'approver';
-  const [dcoScope, setDcoScope] = useState('ALL'); // 'ALL' | 'MINE'
   const [activeTab, setActiveTab] = useState('ALL'); // 'ALL' | 'DRAFT' | 'REVISION'
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDept, setSelectedDept] = useState('ALL');
@@ -50,7 +48,7 @@ export default function DraftListView() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Helper untuk memeriksa kepemilikan berkas (ISO 9001 Segregation of Duties)
+  // Helper untuk memeriksa kepemilikan berkas (100% per akun - No Sharing)
   const checkIsOwner = (doc) => {
     if (!currentUser || !doc) return false;
     const userNip = (currentUser.nip || currentUser.nik || '').toUpperCase().trim();
@@ -62,25 +60,13 @@ export default function DraftListView() {
     );
   };
 
-  // Seluruh draft dalam sistem
-  const allDrafts = (documents || []).filter(d => d.status === 'DRAFT' || d.status === 'PERLU REVISI' || d.status === 'REVISI');
-
-  // Draft yang berhak diakses oleh user saat ini
-  const drafts = allDrafts.filter(doc => {
-    if (!isDcoOrAdmin) {
-      // Staf biasa: HANYA draft milik pribadi
-      return checkIsOwner(doc);
-    }
-    // DCO / Admin: Berdasarkan toggle DCO Scope
-    if (dcoScope === 'MINE') {
-      return checkIsOwner(doc);
-    }
-    return true; // 'ALL' (Mode Pengawasan DCO)
-  });
+  // Draft murni per akun pembuat (Personal Draft)
+  const drafts = (documents || [])
+    .filter(d => d.status === 'DRAFT' || d.status === 'PERLU REVISI' || d.status === 'REVISI')
+    .filter(checkIsOwner);
 
   const draftOnlyCount = drafts.filter(d => d.status === 'DRAFT').length;
   const revisionCount = drafts.filter(d => d.status === 'PERLU REVISI' || d.status === 'REVISI').length;
-  const myDraftCount = allDrafts.filter(d => checkIsOwner(d)).length;
 
   const filteredDrafts = drafts.filter(doc => {
     const isNeedsRev = doc.status === 'PERLU REVISI' || doc.status === 'REVISI';
@@ -169,45 +155,16 @@ export default function DraftListView() {
                 Draft & Dokumen Perlu Perbaikan
               </h2>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                {isDcoOrAdmin && dcoScope === 'ALL' ? `${drafts.length} Berkas Sistem` : `${drafts.length} Berkas Saya`}
+                {drafts.length} Berkas
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              {isDcoOrAdmin
-                ? 'Mode Otoritas DCO: Pantau dan kelola seluruh usulan dokumen draft dalam sistem perusahaan.'
-                : 'Daftar berkas usulan dokumen yang Anda buat dan berkas yang memerlukan revisi sebelum diajukan.'}
+              Daftar berkas usulan dokumen yang Anda buat dan berkas yang memerlukan revisi sebelum diajukan.
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
-          {/* DCO Scope Switch (Hanya untuk Admin / DCO / Approver) */}
-          {isDcoOrAdmin && (
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 text-xs">
-              <button
-                type="button"
-                onClick={() => setDcoScope('MINE')}
-                className={`px-2.5 py-1.5 rounded-md text-xs font-bold transition cursor-pointer ${
-                  dcoScope === 'MINE'
-                    ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-2xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                Draft Saya ({myDraftCount})
-              </button>
-              <button
-                type="button"
-                onClick={() => setDcoScope('ALL')}
-                className={`px-2.5 py-1.5 rounded-md text-xs font-bold transition cursor-pointer ${
-                  dcoScope === 'ALL'
-                    ? 'bg-blue-600 text-white shadow-2xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                Semua Draft ({allDrafts.length})
-              </button>
-            </div>
-          )}
 
           <button
             type="button"
@@ -341,14 +298,10 @@ export default function DraftListView() {
                 <div className="min-w-0 flex-1">
                   <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-blue-700 dark:text-blue-300">Ruang kerja draft</p>
                   <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                    {!isDcoOrAdmin || dcoScope === 'MINE'
-                      ? 'Belum ada draft milik Anda'
-                      : 'Belum ada draft tersimpan'}
+                    Belum ada draft milik Anda
                   </h3>
                   <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-                    {!isDcoOrAdmin || dcoScope === 'MINE'
-                      ? 'Simpan formulir registrasi sebagai draft untuk melanjutkan pengisian nanti. Dokumen yang perlu diperbaiki juga akan muncul di sini.'
-                      : 'Draft registrasi dan dokumen yang menunggu perbaikan akan tercatat di halaman ini.'}
+                    Simpan formulir registrasi sebagai draft untuk melanjutkan pengisian nanti. Dokumen yang perlu diperbaiki juga akan muncul di sini.
                   </p>
                 </div>
                 <div className="w-full shrink-0 border-t border-slate-200 pt-5 dark:border-slate-700 sm:w-auto sm:border-l sm:border-t-0 sm:py-1 sm:pl-8 sm:pt-1">
@@ -523,66 +476,48 @@ export default function DraftListView() {
                           </button>
 
                           {/* 2. Edit / Upload Revisi */}
-                          {(isOwner || isDcoOrAdmin) && (
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEditModal(doc)}
-                              className={`p-1.5 rounded-lg transition cursor-pointer border ${
-                                isNeedsRevision
-                                  ? 'text-amber-700 bg-amber-50 hover:bg-amber-100 border-amber-300 dark:bg-amber-950/50 dark:border-amber-800'
-                                  : 'text-slate-600 dark:text-slate-300 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-800 border-transparent hover:border-blue-200 dark:hover:border-blue-800'
-                              }`}
-                              title={
-                                !isOwner && isDcoOrAdmin
-                                  ? 'Edit Berkas (Otoritas DCO)'
-                                  : isNeedsRevision
-                                  ? 'Unggah Berkas Revisi Baru'
-                                  : 'Edit Judul / Ganti Berkas'
-                              }
-                            >
-                              <FileEdit className="w-4 h-4" />
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditModal(doc)}
+                            className={`p-1.5 rounded-lg transition cursor-pointer border ${
+                              isNeedsRevision
+                                ? 'text-amber-700 bg-amber-50 hover:bg-amber-100 border-amber-300 dark:bg-amber-950/50 dark:border-amber-800'
+                                : 'text-slate-600 dark:text-slate-300 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-800 border-transparent hover:border-blue-200 dark:hover:border-blue-800'
+                            }`}
+                            title={isNeedsRevision ? 'Unggah Berkas Revisi Baru' : 'Edit Judul / Ganti Berkas'}
+                          >
+                            <FileEdit className="w-4 h-4" />
+                          </button>
 
                           {/* 3. Ajukan Verifikasi (Primary CTA) */}
-                          {(isOwner || isDcoOrAdmin) && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                submitForVerification({
-                                  ...doc,
-                                  isResubmission: doc.status === 'PERLU REVISI' || doc.status === 'REVISI' || Boolean(doc.revisionNotes)
-                                });
-                              }}
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold rounded-lg text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-2xs transition cursor-pointer whitespace-nowrap"
-                              title={
-                                !isOwner && isDcoOrAdmin
-                                  ? 'Ajukan Verifikasi (Otoritas DCO)'
-                                  : doc.status === 'PERLU REVISI'
-                                  ? 'Ajukan Ulang ke Tahap Terakhir'
-                                  : 'Ajukan Verifikasi Sekarang'
-                              }
-                            >
-                              <Send className="w-3.5 h-3.5" />
-                              <span>Ajukan</span>
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              submitForVerification({
+                                ...doc,
+                                isResubmission: doc.status === 'PERLU REVISI' || doc.status === 'REVISI' || Boolean(doc.revisionNotes)
+                              });
+                            }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold rounded-lg text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-2xs transition cursor-pointer whitespace-nowrap"
+                            title={doc.status === 'PERLU REVISI' ? 'Ajukan Ulang ke Tahap Terakhir' : 'Ajukan Verifikasi Sekarang'}
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                            <span>Ajukan</span>
+                          </button>
 
                           {/* 4. Hapus Draft */}
-                          {(isAdmin || isOwner) && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (window.confirm(`Hapus draf ${doc.docNumber} (${doc.title})?`)) {
-                                  deleteDocument(doc.id);
-                                }
-                              }}
-                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer border border-transparent hover:border-rose-200 dark:hover:border-rose-900"
-                              title="Hapus Draft"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (window.confirm(`Hapus draf ${doc.docNumber} (${doc.title})?`)) {
+                                deleteDocument(doc.id);
+                              }
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer border border-transparent hover:border-rose-200 dark:hover:border-rose-900"
+                            title="Hapus Draft"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -594,7 +529,6 @@ export default function DraftListView() {
             {/* Table Footer info */}
             <div className="px-4 py-2.5 bg-slate-50/70 dark:bg-slate-800/40 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
               <span>Menampilkan <strong>{filteredDrafts.length}</strong> dari <strong>{drafts.length}</strong> berkas draft</span>
-              <span className="text-[10px] text-slate-400">ISO 9001:2015 Klausul 7.5</span>
             </div>
           </div>
         )}

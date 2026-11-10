@@ -95,7 +95,7 @@ export default function PublicDocumentVerifyView({ docNumber, onBackToApp }) {
               </div>
             ) : (
               <div className="px-4 py-1.5 bg-slate-800 text-white font-mono font-black text-sm tracking-wider rounded-lg">
-                HOLDING GROUP
+                DOCUMENT CONTROL CENTER
               </div>
             )}
           </div>
@@ -103,7 +103,7 @@ export default function PublicDocumentVerifyView({ docNumber, onBackToApp }) {
             {companyName} Document Control System
           </h1>
           <p className="text-xs text-slate-400">
-            Portal Verifikasi Keaslian & Status Naskah Resmi (ISO 9001:2015 Klausul 7.5)
+            Portal Verifikasi Keaslian & Status Naskah Resmi
           </p>
         </div>
 

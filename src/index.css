@@ -205,15 +205,33 @@ body {
   border-collapse: collapse;
   font-size: 11.5px;
   background: white;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 #excel-preview-table th, #excel-preview-table td {
-  border: 1px solid #e2e8f0;
-  padding: 6px 12px;
+  border: 1px solid #cbd5e1;
+  padding: 7px 12px;
   white-space: nowrap;
+  color: #1e293b;
 }
-#excel-preview-table tr:first-child {
+#excel-preview-table tr:hover td {
   background-color: #f8fafc;
+}
+#excel-preview-table tr:first-child td {
+  background-color: #f1f5f9;
   font-weight: 700;
-  position: sticky;
-  top: 0;
+  color: #0f172a;
+}
+.dark #excel-preview-table {
+  background: #0f172a;
+}
+.dark #excel-preview-table th, .dark #excel-preview-table td {
+  border-color: #334155;
+  color: #e2e8f0;
+}
+.dark #excel-preview-table tr:hover td {
+  background-color: #1e293b;
+}
+.dark #excel-preview-table tr:first-child td {
+  background-color: #1e293b;
+  color: #f8fafc;
 }

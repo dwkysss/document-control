@@ -193,7 +193,6 @@ export default function RevisionHistoryView() {
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
               <span>Pernah Direvisi</span>
               <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
                 activeTab === 'MULTI' ? 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
