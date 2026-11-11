@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Menu, Bell, Search, UserCheck, ChevronDown, Check, Shield, FileText, CheckCircle2, AlertCircle, RefreshCw, X, Eye, LogOut, Building2, Lock } from 'lucide-react';
 import { useDocumentControl } from '../../context/DocumentControlContext';
-import { initialEmployees } from '../../data/initialData';
 import Badge from '../common/Badge';
 
 export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
@@ -43,23 +42,9 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
   const userMenuRef = useRef(null);
   const searchRef = useRef(null);
 
-  // List personil demo: Memadukan initialEmployees secara deterministik agar akun IMK/UMI selalu ada dan tidak pernah kosong
+  // Directory comes exclusively from the authenticated API response.
   const demoEmployeesList = useMemo(() => {
     const sourceMap = new Map();
-    // 1. Masukkan semua akun standar (DJI, IMK, UMI, ALL) dari initialData
-    (initialEmployees || []).forEach(e => {
-      const empNip = e.nip || e.nik;
-      const canonicalComp = empNip?.startsWith('UMI')
-        ? 'UMI'
-        : empNip?.startsWith('IMK')
-        ? 'IMK'
-        : empNip === '123463'
-        ? 'ALL'
-        : (e.companyCode || 'DJI');
-      sourceMap.set(String(empNip || '').trim(), { ...e, companyCode: canonicalComp });
-    });
-
-    // 2. Tumpuk dengan state allEmployees / employees jika ada personil tambahan
     (allEmployees || employees || []).forEach(e => {
       const nip = String(e?.nip || e?.nik || '').trim();
       if (nip) {

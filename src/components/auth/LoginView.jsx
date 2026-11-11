@@ -4,16 +4,18 @@ import { useDocumentControl } from '../../context/DocumentControlContext';
 
 export default function LoginView() {
   const { login, allEmployees, employees, systemSettings, showToast } = useDocumentControl();
-  const [identifier, setIdentifier] = useState('dwiky.sumarlin@dji-indonesia.com');
-  const [password, setPassword] = useState('password123');
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(null); // 'forgot' | 'signup' | null
   const [showQuickRoles, setShowQuickRoles] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
-  // Fallback list of PT DJI actual registered employees
-  const fallbackRealEmployees = [
+  // Account discovery is intentionally disabled; users authenticate with their assigned NIP/email.
+  const fallbackRealEmployees = [];
+  /*
+  const legacyEmployeeDirectory = [
     { nip: 'DJI092115', name: 'DENI RAMDAN', companyCode: 'DJI', department: 'MGMT', position: 'GENERAL MANAGER', email: 'deni.ramdan@dji-indonesia.com', role: 'approver' },
     { nip: 'DJI022203', name: 'DEDE SUHENDA', companyCode: 'DJI', department: 'PRODUKSI', position: 'KEPALA BAGIAN PRODUKSI', email: 'dede.suhenda@dji-indonesia.com', role: 'reviewer' },
     { nip: 'DJI012548', name: 'BABAN RACHMAT SUBAGJA', companyCode: 'DJI', department: 'HRGA', position: 'MANAGER HRGA & MR', email: 'baban.rachmat.subagja@dji-indonesia.com', role: 'approver' },
@@ -38,7 +40,7 @@ export default function LoginView() {
     { nip: 'IMK02002', name: 'TIARA KUSUMA', companyCode: 'IMK', department: 'FAT', position: 'DOCUMENT CONTROL OFFICER (IMK)', email: 'tiara.kusuma@imk-textile.com', role: 'doc_control' },
     { nip: 'IMK03003', name: 'RIZKY PRATAMA', companyCode: 'IMK', department: 'PRODUKSI', position: 'STAFF PRODUKSI & KNITTING (IMK)', email: 'rizky.pratama@imk-textile.com', role: 'staff' },
     { nip: 'IMK05005', name: 'ANISA FITRIANI', companyCode: 'IMK', department: 'PRODUKSI', position: 'OPERATOR KNITTING & QC', email: 'anisa.fitriani@imk-textile.com', role: 'viewer' }
-  ];
+  ]; */
 
   // Exclude legacy dummy demo NIPs to ensure only 100% real accounts are shown
   const dummyNips = ['123456', '123457', '123458', '123459', '123460', '123461', '123462'];
@@ -85,10 +87,7 @@ export default function LoginView() {
     }
 
     setIsLoading(true);
-    setTimeout(() => {
-      login(cleanId, password);
-      setIsLoading(false);
-    }, 200);
+    login(cleanId, password).finally(() => setIsLoading(false));
   };
 
   const handleQuickLogin = (account) => {
@@ -96,7 +95,7 @@ export default function LoginView() {
     setPassword('••••••••');
     setIsLoading(true);
     setTimeout(() => {
-      login(account.nip || account.nik);
+      login(account.nip || account.nik, '');
       setIsLoading(false);
     }, 200);
   };

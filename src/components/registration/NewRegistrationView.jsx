@@ -27,7 +27,6 @@ import {
 } from 'lucide-react';
 import Badge from '../common/Badge';
 import { useDocumentControl } from '../../context/DocumentControlContext';
-import { initialEmployees } from '../../data/initialData';
 import { getNextSequenceNumber, formatDocumentNumber } from '../../utils/numberingEngine';
 import { uploadDocumentFile } from '../../lib/supabaseClient';
 

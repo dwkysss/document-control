@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS public.employees (
   department TEXT NOT NULL,
   position TEXT NOT NULL,
   email TEXT,
+  password_hash TEXT,
   role TEXT DEFAULT 'staff' NOT NULL,
   status TEXT DEFAULT 'Aktif' NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL

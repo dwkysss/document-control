@@ -49,7 +49,8 @@ services:
       PORT: 5001
       DATABASE_URL: postgresql://${DB_USER:-appuser}:${DB_PASSWORD:-appsecurepassword}@postgres:5432/${DB_NAME:-doccontroldb}
       UPLOAD_DIR: /app/public/uploads
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?Set ALLOWED_ORIGINS to the exact HTTPS application origin}
+      AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET to a random 32+ character value}
     ports:
       # Bound to loopback 127.0.0.1 only (Zero port collision on public host)
       - "127.0.0.1:${BACKEND_PORT:-5005}:5001"

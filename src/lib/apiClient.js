@@ -29,6 +29,36 @@ const tableToEndpoint = {
   system_settings: '/api/system-settings',
 };
 
+async function request(path, options = {}) {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    credentials: 'include',
+    ...options,
+  });
+  if (!response.ok) {
+    const detail = await response.json().catch(() => ({}));
+    throw new Error(detail.error || `HTTP ${response.status}`);
+  }
+  return response;
+}
+
+export async function login(identifier, password) {
+  const response = await request('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier, password }),
+  });
+  return response.json();
+}
+
+export async function logout() {
+  await request('/api/auth/logout', { method: 'POST' });
+}
+
+export async function getCurrentUser() {
+  const response = await request('/api/auth/me');
+  return response.json();
+}
+
 function getEndpoint(table) {
   return tableToEndpoint[table] || `/api/${table.replace(/_/g, '-')}`;
 }
@@ -51,6 +81,7 @@ export async function uploadDocumentFile(file, docNumber = 'DOC') {
     const res = await fetch(`${API_BASE_URL}/api/upload`, {
       method: 'POST',
       body: formData,
+      credentials: 'include',
     });
 
     if (res.ok) {
@@ -162,6 +193,7 @@ class QueryBuilder {
           const qs = new URLSearchParams(this.params).toString();
           url += (url.includes('?') ? '&' : '?') + qs;
         }
+        options.credentials = 'include';
         const res = await fetch(url, options);
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
         let data = await res.json();
@@ -174,6 +206,7 @@ class QueryBuilder {
       if (this.action === 'UPSERT' || this.action === 'INSERT') {
         options.method = 'POST';
         options.body = JSON.stringify(this.payload);
+        options.credentials = 'include';
         const res = await fetch(url, options);
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
         const data = await res.json();
@@ -184,6 +217,7 @@ class QueryBuilder {
         options.method = 'PUT';
         const targetUrl = this.id ? `${url}/${this.id}` : url;
         options.body = JSON.stringify(this.payload);
+        options.credentials = 'include';
         const res = await fetch(targetUrl, options);
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
         const data = await res.json();
@@ -193,6 +227,7 @@ class QueryBuilder {
       if (this.action === 'DELETE') {
         options.method = 'DELETE';
         const targetUrl = this.id ? `${url}/${this.id}` : url;
+        options.credentials = 'include';
         const res = await fetch(targetUrl, options);
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
         const data = await res.json();

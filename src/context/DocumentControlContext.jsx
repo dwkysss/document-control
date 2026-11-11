@@ -1,42 +1,34 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import confetti from 'canvas-confetti';
-import {
-  initialCompanies,
-  initialDepartments,
-  initialDocumentTypes,
-  initialEmployees,
-  initialVerifierTeams,
-  initialDocuments,
-  initialAuditLogs,
-  initialSystemSettings
-} from '../data/initialData';
 import { getNextSequenceNumber, getNextRevisionCode, formatDocumentNumber } from '../utils/numberingEngine';
 import { supabase, isSupabaseConfigured, uploadDocumentFile } from '../lib/supabaseClient';
+import { login as authenticate, logout as endSession, getCurrentUser } from '../lib/apiClient';
 
 const DocumentControlContext = createContext(null);
+// Sensitive operational records must only arrive from authenticated API requests.
+const initialCompanies = [];
+const initialDepartments = [];
+const initialDocumentTypes = [];
+const initialEmployees = [];
+const initialVerifierTeams = [];
+const initialDocuments = [];
+const initialAuditLogs = [];
+const initialSystemSettings = {
+  companyName: 'PT Dentelle Jaya Infinitex',
+  systemName: 'Document Control System',
+  periodicReviewMonths: 12,
+};
 
 export function DocumentControlProvider({ children }) {
   const [isLoadingCloud, setIsLoadingCloud] = useState(isSupabaseConfigured);
 
   // 1. Core State with LocalStorage Caching & Cloud Fallback
-  const [companies, setCompanies] = useState(() => {
-    const saved = localStorage.getItem('dji_dms_companies');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch (e) {}
-    }
-    return initialCompanies;
-  });
+  const [companies, setCompanies] = useState(initialCompanies);
 
   const [selectedCompanyFilter, setSelectedCompanyFilter] = useState('ALL');
 
   // Master Raw Documents (Holding all records in cache / database)
-  const [rawDocuments, setRawDocuments] = useState(() => {
-    const saved = localStorage.getItem('dji_dms_documents');
-    return saved ? JSON.parse(saved) : initialDocuments;
-  });
+  const [rawDocuments, setRawDocuments] = useState(initialDocuments);
 
   const [departments, setDepartments] = useState(() => {
     const saved = localStorage.getItem('dji_dms_departments');
@@ -86,6 +78,7 @@ export function DocumentControlProvider({ children }) {
 
   // Master Raw Employees (Holding all personnel across all companies)
   const [rawEmployees, setRawEmployees] = useState(() => {
+    return initialEmployees;
     const saved = localStorage.getItem('dji_dms_employees');
     if (saved) {
       try {
@@ -228,6 +221,7 @@ export function DocumentControlProvider({ children }) {
   };
 
   const [rawAuditLogs, setRawAuditLogs] = useState(() => {
+    return initialAuditLogs;
     const saved = localStorage.getItem('dji_dms_auditlogs');
     if (saved) {
       try {
@@ -266,23 +260,16 @@ export function DocumentControlProvider({ children }) {
     return initialSystemSettings;
   });
 
-  // Current Logged-in User Session (Stored in localStorage 'dji_auth_user')
-  const [currentUser, setCurrentUser] = useState(() => {
-    try {
-      const saved = localStorage.getItem('dji_auth_user');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (!parsed.companyCode) {
-          const empId = parsed.nip || parsed.nik;
-          parsed.companyCode = empId?.startsWith('UMI') ? 'UMI' : empId?.startsWith('IMK') ? 'IMK' : (empId === '123463' ? 'ALL' : 'DJI');
-        }
-        return parsed;
-      }
-    } catch (e) {
-      console.warn('Error reading saved session:', e);
-    }
-    return null; // Start logged out so user logs in with NIP
-  });
+  // The session is an HttpOnly cookie verified by the backend; never trust browser storage for identity.
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    getCurrentUser()
+      .then(({ user }) => { if (mounted) setCurrentUser(user); })
+      .catch(() => { if (mounted) setCurrentUser(null); });
+    return () => { mounted = false; };
+  }, []);
 
   // Ensure all baseline personnel across companies (IMK, UMI, DJI) are merged into rawEmployees & persisted
   useEffect(() => {
@@ -434,43 +421,22 @@ export function DocumentControlProvider({ children }) {
   };
 
   // Login handler by Email or NIP
-  const login = (identifier, password = '') => {
+  const login = async (identifier, password = '') => {
     const cleanId = String(identifier || '').trim().toLowerCase();
     if (!cleanId) {
       showToast('Harap masukkan Email atau NIP pegawai!', 'danger');
       return { success: false, message: 'Identitas akun wajib diisi.' };
     }
-
-    const foundEmp = rawEmployees.find(
-      e => String(e.nip || e.nik || '').trim().toLowerCase() === cleanId ||
-           String(e.id || '').trim().toLowerCase() === cleanId ||
-           String(e.email || '').trim().toLowerCase() === cleanId ||
-           String(e.name || '').trim().toLowerCase() === cleanId
-    );
-
-    if (!foundEmp) {
-      showToast(`Akun dengan Email/NIP "${identifier}" tidak terdaftar dalam sistem!`, 'danger');
-      return { success: false, message: 'Akun tidak terdaftar.' };
-    }
-
-    if (foundEmp.status === 'Nonaktif') {
-      showToast(`Akun ${cleanId} (${foundEmp.name}) berstatus Nonaktif! Hubungi Administrator.`, 'danger');
-      return { success: false, message: 'Akun berstatus nonaktif.' };
-    }
-
-    setCurrentUser(foundEmp);
-    if (foundEmp.companyCode && foundEmp.companyCode !== 'ALL') {
-      setSelectedCompanyFilter(foundEmp.companyCode);
-    }
     try {
-      localStorage.setItem('dji_auth_user', JSON.stringify(foundEmp));
-    } catch (e) {
-      console.warn('Error saving session:', e);
+      const { user } = await authenticate(cleanId, password);
+      setCurrentUser(user);
+      if (user.companyCode && user.companyCode !== 'ALL') setSelectedCompanyFilter(user.companyCode);
+      showToast(`Selamat datang, ${user.name}!`, 'success');
+      return { success: true, user };
+    } catch (error) {
+      showToast('Email/NIP atau kata sandi tidak valid.', 'danger');
+      return { success: false, message: error.message };
     }
-
-    addAuditLog('USER_LOGIN', '-', '-', `Pengguna ${foundEmp.name} (${foundEmp.position} - ${foundEmp.role}) berhasil masuk ke sistem.`, foundEmp);
-    showToast(`Selamat datang, ${foundEmp.name}! Berhasil masuk sebagai ${foundEmp.position} (${foundEmp.companyCode || 'DJI'}).`, 'success');
-    return { success: true, user: foundEmp };
   };
 
   // Logout handler
@@ -478,13 +444,9 @@ export function DocumentControlProvider({ children }) {
     if (currentUser) {
       addAuditLog('USER_LOGOUT', '-', '-', `Pengguna ${currentUser.name} keluar dari sistem.`);
     }
+    endSession().catch(() => {});
     setCurrentUser(null);
     setSelectedCompanyFilter('ALL');
-    try {
-      localStorage.removeItem('dji_auth_user');
-    } catch (e) {
-      console.warn('Error clearing session:', e);
-    }
     showToast('Anda telah keluar dari sistem.', 'info');
   };
 
@@ -879,7 +841,7 @@ export function DocumentControlProvider({ children }) {
 
   // 1.5 Fetch initial data from self-hosted API (PostgreSQL)
   useEffect(() => {
-    if (!isSupabaseConfigured || !supabase) {
+    if (!currentUser || !isSupabaseConfigured || !supabase) {
       setIsLoadingCloud(false);
       return;
     }
@@ -1017,7 +979,7 @@ export function DocumentControlProvider({ children }) {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [currentUser]);
 
   // Toast Notification State
   const [toast, setToast] = useState(null);

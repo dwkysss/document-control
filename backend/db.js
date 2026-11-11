@@ -35,6 +35,7 @@ async function initDatabase() {
       ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS company_name TEXT DEFAULT 'PT Dentelle Jaya Infinitex';
       ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS company_code TEXT DEFAULT 'DJI';
       ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS company_name TEXT DEFAULT 'PT Dentelle Jaya Infinitex';
+      ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS password_hash TEXT;
 
       DO $$
       BEGIN

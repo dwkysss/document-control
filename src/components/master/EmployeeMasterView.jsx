@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Users, Plus, Edit, Trash2, Search, UserCheck, Mail, Shield } from 'lucide-react';
 import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
-import { initialEmployees } from '../../data/initialData';
 
 export default function EmployeeMasterView() {
   const { employees, departments, companies, selectedCompanyFilter, currentUser, addEmployee, updateEmployee, deleteEmployee, isAdmin, showToast } = useDocumentControl();
@@ -24,7 +23,7 @@ export default function EmployeeMasterView() {
   const [role, setRole] = useState('staff');
   const [status, setStatus] = useState('Aktif');
 
-  const safeEmployees = Array.isArray(employees) && employees.length > 0 ? employees : initialEmployees;
+  const safeEmployees = Array.isArray(employees) ? employees : [];
   const safeDepartments = Array.isArray(departments) ? departments : [];
 
   const filteredEmployees = safeEmployees.filter(e => {
