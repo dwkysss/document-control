@@ -95,7 +95,106 @@ export default function RejectedListView() {
             <input type="search" placeholder="Cari nomor, judul, atau alasan" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full rounded-md border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-white" />
           </label>
         </div>
-        <div className="overflow-x-auto">
+        {/* Mobile Card List View (md:hidden) */}
+        <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+          {filteredDocs.length === 0 ? (
+            <div className="px-4 py-12 text-center">
+              <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                {rejectedDocs.length === 0 ? <XCircle className="h-5 w-5" aria-hidden="true" /> : <Search className="h-5 w-5" aria-hidden="true" />}
+              </div>
+              <p className="text-sm font-bold text-slate-900 dark:text-white">
+                {rejectedDocs.length === 0 ? 'Belum ada pengajuan yang ditolak' : 'Tidak ada dokumen yang cocok'}
+              </p>
+              <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                {rejectedDocs.length === 0 ? 'Pengajuan yang ditolak beserta catatan verifikator akan tercatat di sini.' : 'Coba kata kunci lain untuk mencari nomor, judul, atau alasan.'}
+              </p>
+              {rejectedDocs.length > 0 && searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="mt-3 rounded-md px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:text-blue-300 dark:hover:bg-slate-800 cursor-pointer"
+                >
+                  Hapus pencarian
+                </button>
+              )}
+            </div>
+          ) : (
+            filteredDocs.map((doc) => (
+              <div key={doc.id} className="p-4 space-y-3 hover:bg-rose-50/20 dark:hover:bg-slate-800/40 transition">
+                {/* Header: Company + Number + Status */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
+                    <span className="font-bold font-mono text-xs text-slate-900 dark:text-white truncate">
+                      {doc.docNumber}
+                    </span>
+                  </div>
+                  <Badge status={doc.status} size="sm" />
+                </div>
+
+                {/* Body: Title + Dept + Creator */}
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white leading-snug line-clamp-2">
+                    {doc.title}
+                  </h3>
+                  <div className="mt-1 flex items-center justify-between text-[11px] text-slate-500">
+                    <span>Dept: <strong className="text-slate-700 dark:text-slate-300">{doc.department}</strong></span>
+                    <span>Pembuat: {doc.creator}</span>
+                  </div>
+
+                  {/* Rejection Note Plate */}
+                  <div className="mt-2 text-xs bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 rounded-lg p-2.5 text-rose-800 dark:text-rose-300">
+                    <div className="font-bold flex items-center gap-1 text-[11px] text-rose-700 dark:text-rose-400">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      Alasan Penolakan:
+                    </div>
+                    <p className="mt-1 text-slate-800 dark:text-slate-200 leading-snug">
+                      "{doc.rejectionReason || 'Format klausul belum memenuhi standar.'}"
+                    </p>
+                    <div className="mt-1 text-[10px] text-slate-400">
+                      Oleh: {doc.rejectedBy || 'Verifikator'} • {doc.rejectedDate ? doc.rejectedDate.slice(0, 10) : doc.createdDate}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions Footer */}
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleResubmitAsDraft(doc)}
+                    className="flex-1 min-h-[40px] py-2 px-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Perbaiki Sebagai Draft</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setViewingDocument(doc)}
+                    className="min-h-[40px] px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold flex items-center justify-center transition active:scale-98 cursor-pointer"
+                    title="Pratinjau Dokumen"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+
+                  {(isAdmin || (currentUser && (currentUser.name === doc.creator || (currentUser.nip || currentUser.nik) === (doc.creatorNip || doc.creatorNik)))) && (
+                    <button
+                      type="button"
+                      onClick={() => setDocToDelete(doc)}
+                      className="min-h-[40px] px-3 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 rounded-lg text-xs font-semibold flex items-center justify-center transition active:scale-98 cursor-pointer"
+                      title="Hapus Dokumen Ditolak"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop Table (hidden md:block) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 text-[11px] font-bold">

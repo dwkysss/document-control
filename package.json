@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
+    "test": "vitest run",
     "backup": "node scripts/backup.js",
     "restore": "node scripts/restore.js",
     "decrypt": "node scripts/decrypt-file.js",
@@ -41,6 +42,7 @@
     "oxlint": "^1.79.0",
     "postcss": "^8.5.26",
     "tailwindcss": "^4.3.3",
-    "vite": "^8.2.2"
+    "vite": "^8.2.2",
+    "vitest": "^5.1.0"
   }
 }

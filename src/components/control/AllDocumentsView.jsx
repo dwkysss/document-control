@@ -232,9 +232,111 @@ export default function AllDocumentsView() {
         </div>
       </div>
 
-      {/* Main Master Table */}
+      {/* Main Master Table & Mobile Card List */}
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Mobile Card List View (md:hidden) */}
+        <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+          {paginatedDocs.length === 0 ? (
+            <div className="p-8 text-center text-slate-500">
+              <Filter className="w-8 h-8 mx-auto text-slate-400 mb-2" />
+              <p className="font-bold text-sm text-slate-800 dark:text-slate-200">Tidak ada dokumen yang sesuai</p>
+              <p className="text-xs text-slate-500 mt-1">Coba sesuaikan kata kunci pencarian atau reset filter.</p>
+            </div>
+          ) : (
+            paginatedDocs.map((doc) => (
+              <div key={doc.id} className="p-4 space-y-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                {/* Header: Company + Number + Status */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
+                    <span className="font-mono text-xs font-bold text-slate-900 dark:text-white truncate" title={doc.docNumber}>
+                      {doc.docNumber}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Badge status={doc.status} size="sm" />
+                    <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100 dark:bg-slate-800 dark:text-slate-300 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                      R{doc.revision}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Body: Title & Details */}
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white leading-snug line-clamp-2">
+                    {doc.title}
+                  </h3>
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+                    <div>
+                      <span className="text-slate-400">Dept:</span> <strong className="text-slate-700 dark:text-slate-300">{doc.department}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">Jenis:</span> <strong className="text-slate-700 dark:text-slate-300">{doc.type}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">Pembuat:</span> <span className="text-slate-700 dark:text-slate-300 truncate">{doc.creator}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">Tercatat:</span> <span className="text-slate-700 dark:text-slate-300">{formatRegisterDate(doc.createdDate)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer Action Buttons */}
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setViewingDocument(doc)}
+                    className="flex-1 min-h-[40px] py-2 px-3 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-98"
+                  >
+                    <Eye className="w-4 h-4" />
+                    <span>Pratinjau</span>
+                  </button>
+
+                  {doc.status === 'AKTIF' && (
+                    <button
+                      type="button"
+                      onClick={() => handleRevisionClick(doc)}
+                      className="min-h-[40px] px-3 py-2 bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-98"
+                      title="Ajukan Revisi"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      <span className="text-[11px]">Revisi</span>
+                    </button>
+                  )}
+
+                  {isAdmin && (doc.status === 'AKTIF' || doc.status === 'VERIFIKASI') && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDocToCancel(doc);
+                        setCancelReason('');
+                      }}
+                      className="min-h-[40px] px-3 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-98"
+                      title="Batalkan Dokumen"
+                    >
+                      <Ban className="w-4 h-4" />
+                    </button>
+                  )}
+
+                  {isAdmin && (doc.status === 'DRAFT' || doc.status === 'DITOLAK' || doc.status === 'OBSOLETE') && (
+                    <button
+                      type="button"
+                      onClick={() => setDocToDelete(doc)}
+                      className="min-h-[40px] px-3 py-2 bg-slate-100 hover:bg-rose-50 dark:bg-slate-800 dark:hover:bg-rose-950/40 text-slate-500 hover:text-rose-600 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-98"
+                      title="Hapus Dokumen"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop Table (hidden md:block) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full min-w-[1120px] table-fixed text-left border-collapse text-sm">
             <colgroup><col className="w-[32%]" /><col className="w-[8%]" /><col className="w-[10%]" /><col className="w-[15%]" /><col className="w-[7%]" /><col className="w-[10%]" /><col className="w-[10%]" /><col className="w-[8%]" /></colgroup>
             <thead>

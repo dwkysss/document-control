@@ -1094,21 +1094,40 @@ export function DocumentControlProvider({ children }) {
         }
         if (cloudTeams && !teamsErr) setVerifierTeams(cloudTeams);
         if (cloudLogs && !logsErr) {
-          setRawAuditLogs(cloudLogs.map(l => {
-            const logNip = l.nip || l.nik;
-            return {
+          if (cloudLogs.length > 0) {
+            setRawAuditLogs(cloudLogs.map(l => {
+              const logNip = l.nip || l.nik;
+              return {
+                id: l.id,
+                timestamp: l.timestamp,
+                user: l.user_name,
+                nip: logNip,
+                nik: logNip,
+                companyCode: l.company_code || (l.doc_number?.split('-')[0]) || (logNip?.startsWith('UMI') ? 'UMI' : logNip?.startsWith('IMK') ? 'IMK' : 'DJI'),
+                action: l.action,
+                docNumber: l.doc_number,
+                docTitle: l.doc_title,
+                details: l.details
+              };
+            }));
+          } else if (cloudDocs && cloudDocs.length > 0) {
+            // Auto seed baseline audit logs to PostgreSQL once
+            const mappedDocs = cloudDocs.map(toCamelCaseDoc);
+            const baselineLogs = generateAuditLogsFromDocuments(mappedDocs);
+            setRawAuditLogs(baselineLogs);
+            const dbRecords = baselineLogs.map(l => ({
               id: l.id,
               timestamp: l.timestamp,
-              user: l.user_name,
-              nip: logNip,
-              nik: logNip,
-              companyCode: l.company_code || (l.doc_number?.split('-')[0]) || (logNip?.startsWith('UMI') ? 'UMI' : logNip?.startsWith('IMK') ? 'IMK' : 'DJI'),
+              user_name: l.user,
+              nip: l.nip || l.nik || '-',
+              company_code: l.companyCode || 'DJI',
               action: l.action,
-              docNumber: l.doc_number,
-              docTitle: l.doc_title,
-              details: l.details
-            };
-          }));
+              doc_number: l.docNumber || '-',
+              doc_title: l.docTitle || '-',
+              details: l.details || '-'
+            }));
+            supabase.from('audit_logs').upsert(dbRecords).catch(e => console.warn('Audit auto-seed failed:', e));
+          }
         }
         if (cloudSettings && cloudSettings.length > 0) {
           const s = cloudSettings[0];
@@ -1300,12 +1319,31 @@ export function DocumentControlProvider({ children }) {
     }
   };
 
-  // Sinkronisasi Jejak Audit dari dokumen yang sudah ada
-  const syncAuditLogsFromDocuments = () => {
+  // Sinkronisasi Jejak Audit dari dokumen yang sudah ada ke database pusat PostgreSQL
+  const syncAuditLogsFromDocuments = async () => {
     const generated = generateAuditLogsFromDocuments(rawDocuments);
     setRawAuditLogs(generated);
     localStorage.setItem('dji_dms_auditlogs', JSON.stringify(generated));
-    showToast(`Berhasil menyinkronkan ${generated.length} entri jejak audit dari dokumen!`, 'success');
+
+    if (isSupabaseConfigured && supabase && generated.length > 0) {
+      const dbRecords = generated.map(l => ({
+        id: l.id,
+        timestamp: l.timestamp,
+        user_name: l.user,
+        nip: l.nip || l.nik || '-',
+        company_code: l.companyCode || 'DJI',
+        action: l.action,
+        doc_number: l.docNumber || '-',
+        doc_title: l.docTitle || '-',
+        details: l.details || '-'
+      }));
+      try {
+        await supabase.from('audit_logs').upsert(dbRecords);
+      } catch (err) {
+        console.warn('Gagal sinkron audit log ke server:', err);
+      }
+    }
+    showToast(`Berhasil menyinkronkan ${generated.length} entri jejak audit ke database pusat!`, 'success');
   };
 
   // Helper to add persistent in-app notification (Frontend + PostgreSQL database)

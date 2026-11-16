@@ -237,11 +237,11 @@ export default function BarcodeScannerModal({ isOpen, onClose }) {
       }}
     >
       <div
-        className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh] my-auto"
+        className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[92dvh] my-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800/60">
+        <div className="px-4 sm:px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800/60">
           <div className="flex items-center gap-2">
             <div className="p-1.5 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-lg">
               <ScanBarcode className="w-4 h-4" />
@@ -254,7 +254,8 @@ export default function BarcodeScannerModal({ isOpen, onClose }) {
           <button
             type="button"
             onClick={handleModalClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-800 transition cursor-pointer"
+            className="w-10 h-10 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-800 transition cursor-pointer"
+            aria-label="Tutup pemindai"
           >
             <X className="w-5 h-5" />
           </button>
@@ -265,38 +266,38 @@ export default function BarcodeScannerModal({ isOpen, onClose }) {
           <button
             type="button"
             onClick={() => setActiveTab('camera')}
-            className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer ${
+            className={`flex-1 min-h-[38px] py-2 rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer text-center ${
               activeTab === 'camera'
-                ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
+                ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs font-bold'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
             }`}
           >
-            <Camera className="w-3.5 h-3.5" />
-            <span>Kamera Live</span>
+            <Camera className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Kamera Live</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('upload')}
-            className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer ${
+            className={`flex-1 min-h-[38px] py-2 rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer text-center ${
               activeTab === 'upload'
-                ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
+                ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs font-bold'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
             }`}
           >
-            <Upload className="w-3.5 h-3.5" />
-            <span>Unggah Foto</span>
+            <Upload className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Unggah Foto</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('manual')}
-            className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer ${
+            className={`flex-1 min-h-[38px] py-2 rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer text-center ${
               activeTab === 'manual'
-                ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs'
+                ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs font-bold'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
             }`}
           >
-            <Keyboard className="w-3.5 h-3.5" />
-            <span>Input / Scanner USB</span>
+            <Keyboard className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Manual / USB</span>
           </button>
         </div>
 

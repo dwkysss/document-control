@@ -76,11 +76,11 @@ export default function ControlTowerHeader({
         </div>
 
         {/* Right Column: Quick Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2.5 flex-shrink-0 self-start lg:self-center">
+        <div className="flex flex-wrap items-center gap-2.5 flex-shrink-0 w-full sm:w-auto">
           {isViewer ? (
             <button
               onClick={() => navigateTo('ctrl-active', ['Dashboard', 'Document Control', 'Dokumen Aktif'])}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer"
+              className="flex-1 sm:flex-initial px-4 py-2.5 min-h-[44px] flex items-center justify-center bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer"
             >
               Buka Master Dokumen Aktif
             </button>
@@ -89,7 +89,7 @@ export default function ControlTowerHeader({
               {canRegisterDocument && (
                 <button
                   onClick={() => navigateTo('reg-new', ['Dashboard', 'Registrasi Dokumen', 'Dokumen Baru'])}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer"
+                  className="flex-1 sm:flex-initial px-4 py-2.5 min-h-[44px] flex items-center justify-center bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer active:scale-98"
                 >
                   + Dokumen Baru
                 </button>
@@ -98,7 +98,7 @@ export default function ControlTowerHeader({
               {canRequestRevision && (
                 <button
                   onClick={() => navigateTo('rev-new', ['Dashboard', 'Document Revision', 'Pengajuan Revisi'])}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-indigo-200 hover:text-white rounded-xl text-xs font-bold border border-indigo-500/40 transition cursor-pointer"
+                  className="flex-1 sm:flex-initial px-4 py-2.5 min-h-[44px] flex items-center justify-center bg-slate-800 hover:bg-slate-700 text-indigo-200 hover:text-white rounded-xl text-xs font-bold border border-indigo-500/40 transition cursor-pointer active:scale-98"
                 >
                   Ajukan Revisi
                 </button>
@@ -107,7 +107,7 @@ export default function ControlTowerHeader({
               {canAccessReports && (
                 <button
                   onClick={() => navigateTo('rep-register', ['Dashboard', 'Report', 'Register Dokumen'])}
-                  className="px-3.5 py-2 bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-semibold border border-slate-700 transition cursor-pointer"
+                  className="flex-1 sm:flex-initial px-3.5 py-2.5 min-h-[44px] flex items-center justify-center bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-semibold border border-slate-700 transition cursor-pointer active:scale-98"
                   title="Unduh Master Register Dokumen Terkendali ISO"
                 >
                   Register ISO

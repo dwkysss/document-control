@@ -34,11 +34,13 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
 
   const notifRef = useRef(null);
   const userMenuRef = useRef(null);
   const searchRef = useRef(null);
+  const mobileSearchRef = useRef(null);
 
   const unreadCount = (notifications || []).filter(n => !n?.read && !n?.is_read).length;
 
@@ -86,6 +88,9 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
       }
       if (searchRef.current && !searchRef.current.contains(event.target)) {
         setIsSearching(false);
+      }
+      if (mobileSearchRef.current && !mobileSearchRef.current.contains(event.target)) {
+        setIsMobileSearchOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -152,11 +157,11 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
         <div className="flex items-center gap-2.5 sm:gap-3.5 shrink-0 min-w-0">
           <button
             onClick={onToggleSidebar}
-            className="w-9 h-9 min-w-[36px] min-h-[36px] flex items-center justify-center p-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition active:scale-95 border border-slate-200/60 dark:border-slate-700/60 shadow-2xs flex-shrink-0"
+            className="w-10 h-10 min-w-[44px] min-h-[44px] flex items-center justify-center p-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition active:scale-95 border border-slate-200/60 dark:border-slate-700/60 shadow-2xs flex-shrink-0 cursor-pointer"
             title="Toggle Sidebar"
             aria-label="Toggle Sidebar"
           >
-            <Menu className="w-4 h-4" />
+            <Menu className="w-5 h-5" />
           </button>
 
           <div className="h-5 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block flex-shrink-0" />
@@ -187,41 +192,70 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
 
         {/* Right Side: Global Search, Notification Center, User Profile */}
         <div className="flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0 min-w-0">
-          {/* Multi-Company Scope Filter Pill (Hanya untuk Admin Holding) */}
+          {/* Multi-Company Scope Filter (Desktop Pill & Mobile Select) */}
           {!isCompanyLocked && (
-            <div className="hidden sm:flex items-center bg-slate-100/90 dark:bg-slate-800/90 p-0.5 rounded-xl border border-slate-200/80 dark:border-slate-700/80 text-xs shadow-2xs shrink-0">
-              <button
-                type="button"
-                onClick={() => setSelectedCompanyFilter('ALL')}
-                className={`px-2 xl:px-2.5 py-1 rounded-lg font-bold text-[11px] transition ${
-                  selectedCompanyFilter === 'ALL'
-                    ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-2xs'
-                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-                }`}
-              >
-                <span className="hidden xl:inline">Semua (3 PT)</span>
-                <span className="xl:hidden">ALL</span>
-              </button>
-              {(companies || []).map((comp) => {
-                const isActive = selectedCompanyFilter === comp.code;
-                return (
-                  <button
-                    key={comp.id}
-                    type="button"
-                    onClick={() => setSelectedCompanyFilter(comp.code)}
-                    className={`px-1.5 xl:px-2 py-1 rounded-lg font-bold text-[11px] transition ${
-                      isActive
-                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
-                        : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-                    }`}
-                    title={comp.name}
-                  >
-                    <span>{comp.code}</span>
-                  </button>
-                );
-              })}
-            </div>
+            <>
+              {/* Mobile Company Select */}
+              <div className="sm:hidden flex items-center">
+                <select
+                  value={selectedCompanyFilter}
+                  onChange={(e) => setSelectedCompanyFilter(e.target.value)}
+                  className="text-[11px] font-bold bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  aria-label="Pilih Perusahaan"
+                >
+                  <option value="ALL">ALL PT</option>
+                  {(companies || []).map((comp) => (
+                    <option key={comp.id} value={comp.code}>{comp.code}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Desktop Company Pill */}
+              <div className="hidden sm:flex items-center bg-slate-100/90 dark:bg-slate-800/90 p-0.5 rounded-xl border border-slate-200/80 dark:border-slate-700/80 text-xs shadow-2xs shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setSelectedCompanyFilter('ALL')}
+                  className={`px-2 xl:px-2.5 py-1 rounded-lg font-bold text-[11px] transition ${
+                    selectedCompanyFilter === 'ALL'
+                      ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <span className="hidden xl:inline">Semua (3 PT)</span>
+                  <span className="xl:hidden">ALL</span>
+                </button>
+                {(companies || []).map((comp) => {
+                  const isActive = selectedCompanyFilter === comp.code;
+                  return (
+                    <button
+                      key={comp.id}
+                      type="button"
+                      onClick={() => setSelectedCompanyFilter(comp.code)}
+                      className={`px-1.5 xl:px-2 py-1 rounded-lg font-bold text-[11px] transition ${
+                        isActive
+                          ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
+                          : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                      }`}
+                      title={comp.name}
+                    >
+                      <span>{comp.code}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
           )}
+
+          {/* Mobile Search Toggle Button */}
+          <button
+            type="button"
+            onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+            className="md:hidden w-10 h-10 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700/80 rounded-xl transition active:scale-95 cursor-pointer shrink-0 shadow-2xs"
+            title="Cari Dokumen"
+            aria-label="Cari Dokumen"
+          >
+            <Search className="w-4 h-4" />
+          </button>
 
           {/* Quick Search dropdown */}
           <div className="relative hidden md:block w-28 lg:w-36 xl:w-48 focus-within:w-44 xl:focus-within:w-56 transition-all duration-200" ref={searchRef}>
@@ -321,7 +355,7 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
 
             {/* Notification Popup Dropdown */}
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-900 rounded-xl shadow-elevated border border-slate-200 dark:border-slate-800 py-2 z-50 animate-fade-in">
+              <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-96 max-w-sm bg-white dark:bg-slate-900 rounded-xl shadow-elevated border border-slate-200 dark:border-slate-800 py-2 z-50 animate-fade-in">
                 <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100 dark:border-slate-800">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-bold text-slate-900 dark:text-white">Notifikasi</span>
@@ -436,7 +470,7 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
 
             {/* Profile & Auth Menu */}
             {showUserMenu && currentUser && (
-              <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 py-2 z-50 animate-fadeIn">
+              <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-72 max-w-xs bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 py-2 z-50 animate-fadeIn">
                 <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
                   <div className="flex items-start justify-between">
                     <div>
@@ -508,6 +542,70 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
           </div>
         </div>
       </div>
+
+      {/* Mobile Live Search Dropdown */}
+      {isMobileSearchOpen && (
+        <div
+          ref={mobileSearchRef}
+          className="md:hidden absolute top-16 left-0 right-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 shadow-xl z-50 animate-fadeIn"
+        >
+          <div className="relative">
+            <input
+              type="text"
+              autoFocus
+              placeholder="Cari nomor, judul, dept, pembuat..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-9 py-2.5 text-xs bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white placeholder-slate-400"
+            />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-2.5 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                aria-label="Hapus pencarian"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {searchQuery.trim() && (
+            <div className="mt-2.5 max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-md">
+              <div className="px-3 py-1.5 text-[10px] uppercase font-bold text-slate-400 bg-slate-50 dark:bg-slate-800/60">
+                Hasil Pencarian ({searchResults.length} dokumen)
+              </div>
+              {searchResults.length === 0 ? (
+                <div className="p-4 text-center text-xs text-slate-400">
+                  Tidak ada dokumen yang cocok
+                </div>
+              ) : (
+                searchResults.map((doc) => (
+                  <div
+                    key={doc.id}
+                    onClick={() => {
+                      setViewingDocument(doc);
+                      setIsMobileSearchOpen(false);
+                    }}
+                    className="p-3 hover:bg-blue-50/70 dark:hover:bg-slate-800 active:bg-blue-100 cursor-pointer text-xs flex items-center justify-between gap-2"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono font-bold text-slate-900 dark:text-white truncate">{doc.docNumber}</span>
+                        <Badge status={doc.status} size="sm" />
+                      </div>
+                      <p className="text-slate-700 dark:text-slate-300 font-medium truncate mt-0.5">{doc.title}</p>
+                      <span className="text-[10px] text-slate-400">Dept: {doc.department} | Rev: {doc.revision}</span>
+                    </div>
+                    <Eye className="w-4 h-4 text-slate-400 shrink-0" />
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Modal Scanner Barcode / QR */}
       <BarcodeScannerModal

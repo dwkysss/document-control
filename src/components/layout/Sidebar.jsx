@@ -14,6 +14,7 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
+  X,
   Archive,
   Layers,
   Users,
@@ -138,8 +139,8 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
       )}
 
       <aside
-        className={`fixed lg:sticky top-0 left-0 h-screen bg-[#0a1628] text-slate-300 border-r border-[#1b2d49] z-40 transition-all duration-300 flex flex-col shadow-2xl shadow-slate-950/25 rounded-r-[24px] lg:rounded-r-[28px] overflow-hidden ${
-          isCollapsed ? 'w-20' : 'w-64 xl:w-72'
+        className={`fixed lg:sticky top-0 left-0 h-[100dvh] bg-[#0a1628] text-slate-300 border-r border-[#1b2d49] z-40 transition-all duration-300 flex flex-col shadow-2xl shadow-slate-950/25 rounded-r-[24px] lg:rounded-r-[28px] overflow-hidden ${
+          isCollapsed ? 'w-20' : 'w-72 max-w-[85vw]'
         } ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
         {/* Brand Header (Dynamic per Active Unit / Holding) */}
@@ -183,25 +184,38 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
 
           return (
             <div className={`h-16 px-4 border-b border-[#172740]/80 flex items-center bg-gradient-to-r from-[#07101e] via-[#091527] to-[#07101e] min-w-0 shrink-0 ${
-              isCollapsed ? 'justify-center px-0' : 'gap-3'
+              isCollapsed ? 'justify-center px-0' : 'justify-between gap-2'
             }`}>
-              {renderCompanyIcon()}
-              {!isCollapsed && (
-                <div className="overflow-hidden min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-[14px] tracking-tight text-white font-sans leading-tight">
-                      Document Control
-                    </span>
-                  </div>
-                  {companySubLabel && (
-                    <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 shadow-[0_0_6px_#34d399]" title="Sistem Aktif & Terkendali" />
-                      <p className="text-[10px] text-slate-400 font-medium tracking-wide uppercase truncate" title={companySubLabel}>
-                        {companySubLabel}
-                      </p>
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                {renderCompanyIcon()}
+                {!isCollapsed && (
+                  <div className="overflow-hidden min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold text-[14px] tracking-tight text-white font-sans leading-tight">
+                        Document Control
+                      </span>
                     </div>
-                  )}
-                </div>
+                    {companySubLabel && (
+                      <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 shadow-[0_0_6px_#34d399]" title="Sistem Aktif & Terkendali" />
+                        <p className="text-[10px] text-slate-400 font-medium tracking-wide uppercase truncate" title={companySubLabel}>
+                          {companySubLabel}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              {/* Mobile Close Button (Touch target 44px) */}
+              {isMobileOpen && (
+                <button
+                  type="button"
+                  onClick={onCloseMobile}
+                  className="lg:hidden p-2 text-slate-400 hover:text-white hover:bg-slate-800/80 rounded-xl transition min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0 cursor-pointer"
+                  aria-label="Tutup menu navigasi"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               )}
             </div>
           );

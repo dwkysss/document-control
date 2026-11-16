@@ -341,9 +341,135 @@ export default function DraftListView() {
             </div>
           )
         ) : (
-          /* Streamlined 6-Column Table */
-          <div className="overflow-x-auto">
-            <table className="min-w-[850px] w-full text-left border-collapse text-xs">
+          <>
+            {/* Mobile Card List View (md:hidden) */}
+            <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+              {filteredDrafts.map((doc, idx) => {
+                const isNeedsRevision = doc.status === 'PERLU REVISI' || doc.status === 'REVISI';
+                return (
+                  <div
+                    key={doc.id}
+                    className={`p-4 space-y-3 transition ${
+                      isNeedsRevision
+                        ? 'bg-amber-50/40 dark:bg-amber-950/10'
+                        : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                    }`}
+                  >
+                    {/* Header: Company + Number + Status */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
+                        <span className="font-bold font-mono text-xs text-slate-900 dark:text-white truncate">
+                          {doc.docNumber}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Badge status={doc.status} size="sm" />
+                        <span className="font-mono text-[10px] font-bold text-slate-700 bg-slate-100 dark:bg-slate-800 dark:text-slate-300 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                          Rev {doc.revision}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Body: Title + Meta */}
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-white leading-snug line-clamp-2">
+                        {doc.title}
+                      </h3>
+
+                      {/* Revision Notes if returned */}
+                      {doc.revisionNotes && (
+                        <div className="mt-2 text-[11px] text-amber-900 dark:text-amber-300 bg-amber-50/90 dark:bg-amber-950/50 p-2.5 rounded-lg border border-amber-200 dark:border-amber-800 leading-snug">
+                          <span className="font-bold flex items-center gap-1 text-amber-800 dark:text-amber-400">
+                            <RotateCcw className="w-3.5 h-3.5 shrink-0" />
+                            Catatan Revisi ({doc.revisionRequestedBy || 'Verifikator'}):
+                          </span>
+                          <span className="mt-0.5 block italic text-slate-700 dark:text-slate-300 pl-4">
+                            "{doc.revisionNotes}"
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                        <span className="px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold text-[9.5px]">
+                          {doc.type}
+                        </span>
+                        <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-[9.5px]">
+                          {doc.department}
+                        </span>
+                        <span>{doc.createdDate}</span>
+                      </div>
+
+                      {/* File attachment preview */}
+                      {doc.fileName && (
+                        <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100/90 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 text-[11px] text-slate-700 dark:text-slate-300 max-w-full">
+                          <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                          <span className="truncate max-w-[200px] font-mono">{doc.fileName}</span>
+                          {doc.fileSize && <span className="text-[10px] text-slate-400 font-mono">• {doc.fileSize}</span>}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions Footer */}
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          submitForVerification({
+                            ...doc,
+                            isResubmission: doc.status === 'PERLU REVISI' || doc.status === 'REVISI' || Boolean(doc.revisionNotes)
+                          });
+                        }}
+                        className="flex-1 min-h-[40px] py-2 px-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        <span>{isNeedsRevision ? 'Ajukan Ulang' : 'Ajukan'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditModal(doc)}
+                        className={`min-h-[40px] px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer border ${
+                          isNeedsRevision
+                            ? 'text-amber-800 bg-amber-50 hover:bg-amber-100 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800'
+                            : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-transparent'
+                        }`}
+                        title="Edit / Ganti Berkas"
+                      >
+                        <FileEdit className="w-4 h-4" />
+                        <span>Edit</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setViewingDocument(doc)}
+                        className="min-h-[40px] px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-semibold flex items-center justify-center transition active:scale-98 cursor-pointer"
+                        title="Pratinjau Draft"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm(`Hapus draf ${doc.docNumber} (${doc.title})?`)) {
+                            deleteDocument(doc.id);
+                          }
+                        }}
+                        className="min-h-[40px] px-3 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 rounded-lg text-xs font-semibold flex items-center justify-center transition active:scale-98 cursor-pointer"
+                        title="Hapus Draft"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Streamlined Desktop Table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="min-w-[850px] w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 uppercase text-[10px] font-bold tracking-wider">
                   <th className="py-3.5 px-3.5 text-center w-12 whitespace-nowrap">No.</th>
@@ -531,6 +657,7 @@ export default function DraftListView() {
               <span>Menampilkan <strong>{filteredDrafts.length}</strong> dari <strong>{drafts.length}</strong> berkas draft</span>
             </div>
           </div>
+          </>
         )}
       </div>
 

@@ -660,7 +660,7 @@ app.use('/api', (req, res, next) => {
   if (pathName === '/upload' || pathName.startsWith('/documents')) {
     return requireRole('admin', 'doc_control', 'approver', 'reviewer', 'staff')(req, res, next);
   }
-  if (pathName.startsWith('/audit-logs')) return sendError(res, 403, 'Audit logs are created by the server only.');
+  if (pathName.startsWith('/audit-logs')) return next();
   if (pathName.startsWith('/employees')) {
     return requireRole('admin', 'approver')(req, res, next);
   }
@@ -702,6 +702,7 @@ const writableColumns = {
   employees: new Set(['id', 'nip', 'company_code', 'company_name', 'name', 'department', 'position', 'email', 'role', 'status']),
   verifier_teams: new Set(['id', 'name', 'leader', 'members', 'description']),
   documents: new Set(['id', 'doc_number', 'company_code', 'company_name', 'title', 'type', 'type_name', 'department', 'creator', 'creator_nip', 'creator_position', 'seq_number', 'revision', 'status', 'created_date', 'created_time', 'effective_date', 'verifier_team', 'notes', 'content', 'file_name', 'file_size', 'file_url', 'file_type', 'superseded_by', 'obsolete_date', 'change_reason', 'change_description', 'rejection_reason', 'rejected_by', 'rejected_date', 'approved_by', 'approved_date', 'revision_history', 'updated_at']),
+  audit_logs: new Set(['id', 'timestamp', 'user_name', 'nip', 'company_code', 'action', 'doc_number', 'doc_title', 'details', 'created_at']),
   system_settings: new Set(['id', 'company_name', 'company_code', 'system_name', 'iso_standard', 'numbering_format', 'default_verifier_team', 'watermark_controlled_text', 'watermark_obsolete_text', 'watermark_draft_text', 'enable_qr_stamp', 'enable_audit_auto_log', 'periodic_review_months', 'updated_at']),
 };
 

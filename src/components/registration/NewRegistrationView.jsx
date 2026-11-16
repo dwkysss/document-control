@@ -886,7 +886,7 @@ export default function NewRegistrationView() {
               )}
 
               {/* Action Buttons */}
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => {
@@ -894,15 +894,15 @@ export default function NewRegistrationView() {
                     setNotes('');
                     setFileAttachment(null);
                   }}
-                  className="px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition cursor-pointer"
+                  className="px-3 py-2.5 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition cursor-pointer text-center"
                 >
                   Reset Form
                 </button>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
                   <button
                     type="button"
                     onClick={handleSaveDraft}
-                    className="flex items-center gap-1.5 px-5 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 border border-slate-300 dark:border-slate-700 rounded-lg transition shadow-xs cursor-pointer"
+                    className="flex items-center justify-center gap-1.5 px-5 py-2.5 min-h-[44px] text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 border border-slate-300 dark:border-slate-700 rounded-lg transition shadow-xs cursor-pointer active:scale-98"
                   >
                     <Save className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                     Simpan Draft
@@ -911,7 +911,7 @@ export default function NewRegistrationView() {
                     type="button"
                     onClick={handleSubmitVerification}
                     disabled={isSubmitting}
-                    className="flex items-center gap-2 px-6 py-2.5 text-xs font-bold text-white rounded-lg transition shadow-sm hover:shadow cursor-pointer bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-blue-600/20"
+                    className="flex items-center justify-center gap-2 px-6 py-2.5 min-h-[44px] text-xs font-bold text-white rounded-lg transition shadow-sm hover:shadow cursor-pointer bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-blue-600/20 active:scale-98"
                   >
                     <Send className="w-4 h-4" />
                     Ajukan Registrasi Dokumen
