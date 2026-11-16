@@ -3,6 +3,23 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 /**
+ * Helper pemformat tanggal resmi ISO (hanya tanggal, bulan, tahun - tanpa detail jam)
+ */
+export function formatDocumentDate(value) {
+  if (!value || value === '-') return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return typeof value === 'string' && value.length >= 10 ? value.slice(0, 10) : String(value);
+  }
+  return new Intl.DateTimeFormat('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'Asia/Jakarta',
+  }).format(date);
+}
+
+/**
  * Helper pemanggil autoTable yang kompatibel lintas bundler / ES modules
  */
 export function applyAutoTable(doc, options) {
@@ -81,9 +98,9 @@ export function exportToExcel(data, fileName = 'Master_Document_Register') {
     'Pembuat': `${doc.creator} (NIP: ${doc.creatorNip || doc.creatorNik || '-'})`,
     'Revisi': doc.revision,
     'Status': doc.status,
-    'Tanggal Registrasi': doc.createdDate || '-',
-    'Tanggal Efektif': doc.effectiveDate || '-',
-    'Tim Verifikator': doc.verifierTeam || '-',
+    'Tanggal Registrasi': formatDocumentDate(doc.createdDate),
+    'Tanggal Efektif': formatDocumentDate(doc.effectiveDate),
+    'Verifikasi (DCO)': doc.verifiedBy || 'Document Control (DCO)',
     'Catatan': doc.notes || '-',
   }));
 
@@ -203,7 +220,7 @@ export function exportMasterRegisterPDF(documents = [], systemSettings = {}, tar
     creator: d.creator,
     rev: d.revision,
     status: d.status,
-    effectiveDate: d.effectiveDate || d.createdDate || '-',
+    effectiveDate: formatDocumentDate(d.effectiveDate || d.createdDate),
   }));
 
   applyAutoTable(doc, {
@@ -347,10 +364,20 @@ export async function exportControlledDocumentPDF(docData, systemSettings = {}, 
   // plakat judul mengambang, nomor dokumen berbingkai, dan identitas perusahaan di kanan bawah.
   // =========================================================================
   if (isCoverMode) {
-    // 1. Logo Perusahaan di Kiri Ujung Atas Cover
+    // 1. Logo Perusahaan di Kiri Ujung Atas Cover (Proporsional sesuai aspect ratio asli)
     if (logoDataUrl) {
       try {
-        doc.addImage(logoDataUrl, 'PNG', 36, 28, 120, 38);
+        const imgProps = doc.getImageProperties(logoDataUrl);
+        const imgAspect = (imgProps.width || 1) / (imgProps.height || 1);
+        const maxLogoW = 120;
+        const maxLogoH = 52;
+        let drawW = maxLogoW;
+        let drawH = drawW / imgAspect;
+        if (drawH > maxLogoH) {
+          drawH = maxLogoH;
+          drawW = drawH * imgAspect;
+        }
+        doc.addImage(logoDataUrl, imgProps.fileType || 'PNG', 36, 28, drawW, drawH);
       } catch (e) {
         console.warn('Gagal memuat logo di cover:', e);
       }
@@ -375,36 +402,43 @@ export async function exportControlledDocumentPDF(docData, systemSettings = {}, 
       doc.text(company, 36, 44);
     }
 
-    // 2. Helper Gambar Bilah Geometris Bersudut 45 Derajat
-    const drawCoverAngledBar = (cx, cy, w, h, angleDeg, color) => {
-      const rad = (angleDeg * Math.PI) / 180;
-      const cos = Math.cos(rad);
-      const sin = Math.sin(rad);
-      const hw = w / 2;
-      const hh = h / 2;
-      const p1 = { x: cx - hw * cos + hh * sin, y: cy - hw * sin - hh * cos };
-      const p2 = { x: cx + hw * cos + hh * sin, y: cy + hw * sin - hh * cos };
-      const p3 = { x: cx + hw * cos - hh * sin, y: cy + hw * sin + hh * cos };
-      const p4 = { x: cx - hw * cos - hh * sin, y: cy - hw * sin + hh * cos };
-
+    // 2. Helper Gambar Poligon dan Garis Vektor Ornamen Sudut Cover ISO
+    const drawCoverPoly = (pts, color) => {
       doc.setFillColor(color[0], color[1], color[2]);
-      doc.triangle(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, 'F');
-      doc.triangle(p1.x, p1.y, p3.x, p3.y, p4.x, p4.y, 'F');
+      doc.triangle(pts[0][0], pts[0][1], pts[1][0], pts[1][1], pts[2][0], pts[2][1], 'F');
+      doc.triangle(pts[0][0], pts[0][1], pts[2][0], pts[2][1], pts[3][0], pts[3][1], 'F');
     };
 
+    const drawCoverLine = (x1, y1, x2, y2, color, lineWidth = 2) => {
+      doc.setDrawColor(color[0], color[1], color[2]);
+      doc.setLineWidth(lineWidth);
+      doc.line(x1, y1, x2, y2);
+    };
+
+    const cCyan = [7, 167, 229];
+    const cAmber = [252, 183, 80];
+    const cNavy = [9, 16, 77];
+    const cWhite = [255, 255, 255];
+
     // Ornamen Sudut Kanan Atas (Top-Right Geometric Accents)
-    drawCoverAngledBar(550, 35, 260, 55, 45, [0, 164, 228]);   // Cyan Wedge
-    drawCoverAngledBar(505, 80, 280, 20, 45, [245, 166, 35]);  // Gold/Amber Stripe
-    drawCoverAngledBar(485, 155, 270, 76, 45, [11, 37, 69]);   // Dark Navy Block
-    drawCoverAngledBar(440, 215, 220, 18, 45, [0, 164, 228]);  // Cyan Accent
-    drawCoverAngledBar(535, 210, 120, 24, 45, [0, 82, 155]);   // Deep Blue Strip
+    drawCoverPoly([[289.9, 3.3], [320.5, -27.5], [553.6, 207.2], [523.0, 238.0]], cCyan);
+    drawCoverPoly([[353.2, 3.7], [371.9, -15.2], [532.4, 146.3], [513.6, 165.3]], cAmber);
+    drawCoverPoly([[371.9, -15.2], [374.0, -17.3], [534.4, 144.3], [532.4, 146.3]], cWhite);
+    drawCoverPoly([[394.8, 2.9], [411.6, -14.0], [551.6, 127.0], [534.9, 143.9]], cAmber);
+    drawCoverPoly([[459.7, 49.3], [497.3, 11.5], [630.8, 145.9], [593.2, 183.8]], cNavy);
+    drawCoverPoly([[437.7, 99.5], [452.0, 85.1], [607.9, 242.1], [593.6, 256.5]], cNavy);
+    drawCoverPoly([[517.7, 3.3], [545.9, -25.1], [622.2, 51.8], [594.1, 80.2]], cAmber);
+    drawCoverPoly([[576.5, 3.3], [585.5, -5.8], [603.4, 12.3], [594.5, 21.4]], cCyan);
+    drawCoverLine(467.1, 154.6, 536.9, 224.9, cNavy, 2.0);
 
     // Ornamen Sudut Kiri Bawah (Bottom-Left Geometric Accents)
-    drawCoverAngledBar(35, 805, 200, 60, 45, [0, 82, 155]);    // Deep Blue Base
-    drawCoverAngledBar(85, 765, 260, 32, 45, [0, 164, 228]);   // Cyan Under-Bar
-    drawCoverAngledBar(80, 695, 280, 82, 45, [11, 37, 69]);    // Dark Navy Block
-    drawCoverAngledBar(95, 615, 310, 20, 45, [245, 166, 35]);  // Gold/Amber Stripe
-    drawCoverAngledBar(45, 575, 230, 16, 45, [0, 164, 228]);   // Cyan Outer Stripe
+    drawCoverPoly([[0.8, 744.1], [75.9, 668.4], [216.4, 809.8], [141.3, 885.5]], cNavy);
+    drawCoverPoly([[-53.1, 569.8], [0.4, 515.9], [198.8, 715.7], [145.3, 769.5]], cAmber);
+    drawCoverPoly([[-14.3, 758.4], [0.0, 744.1], [95.9, 840.7], [81.7, 855.0]], cCyan);
+    drawCoverPoly([[-13.9, 701.3], [2.4, 684.9], [30.2, 712.8], [13.9, 729.3]], cCyan);
+    drawCoverPoly([[149.4, 804.1], [180.1, 773.2], [246.6, 840.2], [216.0, 871.1]], cCyan);
+    drawCoverLine(36.3, 645.8, 113.9, 723.9, cWhite, 2.5);
+    drawCoverLine(193.5, 752.3, 282.1, 841.5, cNavy, 2.0);
 
     // 3. Plakat Judul Mengambang di Tengah Halaman (Central Title Plaque)
     const cardW = 430;
@@ -486,10 +520,21 @@ export async function exportControlledDocumentPDF(docData, systemSettings = {}, 
     // =========================================================================
     drawWatermark();
 
-    // --- KOLOM 1 (KIRI): LOGO PERUSAHAAN ---
+    // --- KOLOM 1 (KIRI): LOGO PERUSAHAAN (Proporsional sesuai aspect ratio asli) ---
     if (logoDataUrl) {
       try {
-        doc.addImage(logoDataUrl, 'PNG', startX, startY + 5, 105, 34);
+        const imgProps = doc.getImageProperties(logoDataUrl);
+        const imgAspect = (imgProps.width || 1) / (imgProps.height || 1);
+        const maxLogoW = 95;
+        const maxLogoH = 36;
+        let drawW = maxLogoW;
+        let drawH = drawW / imgAspect;
+        if (drawH > maxLogoH) {
+          drawH = maxLogoH;
+          drawW = drawH * imgAspect;
+        }
+        const logoY = startY + 4 + (36 - drawH) / 2;
+        doc.addImage(logoDataUrl, imgProps.fileType || 'PNG', startX, logoY, drawW, drawH);
         doc.setFontSize(7);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(100, 116, 139);
@@ -577,7 +622,7 @@ export async function exportControlledDocumentPDF(docData, systemSettings = {}, 
     doc.text('Tgl. Terbit :', metaStartX, startY + 48);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(15, 23, 42);
-    doc.text(docData.effectiveDate || docData.createdDate || '-', metaValX, startY + 48);
+    doc.text(formatDocumentDate(docData.effectiveDate || docData.createdDate), metaValX, startY + 48);
 
     // --- KOLOM 2 (TENGAH): KLASIFIKASI DOKUMEN & JUDUL ---
     const centerLeftX = startX + 115;
@@ -589,24 +634,13 @@ export async function exportControlledDocumentPDF(docData, systemSettings = {}, 
     doc.setFontSize(7.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(100, 116, 139);
-    doc.text(typeStr, centerX, startY + 16, { align: 'center' });
+    doc.text(typeStr, centerX, startY + 22, { align: 'center' });
 
     doc.setFontSize(10.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(15, 23, 42);
     const splitTitle = doc.splitTextToSize((docData.title || '').toUpperCase(), maxTitleW);
-    doc.text(splitTitle, centerX, startY + 30, { align: 'center' });
-
-    doc.setFontSize(7.5);
-    doc.setFont('helvetica', 'bold');
-    if (docData.status === 'AKTIF') {
-      doc.setTextColor(22, 163, 74);
-    } else if (docData.status === 'REVIEW') {
-      doc.setTextColor(217, 119, 6);
-    } else {
-      doc.setTextColor(100, 116, 139);
-    }
-    doc.text(`Status: ${docData.status || 'DRAFT'} | Salinan Terkendali Resmi`, centerX, startY + 47, { align: 'center' });
+    doc.text(splitTitle, centerX, startY + 38, { align: 'center' });
 
     // Garis Pemisah Hairline Bersih di Bawah Kop Surat (Tanpa Kotak Sangkar)
     doc.setDrawColor(226, 232, 240);
@@ -727,7 +761,7 @@ export async function exportControlledDocumentPDF(docData, systemSettings = {}, 
     doc.setFontSize(8.5);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(51, 65, 85);
-    const mainContent = docData.content || `2.1 Seluruh personel terkait pada departemen ${docData.department} wajib memahami dan mengimplementasikan seluruh ketentuan pada dokumen ini.\n2.2 Pemantauan dan evaluasi kepatuhan operasional dilaksanakan secara berkala oleh Tim Verifikator (${docData.verifierTeam}).\n2.3 Dokumen ini berstatus resmi terkendali (${docData.status}) dan diawasi di bawah naungan Document Control System.`;
+    const mainContent = docData.content || `2.1 Seluruh personel terkait pada departemen ${docData.department} wajib memahami dan mengimplementasikan seluruh ketentuan pada dokumen ini.\n2.2 Pemantauan dan evaluasi kepatuhan operasional dilaksanakan secara berkala oleh Document Control Officer (DCO).\n2.3 Dokumen ini berstatus resmi terkendali (${docData.status}) dan diawasi di bawah naungan Document Control System.`;
     const splitMain = doc.splitTextToSize(mainContent, boxWidth);
     doc.text(splitMain, startX, contentY);
   }
@@ -779,7 +813,7 @@ export async function exportControlledDocumentPDF(docData, systemSettings = {}, 
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(15, 23, 42);
     doc.text(docData.creator || 'Pembuat Dokumen', startX + matColW / 2, matrixY + 50, { align: 'center' });
-    doc.text(docData.verifierTeam || 'Tim Verifikator', startX + matColW + matColW / 2, matrixY + 50, { align: 'center' });
+    doc.text(docData.verifiedBy || 'Document Control (DCO)', startX + matColW + matColW / 2, matrixY + 50, { align: 'center' });
     doc.text(docData.approvedBy || docData.targetApprover || 'MR / Dept Head', startX + matColW * 2 + matColW / 2, matrixY + 50, { align: 'center' });
 
     doc.setFontSize(7);

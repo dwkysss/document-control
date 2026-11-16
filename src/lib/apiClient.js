@@ -50,6 +50,67 @@ export async function login(identifier, password) {
   return response.json();
 }
 
+export async function register(payload) {
+  const response = await request('/api/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return response.json();
+}
+
+export async function approveEmployee(id, payload = {}) {
+  const response = await request(`/api/employees/${id}/approve`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return response.json();
+}
+
+export async function rejectEmployee(id, reason = 'Ditolak oleh Admin/MR') {
+  const response = await request(`/api/employees/${id}/reject`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason }),
+  });
+  return response.json();
+}
+
+export async function forgotPassword(payload) {
+  const response = await request('/api/auth/forgot-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return response.json();
+}
+
+export async function changePassword(payload) {
+  const response = await request('/api/auth/change-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return response.json();
+}
+
+export async function approvePasswordReset(id) {
+  const response = await request(`/api/employees/${id}/approve-reset`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  return response.json();
+}
+
+export async function rejectPasswordReset(id) {
+  const response = await request(`/api/employees/${id}/reject-reset`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  return response.json();
+}
+
 export async function logout() {
   await request('/api/auth/logout', { method: 'POST' });
 }
@@ -57,6 +118,51 @@ export async function logout() {
 export async function getCurrentUser() {
   const response = await request('/api/auth/me');
   return response.json();
+}
+
+// In-App Persistent Notifications
+export async function getNotifications() {
+  try {
+    const response = await request('/api/notifications');
+    return response.json();
+  } catch (e) {
+    return [];
+  }
+}
+
+export async function createNotification(data) {
+  try {
+    const response = await request('/api/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return response.json();
+  } catch (e) {
+    return null;
+  }
+}
+
+export async function markNotificationAsRead(id) {
+  try {
+    const response = await request(`/api/notifications/${id}/read`, {
+      method: 'PUT',
+    });
+    return response.json();
+  } catch (e) {
+    return { success: false };
+  }
+}
+
+export async function markAllNotificationsAsRead() {
+  try {
+    const response = await request('/api/notifications/read-all', {
+      method: 'PUT',
+    });
+    return response.json();
+  } catch (e) {
+    return { success: false };
+  }
 }
 
 function getEndpoint(table) {

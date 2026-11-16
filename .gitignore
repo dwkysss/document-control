@@ -25,6 +25,12 @@ uploads/
 backend/public/uploads/
 !backend/public/uploads/.gitkeep
 
+# Credentials & Keys
+credentials/
+*.pem
+*.key
+*.tar.gz
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -16,6 +16,23 @@ function dataUrlToUint8Array(dataUrl) {
 }
 
 /**
+ * Helper pemformat tanggal resmi ISO (hanya tanggal, bulan, tahun - tanpa detail jam)
+ */
+function formatDocumentDate(value) {
+  if (!value || value === '-') return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return typeof value === 'string' && value.length >= 10 ? value.slice(0, 10) : String(value);
+  }
+  return new Intl.DateTimeFormat('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'Asia/Jakarta',
+  }).format(date);
+}
+
+/**
  * Universal loader: fetch PDF bytes from any URL (data:, blob:, http:, or relative)
  */
 async function getPdfBytes(fileUrl) {
@@ -239,8 +256,8 @@ export async function stampOfficialLetterheadOnPDF(docData, systemSettings = {},
       // 1. Logo Perusahaan di Kiri Ujung Atas Cover
       if (logoImg) {
         const logoAspect = logoImg.width / logoImg.height;
-        const maxLogoW = 125;
-        const maxLogoH = 40;
+        const maxLogoW = 120;
+        const maxLogoH = 52;
         let lW = maxLogoW;
         let lH = lW / logoAspect;
         if (lH > maxLogoH) {
@@ -293,36 +310,31 @@ export async function stampOfficialLetterheadOnPDF(docData, systemSettings = {},
         });
       }
 
-      // 2. Helper Gambar Bilah Geometris Bersudut 45 Derajat
-      const drawCoverBar = (cx, cy, w, h, angleDeg, color) => {
-        const rad = ((-angleDeg) * Math.PI) / 180;
-        const cos = Math.cos(rad);
-        const sin = Math.sin(rad);
-        const hw = w / 2;
-        const hh = h / 2;
-        const pdfCx = cx;
-        const pdfCy = covH - cy;
-        const p1 = { x: pdfCx - hw * cos + hh * sin, y: pdfCy - hw * sin - hh * cos };
-        const p2 = { x: pdfCx + hw * cos + hh * sin, y: pdfCy + hw * sin - hh * cos };
-        const p3 = { x: pdfCx + hw * cos - hh * sin, y: pdfCy + hw * sin + hh * cos };
-        const p4 = { x: pdfCx - hw * cos - hh * sin, y: pdfCy - hw * sin + hh * cos };
-        const path = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y} L ${p3.x} ${p3.y} L ${p4.x} ${p4.y} Z`;
-        coverPage.drawSvgPath(path, { color });
-      };
+      // 2. Ornamen Geometris Sudut Kanan Atas & Kiri Bawah (Exact Vector Shapes via SVG Path)
+      const cCyan = rgb(7 / 255, 167 / 255, 229 / 255);
+      const cAmber = rgb(252 / 255, 183 / 255, 80 / 255);
+      const cNavy = rgb(9 / 255, 16 / 255, 77 / 255);
+      const cWhite = rgb(1, 1, 1);
 
       // Ornamen Sudut Kanan Atas (Top-Right Geometric Accents)
-      drawCoverBar(550, 35, 260, 55, 45, rgb(0 / 255, 164 / 255, 228 / 255)); // Cyan Wedge
-      drawCoverBar(505, 80, 280, 20, 45, rgb(245 / 255, 166 / 255, 35 / 255)); // Gold/Amber Stripe
-      drawCoverBar(485, 155, 270, 76, 45, rgb(11 / 255, 37 / 255, 69 / 255)); // Dark Navy Block
-      drawCoverBar(440, 215, 220, 18, 45, rgb(0 / 255, 164 / 255, 228 / 255)); // Cyan Accent
-      drawCoverBar(535, 210, 120, 24, 45, rgb(0 / 255, 82 / 255, 155 / 255)); // Deep Blue Strip
+      coverPage.drawSvgPath('M 289.9 3.3 L 320.5 -27.5 L 553.6 207.2 L 523.0 238.0 Z', { x: 0, y: covH, color: cCyan }); // Cyan Main
+      coverPage.drawSvgPath('M 353.2 3.7 L 371.9 -15.2 L 532.4 146.3 L 513.6 165.3 Z', { x: 0, y: covH, color: cAmber }); // Amber Lower
+      coverPage.drawSvgPath('M 371.9 -15.2 L 374.0 -17.3 L 534.4 144.3 L 532.4 146.3 Z', { x: 0, y: covH, color: cWhite }); // White Hairline
+      coverPage.drawSvgPath('M 394.8 2.9 L 411.6 -14.0 L 551.6 127.0 L 534.9 143.9 Z', { x: 0, y: covH, color: cAmber }); // Amber Upper
+      coverPage.drawSvgPath('M 459.7 49.3 L 497.3 11.5 L 630.8 145.9 L 593.2 183.8 Z', { x: 0, y: covH, color: cNavy }); // Navy Main Block
+      coverPage.drawSvgPath('M 437.7 99.5 L 452.0 85.1 L 607.9 242.1 L 593.6 256.5 Z', { x: 0, y: covH, color: cNavy }); // Navy Lower Bar
+      coverPage.drawSvgPath('M 517.7 3.3 L 545.9 -25.1 L 622.2 51.8 L 594.1 80.2 Z', { x: 0, y: covH, color: cAmber }); // Amber Corner
+      coverPage.drawSvgPath('M 576.5 3.3 L 585.5 -5.8 L 603.4 12.3 L 594.5 21.4 Z', { x: 0, y: covH, color: cCyan }); // Cyan Tip
+      coverPage.drawLine({ start: { x: 467.1, y: covH - 154.6 }, end: { x: 536.9, y: covH - 224.9 }, color: cNavy, thickness: 2.0 }); // Navy Hairline
 
       // Ornamen Sudut Kiri Bawah (Bottom-Left Geometric Accents)
-      drawCoverBar(35, 805, 200, 60, 45, rgb(0 / 255, 82 / 255, 155 / 255)); // Deep Blue Base
-      drawCoverBar(85, 765, 260, 32, 45, rgb(0 / 255, 164 / 255, 228 / 255)); // Cyan Under-Bar
-      drawCoverBar(80, 695, 280, 82, 45, rgb(11 / 255, 37 / 255, 69 / 255)); // Dark Navy Block
-      drawCoverBar(95, 615, 310, 20, 45, rgb(245 / 255, 166 / 255, 35 / 255)); // Gold/Amber Stripe
-      drawCoverBar(45, 575, 230, 16, 45, rgb(0 / 255, 164 / 255, 228 / 255)); // Cyan Outer Stripe
+      coverPage.drawSvgPath('M 0.8 744.1 L 75.9 668.4 L 216.4 809.8 L 141.3 885.5 Z', { x: 0, y: covH, color: cNavy }); // Navy Main Block
+      coverPage.drawSvgPath('M -53.1 569.8 L 0.4 515.9 L 198.8 715.7 L 145.3 769.5 Z', { x: 0, y: covH, color: cAmber }); // Amber Main
+      coverPage.drawSvgPath('M -14.3 758.4 L 0.0 744.1 L 95.9 840.7 L 81.7 855.0 Z', { x: 0, y: covH, color: cCyan }); // Cyan Corner Stripe
+      coverPage.drawSvgPath('M -13.9 701.3 L 2.4 684.9 L 30.2 712.8 L 13.9 729.3 Z', { x: 0, y: covH, color: cCyan }); // Cyan Tab 1
+      coverPage.drawSvgPath('M 149.4 804.1 L 180.1 773.2 L 246.6 840.2 L 216.0 871.1 Z', { x: 0, y: covH, color: cCyan }); // Cyan Tab 2
+      coverPage.drawLine({ start: { x: 36.3, y: covH - 645.8 }, end: { x: 113.9, y: covH - 723.9 }, color: cWhite, thickness: 2.5 }); // White Hairline
+      coverPage.drawLine({ start: { x: 193.5, y: covH - 752.3 }, end: { x: 282.1, y: covH - 841.5 }, color: cNavy, thickness: 2.0 }); // Navy Hairline
 
       // 3. Plakat Judul Mengambang di Tengah Halaman (Central Title Plaque)
       const cardW = 430;
@@ -655,7 +667,7 @@ export async function stampOfficialLetterheadOnPDF(docData, systemSettings = {},
         }
         newPage.drawText(typeStr, {
           x: titleAreaX + Math.max(8, (titleColW - typeTextW) / 2),
-          y: boxY + headerH - 18,
+          y: boxY + headerH - 22,
           size: typeFontSize,
           font: helveticaBold,
           color: rgb(0.35, 0.42, 0.52),
@@ -664,30 +676,13 @@ export async function stampOfficialLetterheadOnPDF(docData, systemSettings = {},
         // Judul Dokumen Utama
         let rawTitle = String(docData.title || "-");
         if (rawTitle.length > 40) rawTitle = rawTitle.substring(0, 38) + "...";
-        const titleW = helveticaBold.widthOfTextAtSize(rawTitle, 8.5);
+        const titleW = helveticaBold.widthOfTextAtSize(rawTitle, 9);
         newPage.drawText(rawTitle, {
           x: titleAreaX + Math.max(8, (titleColW - titleW) / 2),
-          y: boxY + headerH - 33,
-          size: 8.5,
+          y: boxY + headerH - 38,
+          size: 9,
           font: helveticaBold,
           color: rgb(0.06, 0.12, 0.25),
-        });
-
-        // Baris Status & Ketentuan
-        const statusColor = docData.status === "AKTIF"
-          ? rgb(0.02, 0.55, 0.35)
-          : docData.status === "OBSOLETE"
-          ? rgb(0.85, 0.20, 0.20)
-          : rgb(0.85, 0.45, 0.08);
-
-        const statusStr = "Status: " + (docData.status || "AKTIF") + " | Salinan Terkendali Resmi";
-        const statusW = helvetica.widthOfTextAtSize(statusStr, 6.5);
-        newPage.drawText(statusStr, {
-          x: titleAreaX + Math.max(8, (titleColW - statusW) / 2),
-          y: boxY + 12,
-          size: 6.5,
-          font: helveticaBold,
-          color: statusColor,
         });
 
         // --- KOLOM 3: TABEL METADATA RESMI (KANAN) ---
@@ -696,7 +691,7 @@ export async function stampOfficialLetterheadOnPDF(docData, systemSettings = {},
           { label: "No. Dokumen", val: String(docData.docNumber || "-"), y: boxY + headerH - 16 },
           { label: "Revisi", val: String(docData.revision || "00"), y: boxY + headerH - 28 },
           { label: "Departemen", val: String(docData.department || "-"), y: boxY + headerH - 40 },
-          { label: "Tgl. Terbit", val: String(docData.effectiveDate || docData.createdDate || "-"), y: boxY + headerH - 52 },
+          { label: "Tgl. Terbit", val: formatDocumentDate(docData.effectiveDate || docData.createdDate), y: boxY + headerH - 52 },
         ];
 
         metaRows.forEach(row => {

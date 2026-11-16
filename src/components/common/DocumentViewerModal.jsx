@@ -22,10 +22,12 @@ import {
   FileText,
   Table,
   Search,
-  Copy
+  Copy,
+  Tag
 } from 'lucide-react';
 import Modal from './Modal';
 import Badge, { CompanyBadge } from './Badge';
+import DocumentLabelModal from './DocumentLabelModal';
 import { generateDocumentQRCode } from '../../utils/qrGenerator';
 import { exportControlledDocumentPDF } from '../../utils/exportUtils';
 import { stampOfficialLetterheadOnPDF, downloadBlobAsFile, getDocumentTypeFullName } from '../../utils/pdfStamper';
@@ -47,10 +49,25 @@ function getColumnLetter(colIndex) {
   return letter;
 }
 
+function formatDocumentDate(value) {
+  if (!value || value === '-') return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return typeof value === 'string' && value.length >= 10 ? value.slice(0, 10) : String(value);
+  }
+  return new Intl.DateTimeFormat('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'Asia/Jakarta',
+  }).format(date);
+}
+
 export default function DocumentViewerModal({ doc, isOpen, onClose }) {
   const { systemSettings, showToast, attachFileToDocument, companies } = useDocumentControl();
   const [qrCodeUrl, setQrCodeUrl] = useState(null);
   const [showQrVerifyInfo, setShowQrVerifyInfo] = useState(false);
+  const [showLabelModal, setShowLabelModal] = useState(false);
   const [blobUrl, setBlobUrl] = useState(null);
   const [stampedPdfUrl, setStampedPdfUrl] = useState(null);
   const [isStampingPreview, setIsStampingPreview] = useState(false);
@@ -736,6 +753,16 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
             <QrCode className="w-4 h-4" />
           </button>
 
+          {/* Cetak Stiker Label Arsip */}
+          <button
+            type="button"
+            onClick={() => setShowLabelModal(true)}
+            title="Cetak Stiker Label Arsip Dokumen (Ordner / Map)"
+            className="p-1.5 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition cursor-pointer"
+          >
+            <Tag className="w-4 h-4" />
+          </button>
+
           {/* Ganti File */}
           <button
             type="button"
@@ -874,7 +901,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
                 <span className="text-slate-300 dark:text-slate-600">|</span>
                 <span>Revisi: <strong className="text-slate-800 dark:text-slate-200">{doc.revision}</strong></span>
               </div>
-              <div className="pt-2">
+              <div className="pt-2 flex flex-wrap items-center gap-3">
                 <a
                   href={`/?verify=${encodeURIComponent(doc.docNumber)}`}
                   target="_blank"
@@ -883,6 +910,14 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
                 >
                   <ExternalLink className="w-3.5 h-3.5" /> Uji Coba Buka Halaman Verifikasi Publik (Simulasi Scan HP)
                 </a>
+                <span className="text-slate-300 dark:text-slate-600">•</span>
+                <button
+                  type="button"
+                  onClick={() => setShowLabelModal(true)}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 hover:underline cursor-pointer"
+                >
+                  <Tag className="w-3.5 h-3.5 text-blue-600" /> Cetak Stiker Label Arsip Fisik
+                </button>
               </div>
             </div>
           </div>
@@ -924,18 +959,24 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
               preserveAspectRatio="xMidYMid slice"
             >
               {/* Ornamen Sudut Kanan Atas (Top-Right Geometric Accents) */}
-              <polygon points="463,-71 646,112 607,151 424,-32" fill="#00A4E4" />
-              <polygon points="398,-21 596,177 582,191 384,-7" fill="#F5A623" />
-              <polygon points="408,34 606,232 552,286 354,88" fill="#0B2545" />
-              <polygon points="369,131 524,286 511,299 356,144" fill="#00A4E4" />
-              <polygon points="496,159 581,244 564,261 479,176" fill="#00529B" />
+              <polygon points="289.9,3.3 320.5,-27.5 553.6,207.2 523.0,238.0" fill="#07A7E5" />
+              <polygon points="353.2,3.7 371.9,-15.2 532.4,146.3 513.6,165.3" fill="#FCB750" />
+              <polygon points="371.9,-15.2 374.0,-17.3 534.4,144.3 532.4,146.3" fill="#FFFFFF" />
+              <polygon points="394.8,2.9 411.6,-14.0 551.6,127.0 534.9,143.9" fill="#FCB750" />
+              <polygon points="459.7,49.3 497.3,11.5 630.8,145.9 593.2,183.8" fill="#09104D" />
+              <polygon points="437.7,99.5 452.0,85.1 607.9,242.1 593.6,256.5" fill="#09104D" />
+              <polygon points="517.7,3.3 545.9,-25.1 622.2,51.8 594.1,80.2" fill="#FCB750" />
+              <polygon points="576.5,3.3 585.5,-5.8 603.4,12.3 594.5,21.4" fill="#07A7E5" />
+              <line x1="467.1" y1="154.6" x2="536.9" y2="224.9" stroke="#09104D" strokeWidth="2.0" />
 
               {/* Ornamen Sudut Kiri Bawah (Bottom-Left Geometric Accents) */}
-              <polygon points="-14,713 127,854 84,897 -57,756" fill="#00529B" />
-              <polygon points="4,662 188,846 166,868 -18,684" fill="#00A4E4" />
-              <polygon points="10,567 208,765 150,823 -48,625" fill="#0B2545" />
-              <polygon points="-8,498 212,718 198,732 -22,512" fill="#F5A623" />
-              <polygon points="-31,488 132,651 121,662 -42,499" fill="#00A4E4" />
+              <polygon points="0.8,744.1 75.9,668.4 216.4,809.8 141.3,885.5" fill="#09104D" />
+              <polygon points="-53.1,569.8 0.4,515.9 198.8,715.7 145.3,769.5" fill="#FCB750" />
+              <polygon points="-14.3,758.4 0.0,744.1 95.9,840.7 81.7,855.0" fill="#07A7E5" />
+              <polygon points="-13.9,701.3 2.4,684.9 30.2,712.8 13.9,729.3" fill="#07A7E5" />
+              <polygon points="149.4,804.1 180.1,773.2 246.6,840.2 216.0,871.1" fill="#07A7E5" />
+              <line x1="36.3" y1="645.8" x2="113.9" y2="723.9" stroke="#FFFFFF" strokeWidth="2.5" />
+              <line x1="193.5" y1="752.3" x2="282.1" y2="841.5" stroke="#09104D" strokeWidth="2.0" />
             </svg>
 
             {/* 1. Logo Perusahaan di Kiri Ujung Atas */}
@@ -950,7 +991,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
                       <img
                         src={logoSrc}
                         alt={docCompanyCode}
-                        className="h-10 sm:h-12 max-w-[150px] object-contain drop-shadow-2xs"
+                        className="h-10 sm:h-12 w-auto max-w-[150px] object-contain drop-shadow-2xs"
                       />
                     );
                   }
@@ -1032,7 +1073,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
                       <img
                         src={logoSrc}
                         alt={`${docCompanyCode} Logo`}
-                        className="h-11 max-w-[145px] object-contain drop-shadow-2xs"
+                        className="h-11 w-auto max-w-[145px] object-contain drop-shadow-2xs"
                       />
                     );
                   }
@@ -1084,12 +1125,6 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
                 <h3 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white uppercase leading-snug my-1 px-1" title={doc.title}>
                   {doc.title}
                 </h3>
-                <div className="flex items-center justify-center gap-1.5 text-[10.5px] font-medium text-slate-600 dark:text-slate-300">
-                  <span>Status:</span>
-                  <span className="font-bold text-blue-600 dark:text-blue-400">{doc.status}</span>
-                  <span className="text-slate-300 dark:text-slate-600">|</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Salinan Terkendali Resmi</span>
-                </div>
               </div>
 
               {/* Document Metadata Box + QR Code (col-span-4) */}
@@ -1113,7 +1148,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
                   <div className="flex items-center">
                     <span className="text-slate-500 w-20 shrink-0">Tgl. Terbit</span>
                     <span className="text-slate-400 mr-1.5 font-bold">:</span>
-                    <span className="font-mono text-slate-900 dark:text-white">{doc.effectiveDate || doc.createdDate}</span>
+                    <span className="font-mono text-slate-900 dark:text-white">{formatDocumentDate(doc.effectiveDate || doc.createdDate)}</span>
                   </div>
                 </div>
 
@@ -1581,7 +1616,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
                   </p>
                   <p className="text-[10px] text-slate-400 font-mono flex items-center gap-1 pt-1 border-t border-slate-100 dark:border-slate-800">
                     <Clock className="w-3 h-3 text-slate-400 shrink-0" />
-                    {doc.createdDate}
+                    {formatDocumentDate(doc.createdDate)}
                   </p>
                 </div>
 
@@ -1627,8 +1662,8 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
                       {doc.verifiedBy ? 'Terverifikasi' : 'Menunggu'}
                     </span>
                   </div>
-                  <p className="font-bold text-slate-900 dark:text-white truncate" title={doc.verifiedBy || doc.verifierTeam || 'Document Control'}>
-                    {doc.verifiedBy || doc.verifierTeam || 'Document Control'}
+                  <p className="font-bold text-slate-900 dark:text-white truncate" title={doc.verifiedBy || 'Document Control (DCO)'}>
+                    {doc.verifiedBy || 'Document Control (DCO)'}
                   </p>
                   <p className="text-[11px] text-slate-500 truncate">
                     Format & Penomoran ISO
@@ -1675,6 +1710,14 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
           <span>Standar Sistem Manajemen Mutu</span>
         </div>
       </div>
+
+      {/* Modal Cetak Label Barcode / Stiker Arsip */}
+      <DocumentLabelModal
+        isOpen={showLabelModal}
+        onClose={() => setShowLabelModal(false)}
+        doc={doc}
+        systemSettings={systemSettings}
+      />
     </Modal>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Settings, Save, Download, Upload, RotateCcw, Shield, Building2, Sliders, CheckCircle2 } from 'lucide-react';
+import { Settings, Save, Download, Upload, RotateCcw, Shield, Building2, Sliders, CheckCircle2, Cloud, Lock, RefreshCw, Key, ShieldCheck } from 'lucide-react';
 import { useDocumentControl } from '../../context/DocumentControlContext';
 
 export default function SystemSettingsView() {
@@ -15,6 +15,36 @@ export default function SystemSettingsView() {
     isAdmin,
     showToast
   } = useDocumentControl();
+
+  // Google Drive Backup Status & Action
+  const [gdriveStatus, setGdriveStatus] = useState(null);
+  const [isSyncingGDrive, setIsSyncingGDrive] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/backup/gdrive/status')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data) setGdriveStatus(data); })
+      .catch(() => {});
+  }, []);
+
+  const handleSyncGDrive = async () => {
+    if (isSyncingGDrive) return;
+    setIsSyncingGDrive(true);
+    showToast('Memulai sinkronisasi berkas terenkripsi ke Google Drive...', 'info');
+    try {
+      const res = await fetch('/api/backup/gdrive/sync-all', { method: 'POST' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      showToast(`Berhasil mencadangkan ${data.successCount} dari ${data.total} berkas dokumen aktif ke Google Drive!`, 'success');
+    } catch (e) {
+      showToast(`Gagal sinkronisasi GDrive: ${e.message}`, 'danger');
+    } finally {
+      setIsSyncingGDrive(false);
+    }
+  };
 
   // Active Company Tab in Settings
   const [selectedCompanyId, setSelectedCompanyId] = useState(companies[0]?.id || 'comp-dji');
@@ -496,6 +526,83 @@ export default function SystemSettingsView() {
               >
                 Reset Database
               </button>
+            </div>
+          </div>
+
+          {/* Card Google Drive Per-File Encrypted Cloud Backup */}
+          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold uppercase text-slate-800 dark:text-slate-200 tracking-wider flex items-center gap-1.5">
+                <Cloud className="w-4 h-4 text-sky-500" />
+                PENCADANGAN GOOGLE DRIVE (PER-FILE)
+              </h3>
+              <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                <Lock className="w-3 h-3 text-emerald-600" />
+                AES-256
+              </span>
+            </div>
+
+            <p className="text-[11px] text-slate-500 leading-relaxed">
+              Setiap kali dokumen disahkan (<span className="font-bold text-emerald-600">Status Aktif</span>), berkas PDF otomatis dikunci dengan sandi dokumen standar (AES-256) dan diunggah langsung berformat <span className="font-bold text-sky-600">.pdf</span> ke Google Drive.
+            </p>
+
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-lg border border-slate-200 dark:border-slate-700 space-y-2 text-xs">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-slate-500">Status Koneksi:</span>
+                {gdriveStatus?.configured ? (
+                  <span className="font-bold text-emerald-600 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Terhubung ({gdriveStatus.authMethod || 'OAuth 2.0'})
+                  </span>
+                ) : (
+                  <span className="font-bold text-amber-600 dark:text-amber-400">
+                    Menunggu Konfigurasi .env
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-slate-500">Format di Google Drive:</span>
+                <span className="font-mono font-bold text-sky-700 dark:text-sky-300 text-[10px]">
+                  Langsung *.pdf (Password-Protected)
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-slate-500">Sandi Buka PDF:</span>
+                <span className="font-mono font-bold px-1.5 py-0.5 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 rounded text-[10px] select-all">
+                  {gdriveStatus?.pdfPassword || 'DCS2026!'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-slate-500">Pemicu Cadangan:</span>
+                <span className="font-semibold text-slate-700 dark:text-slate-300">
+                  Otomatis saat Dokumen Aktif
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleSyncGDrive}
+              disabled={isSyncingGDrive}
+              className="w-full py-2 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-700 hover:to-blue-700 text-white font-bold rounded-lg transition cursor-pointer text-xs flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+            >
+              {isSyncingGDrive ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  Mencadangkan Berkas...
+                </>
+              ) : (
+                <>
+                  <Cloud className="w-3.5 h-3.5" />
+                  Sinkronkan Seluruh Dokumen ke GDrive
+                </>
+              )}
+            </button>
+
+            <div className="text-[10.5px] text-slate-400 dark:text-slate-500 space-y-1 pt-1 border-t border-slate-100 dark:border-slate-800">
+              <span className="font-bold text-slate-600 dark:text-slate-400 block">💡 Cara Buka di Google Drive:</span>
+              <p>
+                Cukup klik 2x file PDF di Google Drive atau buka di aplikasi HP / Acrobat, lalu masukkan sandi <code className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded font-mono font-bold text-amber-600 text-[10px]">{gdriveStatus?.pdfPassword || 'DCS2026!'}</code> untuk membaca dokumen.
+              </p>
             </div>
           </div>
         </div>

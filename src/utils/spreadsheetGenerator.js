@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { downloadBlobAsFile } from './pdfStamper';
+import { formatDocumentDate } from './exportUtils';
 
 /**
  * Membangun lembar kerja (Workbook) Spreadsheet Excel Standar ISO 9001
@@ -31,7 +32,7 @@ export function buildIsoSpreadsheetWorkbook(doc, systemSettings = {}) {
       'Departemen:', doc?.department || '-',
       '',
       'Revisi:', doc?.revision || '00',
-      'Tgl. Terbit:', doc?.effectiveDate || doc?.createdDate || '-'
+      'Tgl. Terbit:', formatDocumentDate(doc?.effectiveDate || doc?.createdDate)
     ],
     []
   ];
@@ -75,7 +76,7 @@ export function buildIsoSpreadsheetWorkbook(doc, systemSettings = {}) {
     [],
     ['', 'DIBUAT OLEH (STAFF)', '', '', 'DIPERIKSA (REVIEWER)', '', '', 'DISETUJUI (MR / HEAD)'],
     ['Nama:', doc?.creator || 'Staff Pembuat', '', '', doc?.reviewedBy || 'Reviewer Atasan', '', '', doc?.approvedBy || (companyCode === 'UMI' ? 'RATNA SARI' : companyCode === 'IMK' ? 'BAMBANG WIJAYA' : 'BABAN RACHMAT SUBAGJA')],
-    ['Tanggal:', doc?.effectiveDate || doc?.createdDate || '-', '', '', doc?.effectiveDate || doc?.createdDate || '-', '', '', doc?.effectiveDate || doc?.createdDate || '-'],
+    ['Tanggal:', formatDocumentDate(doc?.effectiveDate || doc?.createdDate), '', '', formatDocumentDate(doc?.effectiveDate || doc?.createdDate), '', '', formatDocumentDate(doc?.effectiveDate || doc?.createdDate)],
     ['Status:', 'Verified Digital Signature', '', '', 'Verified Digital Signature', '', '', 'Authorized Approval']
   );
 
@@ -111,7 +112,7 @@ export function buildIsoSpreadsheetWorkbook(doc, systemSettings = {}) {
       sheet2Data.push([
         idx + 1,
         rev.revision || doc.revision || '00',
-        rev.date || doc.effectiveDate || doc.createdDate || '-',
+        formatDocumentDate(rev.date || doc.effectiveDate || doc.createdDate),
         rev.note || 'Penerbitan dokumen terkendali',
         rev.author || doc.creator || '-',
         doc.approvedBy || 'MR'
@@ -121,7 +122,7 @@ export function buildIsoSpreadsheetWorkbook(doc, systemSettings = {}) {
     sheet2Data.push([
       1,
       doc?.revision || '00',
-      doc?.effectiveDate || doc?.createdDate || '-',
+      formatDocumentDate(doc?.effectiveDate || doc?.createdDate),
       'Penerbitan dokumen perdana / terdaftar aktif',
       doc?.creator || '-',
       doc?.approvedBy || (companyCode === 'UMI' ? 'RATNA SARI' : companyCode === 'IMK' ? 'BAMBANG WIJAYA' : 'BABAN RACHMAT SUBAGJA')

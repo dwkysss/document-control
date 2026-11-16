@@ -369,7 +369,7 @@ export default function RoleMasterView() {
               }`}
           >
             <Layers className="w-3.5 h-3.5" />
-            <span>Matriks Hak Akses (Matrix RACI)</span>
+            <span>Matriks Hak Akses</span>
           </button>
           <button
             type="button" aria-pressed={activeTab === 'workflow'}

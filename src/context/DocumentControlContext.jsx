@@ -2,11 +2,61 @@ import React, { createContext, useContext, useState, useEffect, useMemo } from '
 import confetti from 'canvas-confetti';
 import { getNextSequenceNumber, getNextRevisionCode, formatDocumentNumber } from '../utils/numberingEngine';
 import { supabase, isSupabaseConfigured, uploadDocumentFile } from '../lib/supabaseClient';
-import { login as authenticate, logout as endSession, getCurrentUser } from '../lib/apiClient';
+import { 
+  login as authenticate, 
+  logout as endSession, 
+  getCurrentUser, 
+  register as apiRegister, 
+  approveEmployee as apiApproveEmployee, 
+  rejectEmployee as apiRejectEmployee,
+  forgotPassword as apiForgotPassword,
+  changePassword as apiChangePassword,
+  approvePasswordReset as apiApprovePasswordReset,
+  rejectPasswordReset as apiRejectPasswordReset,
+  getNotifications as apiGetNotifications,
+  createNotification as apiCreateNotification,
+  markNotificationAsRead as apiMarkNotificationAsRead,
+  markAllNotificationsAsRead as apiMarkAllNotificationsAsRead
+} from '../lib/apiClient';
 
 const DocumentControlContext = createContext(null);
 // Sensitive operational records must only arrive from authenticated API requests.
-const initialCompanies = [];
+const defaultCompanies = [
+  {
+    id: 'comp-dji',
+    code: 'DJI',
+    name: 'PT Dentelle Jaya Infinitex',
+    tagline: 'Dokumen Terkendali, Proses Lebih Pasti, Mutu Lebih Terjaga',
+    color: 'blue',
+    badgeColor: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800',
+    logo_url: '/dji-logo.png',
+    logoUrl: '/dji-logo.png',
+    active: true
+  },
+  {
+    id: 'comp-umi',
+    code: 'UMI',
+    name: 'PT Ultimo Moda Indotex',
+    tagline: 'Excellence in Fashion & Textile Manufacturing',
+    color: 'indigo',
+    badgeColor: 'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800',
+    logo_url: null,
+    logoUrl: null,
+    active: true
+  },
+  {
+    id: 'comp-imk',
+    code: 'IMK',
+    name: 'PT IMK',
+    tagline: 'High Quality Industrial Textile & Knitting',
+    color: 'emerald',
+    badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800',
+    logo_url: null,
+    logoUrl: null,
+    active: true
+  }
+];
+const initialCompanies = defaultCompanies;
 const initialDepartments = [];
 const initialDocumentTypes = [];
 const initialEmployees = [];
@@ -23,7 +73,21 @@ export function DocumentControlProvider({ children }) {
   const [isLoadingCloud, setIsLoadingCloud] = useState(isSupabaseConfigured);
 
   // 1. Core State with LocalStorage Caching & Cloud Fallback
-  const [companies, setCompanies] = useState(initialCompanies);
+  const [companies, setCompanies] = useState(() => {
+    try {
+      const saved = localStorage.getItem('dji_dms_companies');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map(c => ({
+            ...c,
+            logoUrl: c.logoUrl || c.logo_url || (c.code === 'DJI' ? '/dji-logo.png' : null)
+          }));
+        }
+      }
+    } catch (e) {}
+    return defaultCompanies;
+  });
 
   const [selectedCompanyFilter, setSelectedCompanyFilter] = useState('ALL');
 
@@ -266,7 +330,20 @@ export function DocumentControlProvider({ children }) {
   useEffect(() => {
     let mounted = true;
     getCurrentUser()
-      .then(({ user }) => { if (mounted) setCurrentUser(user); })
+      .then(({ user }) => {
+        if (mounted && user) {
+          const isHolding = user.nip === '123463' || user.companyCode === 'ALL' || user.company_code === 'ALL';
+          const resolvedUser = isHolding ? {
+            ...user,
+            companyCode: 'ALL',
+            companyName: 'Holding (Multi-Company)'
+          } : user;
+          setCurrentUser(resolvedUser);
+          if (isHolding) {
+            setSelectedCompanyFilter('ALL');
+          }
+        }
+      })
       .catch(() => { if (mounted) setCurrentUser(null); });
     return () => { mounted = false; };
   }, []);
@@ -429,10 +506,20 @@ export function DocumentControlProvider({ children }) {
     }
     try {
       const { user } = await authenticate(cleanId, password);
-      setCurrentUser(user);
-      if (user.companyCode && user.companyCode !== 'ALL') setSelectedCompanyFilter(user.companyCode);
-      showToast(`Selamat datang, ${user.name}!`, 'success');
-      return { success: true, user };
+      const isHolding = user.nip === '123463' || cleanId === '123463' || cleanId === 'dwiky.sumarlin@dji-indonesia.com' || user.companyCode === 'ALL' || user.company_code === 'ALL';
+      const resolvedUser = isHolding ? {
+        ...user,
+        companyCode: 'ALL',
+        companyName: 'Holding (Multi-Company)'
+      } : user;
+      setCurrentUser(resolvedUser);
+      if (resolvedUser.companyCode && resolvedUser.companyCode !== 'ALL') {
+        setSelectedCompanyFilter(resolvedUser.companyCode);
+      } else {
+        setSelectedCompanyFilter('ALL');
+      }
+      showToast(`Selamat datang, ${resolvedUser.name}!`, 'success');
+      return { success: true, user: resolvedUser };
     } catch (error) {
       showToast('Email/NIP atau kata sandi tidak valid.', 'danger');
       return { success: false, message: error.message };
@@ -448,6 +535,23 @@ export function DocumentControlProvider({ children }) {
     setCurrentUser(null);
     setSelectedCompanyFilter('ALL');
     showToast('Anda telah keluar dari sistem.', 'info');
+  };
+
+  // Self-Service Change Password for Logged-In User
+  const changeUserPassword = async (currentPassword, newPassword) => {
+    try {
+      const res = await apiChangePassword({ currentPassword, newPassword });
+      if (res && res.success) {
+        showToast('Kata sandi Anda berhasil diperbarui!', 'success');
+        addAuditLog('PASSWORD_CHANGED', currentUser?.nip || '-', currentUser?.name || 'User', `Pegawai ${currentUser?.name} (${currentUser?.nip}) berhasil memperbarui kata sandi akun secara mandiri.`);
+        return { success: true };
+      }
+      showToast(res?.message || 'Gagal mengubah kata sandi.', 'danger');
+      return { success: false, message: res?.message };
+    } catch (err) {
+      showToast(err.message || 'Gagal mengubah kata sandi.', 'danger');
+      return { success: false, message: err.message };
+    }
   };
 
   // RBAC Permission Flags (ISO 9001:2015 6 Collaborative Roles)
@@ -484,6 +588,22 @@ export function DocumentControlProvider({ children }) {
   const canAccessReports = (isReviewer || isDocControl || isApprover || isAdmin) && !isViewer;
   const canViewObsolete = (isReviewer || isDocControl || isApprover || isAdmin) && !isViewer;
   const canViewAllDocuments = (isReviewer || isDocControl || isApprover || isAdmin) && !isViewer;
+  const canApproveUser = role === 'admin' || role === 'approver';
+
+  // Pending user registrations awaiting approval by Admin or MR
+  const pendingEmployees = useMemo(() => {
+    return (employees || []).filter(e => e.status === 'Menunggu Persetujuan');
+  }, [employees]);
+  const pendingEmployeesCount = pendingEmployees.length;
+
+  // Pending password reset requests awaiting approval by Admin or MR
+  const pendingPasswordResets = useMemo(() => {
+    return (employees || []).filter(e => Boolean(e.has_pending_reset || e.hasPendingReset));
+  }, [employees]);
+  const pendingPasswordResetsCount = pendingPasswordResets.length;
+
+  // Total pending personnel actions (New accounts + Password resets)
+  const totalPendingUserActionsCount = pendingEmployeesCount + pendingPasswordResetsCount;
 
   // Scope akses berkas Menunggu Verifikasi berdasarkan Departemen & Role (ISO 9001 Segregation)
   const canUserViewPendingDoc = (doc) => {
@@ -618,15 +738,18 @@ export function DocumentControlProvider({ children }) {
       case 'ctrl-obsolete': return ['Dashboard', 'Document Control', 'Dokumen Obsolete'];
       case 'ctrl-history': return ['Dashboard', 'Document Control', 'Riwayat Revisi'];
       case 'rev-new': return ['Dashboard', 'Document Revision', 'Pengajuan Revisi'];
+      case 'master-company': return ['Dashboard', 'Master Data', 'Perusahaan (Multi-PT)'];
       case 'master-emp': return ['Dashboard', 'Master Data', 'Karyawan'];
       case 'master-dept': return ['Dashboard', 'Master Data', 'Departemen'];
       case 'master-type': return ['Dashboard', 'Master Data', 'Jenis Dokumen'];
-      case 'master-role': return ['Dashboard', 'Master Data', 'Role & Hak Akses'];
+      case 'master-role':
+      case 'master-verifier': return ['Dashboard', 'Master Data', 'Role & Hak Akses'];
       case 'rep-register': return ['Dashboard', 'Laporan & Audit', 'Master Register'];
       case 'rep-dept': return ['Dashboard', 'Laporan & Audit', 'Per Departemen'];
       case 'rep-type': return ['Dashboard', 'Laporan & Audit', 'Per Jenis Dokumen'];
       case 'rep-history': return ['Dashboard', 'Laporan & Audit', 'Audit Log'];
       case 'settings': return ['Dashboard', 'Pengaturan', 'Sistem & Konfigurasi'];
+      case 'change-password': return ['Dashboard', 'Pengguna', 'Ubah Kata Sandi'];
       default: return ['Dashboard', 'Registrasi Dokumen', 'Dokumen Baru'];
     }
   };
@@ -686,7 +809,7 @@ export function DocumentControlProvider({ children }) {
     const userRole = currentUser.role || 'staff';
 
     if (userRole === 'viewer') {
-      const allowedViewerMenus = ['dashboard', 'ctrl-active'];
+      const allowedViewerMenus = ['dashboard', 'ctrl-active', 'change-password'];
       if (!allowedViewerMenus.includes(activeMenu)) {
         setActiveMenu('ctrl-active');
       }
@@ -715,17 +838,50 @@ export function DocumentControlProvider({ children }) {
   // Selected Document for Revision Initiation
   const [selectedDocForRevision, setSelectedDocForRevision] = useState(null);
 
-  // Notifications
-  const [notifications, setNotifications] = useState([
-    {
-      id: 'notif-1',
-      title: 'Selamat Datang di Sistem Document Control',
-      message: 'Sistem siap digunakan. Silakan mulai mendaftarkan dokumen baru di menu Registrasi Dokumen.',
-      time: 'Baru saja',
-      read: false,
-      type: 'info'
+  // Real-time Database Persistent Notifications
+  const [notifications, setNotifications] = useState([]);
+
+  // Fetch real persistent notifications from PostgreSQL whenever currentUser changes or on 30s polling
+  useEffect(() => {
+    if (!currentUser) {
+      setNotifications([]);
+      return;
     }
-  ]);
+
+    let isMounted = true;
+    const fetchRealNotifications = async () => {
+      try {
+        const rows = await apiGetNotifications();
+        if (isMounted && Array.isArray(rows)) {
+          setNotifications(rows.map(r => ({
+            id: r.id,
+            title: r.title,
+            message: r.message,
+            type: r.type || 'info',
+            docId: r.doc_id,
+            doc_id: r.doc_id,
+            link: r.link,
+            is_read: Boolean(r.is_read),
+            read: Boolean(r.is_read),
+            created_at: r.created_at,
+            createdAt: r.created_at,
+            recipientNip: r.recipient_nip,
+            recipientRole: r.recipient_role,
+            companyCode: r.company_code
+          })));
+        }
+      } catch (err) {
+        console.warn('[Fetch Notifications Error]', err);
+      }
+    };
+
+    fetchRealNotifications();
+    const interval = setInterval(fetchRealNotifications, 30000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [currentUser?.id, currentUser?.nip, currentUser?.role]);
 
   // Helper sanitize for PostgreSQL date and time types
   const sanitizeDate = (val) => {
@@ -773,7 +929,7 @@ export function DocumentControlProvider({ children }) {
       created_date: sanitizeDate(d.createdDate) || new Date().toISOString().slice(0, 10),
       created_time: sanitizeTime(d.createdTime),
       effective_date: sanitizeDate(d.effectiveDate),
-      verifier_team: d.targetApprover ? `${d.verifierTeam || 'Document Control Team'} [Approver: ${d.targetApprover}]` : (d.verifierTeam || 'Document Control Team'),
+      verifier_team: d.targetApprover ? `${d.verifierTeam || 'Document Control (DCO)'} [Approver: ${d.targetApprover}]` : (d.verifierTeam || 'Document Control (DCO)'),
       notes: d.notes || null,
       content: d.content || null,
       file_name: d.fileName || null,
@@ -818,7 +974,7 @@ export function DocumentControlProvider({ children }) {
       createdDate: d.created_date,
       createdTime: d.created_time,
       effectiveDate: d.effective_date,
-      verifierTeam: d.verifier_team ? d.verifier_team.replace(/\s*\[Approver:[^\]]+\]/, '').trim() : 'Document Control Team',
+      verifierTeam: d.verifier_team ? d.verifier_team.replace(/\s*\[Approver:[^\]]+\]/, '').trim() : 'Document Control (DCO)',
       targetApprover: d.target_approver || (d.verifier_team && d.verifier_team.includes('[Approver:') ? d.verifier_team.split('[Approver:')[1]?.replace(']', '').trim() : null),
       notes: d.notes,
       content: d.content,
@@ -880,8 +1036,12 @@ export function DocumentControlProvider({ children }) {
         if (!isMounted) return;
 
         if (cloudCompanies && !companiesErr && cloudCompanies.length > 0) {
-          setCompanies(cloudCompanies);
-          localStorage.setItem('dji_dms_companies', JSON.stringify(cloudCompanies));
+          const mappedCompanies = cloudCompanies.map(c => ({
+            ...c,
+            logoUrl: c.logo_url || c.logoUrl || (c.code === 'DJI' ? '/dji-logo.png' : null)
+          }));
+          setCompanies(mappedCompanies);
+          localStorage.setItem('dji_dms_companies', JSON.stringify(mappedCompanies));
         }
 
         if (cloudDocs && !docsErr) {
@@ -958,7 +1118,7 @@ export function DocumentControlProvider({ children }) {
             systemName: s.system_name || 'DOCUMENT CONTROL SYSTEM',
             isoStandard: s.iso_standard || 'ISO 9001:2015',
             numberingFormat: s.numbering_format || '{COMPANY}-{TYPE}-{DEPT}-{SEQ:2}-{REV:2}',
-            defaultVerifierTeam: s.default_verifier_team || 'Document Control Team',
+            defaultVerifierTeam: s.default_verifier_team || 'Document Control (DCO)',
             watermarkControlledText: s.watermark_controlled_text || 'CONTROLLED COPY - PT DJI',
             watermarkObsoleteText: s.watermark_obsolete_text || 'OBSOLETE - DO NOT USE',
             watermarkDraftText: s.watermark_draft_text || 'DRAFT - NOT FOR OPERATIONAL USE',
@@ -1148,18 +1308,42 @@ export function DocumentControlProvider({ children }) {
     showToast(`Berhasil menyinkronkan ${generated.length} entri jejak audit dari dokumen!`, 'success');
   };
 
-  // Helper to add in-app notification
-  const addNotification = (title, message, type = 'info', docId = null) => {
+  // Helper to add persistent in-app notification (Frontend + PostgreSQL database)
+  const addNotification = async (title, message, type = 'info', docId = null, extra = {}) => {
     const newNotif = {
-      id: `notif-${Date.now()}`,
+      id: `notif-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       title,
       message,
-      time: 'Baru saja',
-      read: false,
       type,
-      docId
+      docId,
+      doc_id: docId,
+      link: extra.link || (docId ? '#ctrl-active' : null),
+      recipientNip: extra.recipientNip || null,
+      recipientRole: extra.recipientRole || null,
+      companyCode: extra.companyCode || (currentUser?.companyCode || 'ALL'),
+      is_read: false,
+      read: false,
+      created_at: new Date().toISOString()
     };
-    setNotifications(prev => [newNotif, ...prev]);
+
+    // Optimistic UI update
+    setNotifications(prev => [newNotif, ...(prev || [])]);
+
+    // Persist to PostgreSQL database
+    try {
+      await apiCreateNotification({
+        title,
+        message,
+        type,
+        docId,
+        link: extra.link || (docId ? '#ctrl-active' : null),
+        recipientNip: extra.recipientNip || null,
+        recipientRole: extra.recipientRole || null,
+        companyCode: extra.companyCode || (currentUser?.companyCode || 'ALL')
+      });
+    } catch (e) {
+      console.warn('[AddNotification API Error]', e);
+    }
   };
 
   // 3. Document Action Methods
@@ -1212,7 +1396,7 @@ export function DocumentControlProvider({ children }) {
       targetReviewer: docData.targetReviewer || null,
       reviewerNip: docData.reviewerNip || docData.reviewerNik || null,
       reviewerNik: docData.reviewerNip || docData.reviewerNik || null,
-      verifierTeam: docData.verifierTeam || 'Document Control Team',
+      verifierTeam: docData.verifierTeam || 'Document Control (DCO)',
       targetApprover: docData.targetApprover || docData.approverName || null,
       approverNip: docData.approverNip || docData.approverNik || null,
       approverNik: docData.approverNip || docData.approverNik || null,
@@ -1471,7 +1655,7 @@ export function DocumentControlProvider({ children }) {
       targetReviewer: docData.targetReviewer || null,
       reviewerNip: docData.reviewerNip || docData.reviewerNik || null,
       reviewerNik: docData.reviewerNip || docData.reviewerNik || null,
-      verifierTeam: docData.verifierTeam || 'Document Control Team',
+      verifierTeam: docData.verifierTeam || 'Document Control (DCO)',
       targetApprover: docData.targetApprover || docData.approverName || null,
       approverNip: docData.approverNip || docData.approverNik || null,
       approverNik: docData.approverNip || docData.approverNik || null,
@@ -1652,7 +1836,8 @@ export function DocumentControlProvider({ children }) {
       });
 
       if (isSupabaseConfigured && supabase) {
-        updatedDocs.forEach(d => {
+        const changedDocs = updatedDocs.filter(d => d.id === docId || (canActivateNow && d.status === 'OBSOLETE'));
+        changedDocs.forEach(d => {
           supabase.from('documents').upsert([toSnakeCaseDoc(d)]).then(({ error }) => {
             if (error) console.warn('Supabase reviewDocumentContent error:', error);
           });
@@ -1783,7 +1968,8 @@ export function DocumentControlProvider({ children }) {
       });
 
       if (isSupabaseConfigured && supabase) {
-        updatedDocs.forEach(d => {
+        const changedDocs = updatedDocs.filter(d => d.id === docId || (isFastTrack && d.status === 'OBSOLETE'));
+        changedDocs.forEach(d => {
           supabase.from('documents').upsert([toSnakeCaseDoc(d)]).then(({ error }) => {
             if (error) console.warn('Supabase verifyDocumentFormat error:', error);
           });
@@ -1895,7 +2081,8 @@ export function DocumentControlProvider({ children }) {
       });
 
       if (isSupabaseConfigured && supabase) {
-        updatedDocs.forEach(d => {
+        const changedDocs = updatedDocs.filter(d => d.id === docId || d.status === 'OBSOLETE');
+        changedDocs.forEach(d => {
           supabase.from('documents').upsert([toSnakeCaseDoc(d)]).then(({ error }) => {
             if (error) console.warn('Supabase document update error:', error);
           });
@@ -2195,7 +2382,7 @@ export function DocumentControlProvider({ children }) {
       approvedBy,
       approvedDate,
       approvalNotes,
-      verifierTeam: revisionData.verifierTeam || originalDoc.verifierTeam || 'Document Control Team',
+      verifierTeam: revisionData.verifierTeam || originalDoc.verifierTeam || 'Document Control (DCO)',
       targetApprover: revisionData.targetApprover || originalDoc.targetApprover || null,
       approverNip: revisionData.approverNip || originalDoc.approverNip || revisionData.approverNik || originalDoc.approverNik || null,
       approverNik: revisionData.approverNip || originalDoc.approverNip || revisionData.approverNik || originalDoc.approverNik || null,
@@ -2439,6 +2626,7 @@ export function DocumentControlProvider({ children }) {
         tagline: newComp.tagline || null,
         color: newComp.color || 'blue',
         badge_color: newComp.badgeColor || null,
+        logo_url: newComp.logoUrl || newComp.logo_url || null,
         active: true
       }]).then(({ error }) => {
         if (error) console.warn('Database addCompany error:', error);
@@ -2452,7 +2640,9 @@ export function DocumentControlProvider({ children }) {
       return false;
     }
     const prevComp = companies.find(c => c.id === id);
-    setCompanies(prev => prev.map(c => c.id === id ? { ...c, ...updatedData } : c));
+    const resolvedLogo = updatedData.logoUrl !== undefined ? updatedData.logoUrl : (updatedData.logo_url !== undefined ? updatedData.logo_url : prevComp?.logoUrl);
+    const mergedData = { ...updatedData, logoUrl: resolvedLogo };
+    setCompanies(prev => prev.map(c => c.id === id ? { ...c, ...mergedData } : c));
     addAuditLog('UPDATE_COMPANY', updatedData.code || prevComp?.code || id, updatedData.name || prevComp?.name || 'Perusahaan', `Memperbarui data perusahaan: ${updatedData.name || prevComp?.name} (${updatedData.code || prevComp?.code})`);
     showToast('Data perusahaan berhasil diperbarui!', 'success');
 
@@ -2463,7 +2653,8 @@ export function DocumentControlProvider({ children }) {
         name: updatedData.name,
         tagline: updatedData.tagline || null,
         color: updatedData.color,
-        badge_color: updatedData.badgeColor
+        badge_color: updatedData.badgeColor,
+        logo_url: resolvedLogo || null
       }]).then(({ error }) => {
         if (error) console.warn('Database updateCompany error:', error);
       });
@@ -2657,6 +2848,107 @@ export function DocumentControlProvider({ children }) {
     showToast('Data Pegawai berhasil dihapus.', 'info');
   };
 
+  // Self-Registration for new users
+  const registerUser = async (payload) => {
+    try {
+      const res = await apiRegister(payload);
+      if (res.employee) {
+        setEmployees(prev => {
+          if (prev.some(e => e.id === res.employee.id || e.nip === res.employee.nip)) return prev;
+          return [...prev, res.employee];
+        });
+      }
+      return { success: true, message: res.message, employee: res.employee };
+    } catch (err) {
+      return { success: false, message: err.message };
+    }
+  };
+
+  // Approve Pending User Registration (Strictly Admin and Approver / MR)
+  const approveUserRegistration = async (id, roleData = {}) => {
+    if (!isAdmin && !isApprover) {
+      showToast('Akses ditolak! Hanya System Admin dan Management Representative (MR) yang dapat menyetujui akun.', 'danger');
+      return { success: false, message: 'Unauthorized' };
+    }
+    try {
+      const res = await apiApproveEmployee(id, roleData);
+      const updated = res.employee;
+      setEmployees(prev => prev.map(e => e.id === id ? { ...e, ...updated, status: 'Aktif' } : e));
+      showToast(`Akun ${updated?.name || 'Pegawai'} resmi disahkan dan telah aktif!`, 'success');
+      return { success: true, employee: updated };
+    } catch (err) {
+      showToast(`Gagal menyetujui akun: ${err.message}`, 'danger');
+      return { success: false, message: err.message };
+    }
+  };
+
+  // Reject Pending User Registration (Admin and MR)
+  const rejectUserRegistration = async (id, reason = 'Ditolak oleh Admin/MR') => {
+    if (!isAdmin && !isApprover) {
+      showToast('Akses ditolak! Hanya System Admin dan Management Representative (MR) yang dapat menolak akun.', 'danger');
+      return { success: false, message: 'Unauthorized' };
+    }
+    try {
+      await apiRejectEmployee(id, reason);
+      setEmployees(prev => prev.map(e => e.id === id ? { ...e, status: 'Ditolak' } : e));
+      showToast('Pengajuan akun telah ditolak.', 'info');
+      return { success: true };
+    } catch (err) {
+      showToast(`Gagal menolak akun: ${err.message}`, 'danger');
+      return { success: false, message: err.message };
+    }
+  };
+
+  // Self-Service Request for Password Reset
+  const requestPasswordReset = async (payload) => {
+    try {
+      const res = await apiForgotPassword(payload);
+      setEmployees(prev => prev.map(e => {
+        if (e.id === res.employee?.id || (e.nip && e.nip === res.employee?.nip)) {
+          return { ...e, hasPendingReset: true, has_pending_reset: true, password_reset_requested_at: new Date().toISOString() };
+        }
+        return e;
+      }));
+      return { success: true, message: res.message, employee: res.employee };
+    } catch (err) {
+      return { success: false, message: err.message };
+    }
+  };
+
+  // Approve Pending Password Reset (Admin & MR Only)
+  const approvePasswordReset = async (employeeId) => {
+    if (!isAdmin && !isApprover) {
+      showToast('Akses ditolak! Hanya System Admin dan Management Representative (MR) yang dapat menyetujui reset kata sandi.', 'danger');
+      return { success: false, message: 'Unauthorized' };
+    }
+    try {
+      const res = await apiApprovePasswordReset(employeeId);
+      setEmployees(prev => prev.map(e => e.id === employeeId ? { ...e, hasPendingReset: false, has_pending_reset: false, password_reset_requested_at: null } : e));
+      showToast(res.message || 'Kata sandi baru pegawai berhasil disahkan dan aktif!', 'success');
+      return { success: true };
+    } catch (err) {
+      showToast(`Gagal menyetujui reset sandi: ${err.message}`, 'danger');
+      return { success: false, message: err.message };
+    }
+  };
+
+  // Reject Pending Password Reset (Admin & MR Only)
+  const rejectPasswordReset = async (employeeId) => {
+    if (!isAdmin && !isApprover) {
+      showToast('Akses ditolak! Hanya System Admin dan Management Representative (MR) yang dapat membatalkan reset kata sandi.', 'danger');
+      return { success: false, message: 'Unauthorized' };
+    }
+    try {
+      const res = await apiRejectPasswordReset(employeeId);
+      setEmployees(prev => prev.map(e => e.id === employeeId ? { ...e, hasPendingReset: false, has_pending_reset: false, password_reset_requested_at: null } : e));
+      showToast('Permintaan reset kata sandi telah dibatalkan.', 'info');
+      return { success: true };
+    } catch (err) {
+      showToast(`Gagal membatalkan reset sandi: ${err.message}`, 'danger');
+      return { success: false, message: err.message };
+    }
+  };
+
   const addVerifierTeam = (team) => {
     const newTeam = { ...team, id: `team-${Date.now()}` };
     setVerifierTeams(prev => [...prev, newTeam]);
@@ -2842,12 +3134,18 @@ export function DocumentControlProvider({ children }) {
     showToast(`Berkas ${file.name} berhasil disimpan ke cloud storage dan dapat diakses publik!`, 'success');
   };
 
-  const markNotificationAsRead = (notifId) => {
-    setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, read: true } : n));
+  const markNotificationAsRead = async (notifId) => {
+    setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, read: true, is_read: true } : n));
+    try {
+      await apiMarkNotificationAsRead(notifId);
+    } catch (e) {}
   };
 
-  const markAllNotificationsAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  const markAllNotificationsAsRead = async () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true, is_read: true })));
+    try {
+      await apiMarkAllNotificationsAsRead();
+    } catch (e) {}
   };
 
   return (
@@ -2885,6 +3183,7 @@ export function DocumentControlProvider({ children }) {
         isAuthenticated: Boolean(currentUser),
         login,
         logout,
+        changeUserPassword,
         role,
         isViewer,
         isAdmin,
@@ -2949,6 +3248,18 @@ export function DocumentControlProvider({ children }) {
         addEmployee,
         updateEmployee,
         deleteEmployee,
+        registerUser,
+        approveUserRegistration,
+        rejectUserRegistration,
+        pendingEmployees,
+        pendingEmployeesCount,
+        requestPasswordReset,
+        approvePasswordReset,
+        rejectPasswordReset,
+        pendingPasswordResets,
+        pendingPasswordResetsCount,
+        totalPendingUserActionsCount,
+        canApproveUser,
         addVerifierTeam,
         updateVerifierTeam,
         deleteVerifierTeam,

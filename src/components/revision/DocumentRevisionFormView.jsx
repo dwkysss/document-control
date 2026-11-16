@@ -50,7 +50,7 @@ export default function DocumentRevisionFormView() {
   const [changeReason, setChangeReason] = useState('');
   const [changeDescription, setChangeDescription] = useState('');
   const [revisedTitle, setRevisedTitle] = useState('');
-  const [selectedVerifierTeam, setSelectedVerifierTeam] = useState('Document Control Team');
+  const [selectedVerifierTeam, setSelectedVerifierTeam] = useState('Document Control (DCO)');
   const [revisedContent, setRevisedContent] = useState('');
   const [fileAttachment, setFileAttachment] = useState(null);
   const [showCustomApprover, setShowCustomApprover] = useState(false);
@@ -70,7 +70,7 @@ export default function DocumentRevisionFormView() {
       if (e.status === 'Nonaktif') return false;
       const empId = e.nip || e.nik;
       const empComp = (e.companyCode || (empId?.startsWith('UMI') ? 'UMI' : empId?.startsWith('IMK') ? 'IMK' : 'DJI')).toUpperCase();
-      return empComp === targetCompany;
+      return empComp === targetCompany || empComp === 'ALL';
     });
 
     (departments || []).forEach(dept => {
@@ -126,26 +126,46 @@ export default function DocumentRevisionFormView() {
     const docType = (documentTypes || []).find(t => t.code === (typeCode || currentDoc?.type));
     const level = docType?.level || 2;
     const cleanDept = (deptCode || currentDoc?.department || '').toUpperCase();
+    const creatorNip = currentUser?.nip || currentUser?.nik;
 
     if (level === 1) {
       // Level 1 (Policy): Telaah mutu ISO dilakukan oleh MR unit terkait
       const mr = availableReviewers.find(
-        e => (e.position || '').toUpperCase().includes('MR') ||
+        e => ((e.position || '').toUpperCase().includes('MR') ||
              (e.position || '').toUpperCase().includes('MANAGEMENT REPRESENTATIVE') ||
-             e.role === 'approver'
+             e.role === 'approver') &&
+             (e.nip || e.nik) !== creatorNip
       );
       if (mr) return mr.nip || mr.nik;
     }
 
-    const deptMatch = availableReviewers.find(r => (r.department || '').toUpperCase() === cleanDept);
+    // 1. Cari reviewer yang departemennya sesuai dalam PT yang dipilih (kecuali jika orang tersebut adalah pembuat revisi sendiri)
+    const deptMatch = availableReviewers.find(r =>
+      (r.department || '').toUpperCase() === cleanDept &&
+      (r.nip || r.nik) !== creatorNip
+    );
     if (deptMatch) return deptMatch.nip || deptMatch.nik;
 
+    // 2. Jika belum ada reviewer lain di departemen ini (atau pembuat revisi adalah Kepala Departemen):
+    // Alihkan langsung ke Management Representative (MR) unit terkait
     const mr = availableReviewers.find(r =>
-      (r.department || '').toUpperCase() === 'HRGA' ||
+      ((r.department || '').toUpperCase() === 'HRGA' ||
       (r.position || '').toUpperCase().includes('MR') ||
-      r.role === 'approver'
+      r.role === 'approver') &&
+      (r.nip || r.nik) !== creatorNip
     );
     if (mr) return mr.nip || mr.nik;
+
+    const gm = availableReviewers.find(r =>
+      (r.department === 'MGMT' ||
+      (r.position || '').toUpperCase().includes('GENERAL MANAGER') ||
+      (r.position || '').toUpperCase().includes('DIREKSI')) &&
+      (r.nip || r.nik) !== creatorNip
+    );
+    if (gm) return gm.nip || gm.nik;
+
+    const otherCandidate = availableReviewers.find(r => (r.nip || r.nik) !== creatorNip);
+    if (otherCandidate) return otherCandidate.nip || otherCandidate.nik;
 
     if (availableReviewers.length > 0) return availableReviewers[0].nip || availableReviewers[0].nik;
 
@@ -167,7 +187,7 @@ export default function DocumentRevisionFormView() {
       if (isLevel1) {
         return empComp === targetCompany || empComp === 'ALL' || empComp === 'DJI';
       }
-      return empComp === targetCompany;
+      return empComp === targetCompany || empComp === 'ALL';
     });
 
     const list = companyEmps.filter(e =>
@@ -600,10 +620,14 @@ export default function DocumentRevisionFormView() {
                     <ShieldCheck className="w-4 h-4 text-sky-600 dark:text-sky-400 flex-shrink-0 mt-0.5" />
                     <div className="text-xs">
                       <p className="font-bold text-sky-900 dark:text-sky-200">
-                        Mode Pengajuan Revisi Document Control
+                        {currentUser?.role === 'admin' ? 'Mode Pengajuan Revisi Administrator' : 'Mode Pengajuan Revisi Document Control'}
                       </p>
                       <p className="text-sky-800 dark:text-sky-300 mt-0.5 leading-relaxed">
-                        Sebagai Document Control Officer (DCO), revisi yang Anda daftarkan otomatis diverifikasi tata naskahnya dan langsung diteruskan ke Management Representative / General Manager (<strong>{activeApprover?.name || 'Approver'}</strong>) untuk pengesahan resmi.
+                        {currentUser?.role === 'admin' ? (
+                          <>Sebagai <strong>Administrator</strong>, revisi yang Anda daftarkan otomatis diverifikasi tata naskahnya dan langsung diteruskan ke Management Representative / General Manager (<strong>{activeApprover?.name || 'Approver'}</strong>) untuk pengesahan resmi.</>
+                        ) : (
+                          <>Sebagai <strong>Document Control Officer (DCO)</strong>, revisi yang Anda daftarkan otomatis diverifikasi tata naskahnya dan langsung diteruskan ke Management Representative / General Manager (<strong>{activeApprover?.name || 'Approver'}</strong>) untuk pengesahan resmi.</>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -776,7 +800,7 @@ export default function DocumentRevisionFormView() {
                           : 'Diperiksa oleh (Atasan):'}
                       </span>
                       <span className="font-bold text-slate-800 dark:text-slate-200 text-xs block truncate">
-                        {docLevel === 1 ? (selectedVerifierTeam || 'Document Control Team') : (activeReviewer?.name || '-')}
+                        {docLevel === 1 ? 'Document Control (DCO)' : (activeReviewer?.name || '-')}
                       </span>
                     </div>
                   </div>
@@ -797,7 +821,7 @@ export default function DocumentRevisionFormView() {
                           : 'Diverifikasi oleh (Doc Control):'}
                       </span>
                       <span className="font-bold text-slate-800 dark:text-slate-200 text-xs truncate block">
-                        {docLevel === 1 ? (activeReviewer?.name || '-') : (selectedVerifierTeam || 'Document Control Team')}
+                        {docLevel === 1 ? (activeReviewer?.name || '-') : 'Document Control (DCO)'}
                       </span>
                     </div>
                   </div>

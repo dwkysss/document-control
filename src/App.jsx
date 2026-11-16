@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
 import Toast from './components/common/Toast';
@@ -26,6 +26,7 @@ import DepartmentReportView from './components/report/DepartmentReportView';
 import DocumentTypeReportView from './components/report/DocumentTypeReportView';
 import RevisionAuditReportView from './components/report/RevisionAuditReportView';
 import SystemSettingsView from './components/settings/SystemSettingsView';
+import ChangePasswordView from './components/profile/ChangePasswordView';
 import LoginView from './components/auth/LoginView';
 
 import { DocumentControlProvider, useDocumentControl } from './context/DocumentControlContext';
@@ -73,9 +74,56 @@ class ErrorBoundary extends React.Component {
 import PublicDocumentVerifyView from './components/common/PublicDocumentVerifyView';
 
 function MainAppContent() {
-  const { currentUser, isAuthenticated, activeMenu, viewingDocument, setViewingDocument, systemSettings } = useDocumentControl();
+  const {
+    currentUser,
+    isAuthenticated,
+    activeMenu,
+    viewingDocument,
+    setViewingDocument,
+    systemSettings,
+    selectedCompanyFilter,
+    companies,
+    breadcrumbs
+  } = useDocumentControl();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // Dynamic Browser Tab Title and Favicon based on active company scope
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const activeCompanyCode = (currentUser?.companyCode && currentUser.companyCode !== 'ALL')
+      ? currentUser.companyCode
+      : (selectedCompanyFilter !== 'ALL' ? selectedCompanyFilter : 'ALL');
+
+    const activeCompObj = (companies || []).find(c => c.code === activeCompanyCode);
+
+    // 1. Dynamic document.title (Tetap konsisten seperti di dashboard untuk semua menu)
+    const sysName = systemSettings?.systemName || 'DOCUMENT CONTROL SYSTEM';
+    let baseTitle = sysName;
+    if (activeCompanyCode !== 'ALL') {
+      baseTitle = `PT ${activeCompanyCode} - ${sysName}`;
+    }
+
+    document.title = baseTitle;
+
+    // 2. Dynamic Tab Favicon
+    let faviconUrl = '/app-logo.png';
+    if (activeCompanyCode === 'DJI') {
+      faviconUrl = '/dji-logo.png';
+    } else if (activeCompObj?.logoUrl) {
+      faviconUrl = activeCompObj.logoUrl;
+    }
+
+    let link = document.querySelector("link[rel*='icon']");
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'icon';
+      document.head.appendChild(link);
+    }
+    link.type = 'image/png';
+    link.href = faviconUrl;
+  }, [currentUser, selectedCompanyFilter, companies, systemSettings]);
 
   const [publicVerifyDoc, setPublicVerifyDoc] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -140,6 +188,7 @@ function MainAppContent() {
       case 'master-type':
         return <DocumentTypeMasterView />;
       case 'master-role':
+      case 'master-verifier':
         return <RoleMasterView />;
       case 'rep-register':
         return <MasterRegisterReportView />;
@@ -151,6 +200,8 @@ function MainAppContent() {
         return <RevisionAuditReportView />;
       case 'settings':
         return <SystemSettingsView />;
+      case 'change-password':
+        return <ChangePasswordView />;
       default:
         return <DashboardOverview />;
     }

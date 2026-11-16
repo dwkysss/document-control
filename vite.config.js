@@ -5,9 +5,10 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   plugins: [react()],
   server: {
+    host: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:5001',
+        target: 'http://127.0.0.1:5005',
         changeOrigin: true,
         configure: (proxy) => {
           proxy.on('error', (err, req, res) => {
@@ -19,7 +20,7 @@ export default defineConfig({
         }
       },
       '/uploads': {
-        target: 'http://localhost:5001',
+        target: 'http://127.0.0.1:5005',
         changeOrigin: true,
         configure: (proxy) => {
           proxy.on('error', (err, req, res) => {

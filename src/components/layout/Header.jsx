@@ -1,18 +1,17 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Menu, Bell, Search, UserCheck, ChevronDown, Check, Shield, FileText, CheckCircle2, AlertCircle, RefreshCw, X, Eye, LogOut, Building2, Lock } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Menu, Bell, Search, ChevronDown, Shield, FileText, CheckCircle2, AlertCircle, RefreshCw, X, Eye, LogOut, Building2, Lock, ScanBarcode, KeyRound } from 'lucide-react';
 import { useDocumentControl } from '../../context/DocumentControlContext';
 import Badge from '../common/Badge';
+import BarcodeScannerModal from '../common/BarcodeScannerModal';
 
 export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
   const {
     currentUser,
-    setCurrentUser,
     logout,
     role,
     isAdmin,
     isApprover,
     isDocControl,
-    employees,
     notifications,
     markNotificationAsRead,
     markAllNotificationsAsRead,
@@ -26,7 +25,6 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
     setSelectedCompanyFilter,
     isCompanyLocked,
     userCompanyCode,
-    allEmployees,
     documents,
     searchQuery,
     setSearchQuery,
@@ -36,45 +34,32 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  const [demoCompanyTab, setDemoCompanyTab] = useState('ALL');
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
 
   const notifRef = useRef(null);
   const userMenuRef = useRef(null);
   const searchRef = useRef(null);
 
-  // Directory comes exclusively from the authenticated API response.
-  const demoEmployeesList = useMemo(() => {
-    const sourceMap = new Map();
-    (allEmployees || employees || []).forEach(e => {
-      const nip = String(e?.nip || e?.nik || '').trim();
-      if (nip) {
-        const canonicalComp = nip.startsWith('UMI')
-          ? 'UMI'
-          : nip.startsWith('IMK')
-          ? 'IMK'
-          : nip === '123463'
-          ? 'ALL'
-          : (e.companyCode || 'DJI');
-        const prev = sourceMap.get(nip) || {};
-        sourceMap.set(nip, { ...prev, ...e, companyCode: canonicalComp });
-      }
-    });
+  const unreadCount = (notifications || []).filter(n => !n?.read && !n?.is_read).length;
 
-    const list = Array.from(sourceMap.values());
-    const filtered = demoCompanyTab === 'ALL'
-      ? list
-      : list.filter(e => (e.companyCode || '').toUpperCase() === demoCompanyTab.toUpperCase());
-
-    // Urutan prioritas: Holding (ALL) -> IMK -> UMI -> DJI
-    const priority = { ALL: 1, IMK: 2, UMI: 3, DJI: 4 };
-    return [...filtered].sort((a, b) => {
-      const pDiff = (priority[a.companyCode] || 99) - (priority[b.companyCode] || 99);
-      if (pDiff !== 0) return pDiff;
-      return (a.name || '').localeCompare(b.name || '');
-    });
-  }, [allEmployees, employees, demoCompanyTab]);
-
-  const unreadCount = (notifications || []).filter(n => !n?.read).length;
+  const formatTimeAgo = (isoDate) => {
+    if (!isoDate) return 'Baru saja';
+    try {
+      const diffMs = Date.now() - new Date(isoDate).getTime();
+      if (diffMs < 0) return 'Baru saja';
+      const diffSec = Math.floor(diffMs / 1000);
+      if (diffSec < 60) return 'Baru saja';
+      const diffMin = Math.floor(diffSec / 60);
+      if (diffMin < 60) return `${diffMin} mnt lalu`;
+      const diffHour = Math.floor(diffMin / 60);
+      if (diffHour < 24) return `${diffHour} jam lalu`;
+      const diffDays = Math.floor(diffHour / 24);
+      if (diffDays < 7) return `${diffDays} hari lalu`;
+      return new Date(isoDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+    } catch {
+      return 'Baru saja';
+    }
+  };
 
   // Filtered documents from search query
   const searchResults = (searchQuery || '').trim()
@@ -109,10 +94,22 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
 
   const handleNotificationClick = (notif) => {
     markNotificationAsRead(notif.id);
-    if (notif.docId) {
-      const doc = documents.find(d => d.id === notif.docId);
+    const targetDocId = notif.docId || notif.doc_id;
+    if (targetDocId) {
+      const doc = (documents || []).find(d => d.id === targetDocId);
       if (doc) {
         setViewingDocument(doc);
+      }
+    } else if (notif.link) {
+      if (notif.link.includes('master-emp')) {
+        setActiveMenu('master-emp');
+        setBreadcrumbs(['Dashboard', 'Master Data', 'Karyawan']);
+      } else if (notif.link.includes('reg-pending')) {
+        setActiveMenu('reg-pending');
+        setBreadcrumbs(['Dashboard', 'Registrasi Dokumen', 'Menunggu Verifikasi']);
+      } else if (notif.link.includes('ctrl-active')) {
+        setActiveMenu('ctrl-active');
+        setBreadcrumbs(['Dashboard', 'Document Control', 'Dokumen Aktif']);
       }
     }
     setShowNotifications(false);
@@ -142,20 +139,20 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
   };
 
   const getPageTitle = () => {
-    if (breadcrumbs && breadcrumbs.length > 1) {
-      return breadcrumbs[1].toUpperCase();
+    if (breadcrumbs && breadcrumbs.length > 0) {
+      return breadcrumbs[breadcrumbs.length - 1];
     }
-    return 'DASHBOARD';
+    return 'Dashboard';
   };
 
   return (
-    <header className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 shadow-2xs">
-      <div className="flex items-center justify-between px-3 sm:px-6 py-2 sm:py-2.5 gap-2 sm:gap-4">
+    <header className="sticky top-0 z-30 h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 shadow-2xs flex items-center lg:-ml-8 lg:w-[calc(100%+2rem)] lg:pl-8">
+      <div className="w-full flex items-center justify-between px-4 sm:px-6 gap-2 sm:gap-4 min-w-0">
         {/* Left Side: Sidebar Toggle & Breadcrumbs */}
-        <div className="flex items-center gap-2.5 sm:gap-4 shrink-0 min-w-0">
+        <div className="flex items-center gap-2.5 sm:gap-3.5 shrink-0 min-w-0">
           <button
             onClick={onToggleSidebar}
-            className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition active:scale-95 border border-slate-200/60 dark:border-slate-700/60 shadow-2xs flex-shrink-0"
+            className="w-9 h-9 min-w-[36px] min-h-[36px] flex items-center justify-center p-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition active:scale-95 border border-slate-200/60 dark:border-slate-700/60 shadow-2xs flex-shrink-0"
             title="Toggle Sidebar"
             aria-label="Toggle Sidebar"
           >
@@ -165,34 +162,34 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
           <div className="h-5 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block flex-shrink-0" />
 
           <div className="min-w-0">
-            <h1 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white tracking-tight font-sans whitespace-nowrap">
+            <h1 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight font-sans whitespace-nowrap">
               {getPageTitle()}
             </h1>
-            <nav className="hidden sm:flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate max-w-[180px] md:max-w-xs">
-              {breadcrumbs.map((crumb, idx) => (
-                <React.Fragment key={idx}>
-                  {idx > 0 && <span className="text-slate-300 dark:text-slate-600">&gt;</span>}
-                  <button
-                    onClick={() => handleCrumbClick(crumb, idx)}
-                    className={`transition truncate ${
-                      idx === breadcrumbs.length - 1
-                        ? 'text-blue-600 dark:text-blue-400 font-bold cursor-default'
-                        : 'hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer'
-                    }`}
-                  >
-                    {crumb}
-                  </button>
-                </React.Fragment>
-              ))}
+            <nav className="hidden sm:flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate max-w-[160px] md:max-w-xs">
+              {breadcrumbs.length > 1 ? (
+                breadcrumbs.slice(0, -1).map((crumb, idx) => (
+                  <React.Fragment key={idx}>
+                    {idx > 0 && <span className="text-slate-300 dark:text-slate-600">&gt;</span>}
+                    <button
+                      onClick={() => handleCrumbClick(crumb, idx)}
+                      className="hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer transition truncate"
+                    >
+                      {crumb}
+                    </button>
+                  </React.Fragment>
+                ))
+              ) : (
+                <span className="text-slate-400 text-[10px]">Overview & Analitik</span>
+              )}
             </nav>
           </div>
         </div>
 
         {/* Right Side: Global Search, Notification Center, User Profile */}
-        <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0 min-w-0">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0 min-w-0">
           {/* Multi-Company Scope Filter Pill (Hanya untuk Admin Holding) */}
           {!isCompanyLocked && (
-            <div className="hidden lg:flex items-center bg-slate-100/90 dark:bg-slate-800/90 p-0.5 rounded-xl border border-slate-200/80 dark:border-slate-700/80 text-xs shadow-2xs shrink-0">
+            <div className="hidden sm:flex items-center bg-slate-100/90 dark:bg-slate-800/90 p-0.5 rounded-xl border border-slate-200/80 dark:border-slate-700/80 text-xs shadow-2xs shrink-0">
               <button
                 type="button"
                 onClick={() => setSelectedCompanyFilter('ALL')}
@@ -227,7 +224,7 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
           )}
 
           {/* Quick Search dropdown */}
-          <div className="relative hidden md:block w-32 lg:w-40 xl:w-56 focus-within:w-48 lg:focus-within:w-52 xl:focus-within:w-64 transition-all duration-200" ref={searchRef}>
+          <div className="relative hidden md:block w-28 lg:w-36 xl:w-48 focus-within:w-44 xl:focus-within:w-56 transition-all duration-200" ref={searchRef}>
             <input
               type="text"
               placeholder="Cari dokumen..."
@@ -295,11 +292,22 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
             )}
           </div>
 
+          {/* In-App Barcode / QR Scanner Button (Icon only) */}
+          <button
+            type="button"
+            onClick={() => setShowBarcodeScanner(true)}
+            className="w-10 h-10 min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700/80 rounded-xl transition active:scale-95 cursor-pointer shrink-0 shadow-2xs"
+            title="Pindai / Scan Barcode Dokumen"
+            aria-label="Pindai Barcode Dokumen"
+          >
+            <ScanBarcode className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          </button>
+
           {/* Notification Bell Dropdown */}
-          <div className="relative" ref={notifRef}>
+          <div className="relative shrink-0" ref={notifRef}>
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="relative min-w-[44px] min-h-[44px] flex items-center justify-center p-2 text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/50 dark:border-slate-800 transition"
+              className="relative w-10 h-10 min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/50 dark:border-slate-800 transition"
               title="Notifikasi Sistem"
               aria-label="Notifikasi Sistem"
             >
@@ -339,36 +347,41 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
                       Tidak ada notifikasi baru
                     </div>
                   ) : (
-                    notifications.map((notif) => (
-                      <div
-                        key={notif.id}
-                        onClick={() => handleNotificationClick(notif)}
-                        className={`p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/70 cursor-pointer transition flex gap-3 ${
-                          !notif.read ? 'bg-blue-50/40 dark:bg-blue-950/20' : ''
-                        }`}
-                      >
-                        <div className="mt-0.5">
-                          {notif.type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
-                          {notif.type === 'warning' && <AlertCircle className="w-4 h-4 text-amber-500" />}
-                          {notif.type === 'danger' && <AlertCircle className="w-4 h-4 text-rose-500" />}
-                          {notif.type === 'info' && <FileText className="w-4 h-4 text-blue-500" />}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between">
-                            <h4 className={`text-xs ${!notif.read ? 'font-bold text-slate-900 dark:text-white' : 'font-medium text-slate-700 dark:text-slate-300'}`}>
-                              {notif.title}
-                            </h4>
-                            <span className="text-[10px] text-slate-400">{notif.time}</span>
+                    notifications.map((notif) => {
+                      const isUnread = !notif.read && !notif.is_read;
+                      return (
+                        <div
+                          key={notif.id}
+                          onClick={() => handleNotificationClick(notif)}
+                          className={`p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/70 cursor-pointer transition flex gap-3 ${
+                            isUnread ? 'bg-blue-50/40 dark:bg-blue-950/20' : ''
+                          }`}
+                        >
+                          <div className="mt-0.5 shrink-0">
+                            {notif.type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+                            {notif.type === 'warning' && <AlertCircle className="w-4 h-4 text-amber-500" />}
+                            {notif.type === 'danger' && <AlertCircle className="w-4 h-4 text-rose-500" />}
+                            {notif.type === 'info' && <FileText className="w-4 h-4 text-blue-500" />}
                           </div>
-                          <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 leading-snug line-clamp-2">
-                            {notif.message}
-                          </p>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-1">
+                              <h4 className={`text-xs truncate ${isUnread ? 'font-bold text-slate-900 dark:text-white' : 'font-medium text-slate-700 dark:text-slate-300'}`}>
+                                {notif.title}
+                              </h4>
+                              <span className="text-[10px] text-slate-400 shrink-0">
+                                {notif.time || formatTimeAgo(notif.created_at || notif.createdAt)}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 leading-snug line-clamp-2">
+                              {notif.message}
+                            </p>
+                          </div>
+                          {isUnread && (
+                            <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0 self-center"></span>
+                          )}
                         </div>
-                        {!notif.read && (
-                          <span className="w-2 h-2 rounded-full bg-blue-600 self-center"></span>
-                        )}
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
 
@@ -388,17 +401,17 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
           </div>
 
           {/* User Profile & Role Menu */}
-          <div className="relative" ref={userMenuRef}>
+          <div className="relative shrink-0" ref={userMenuRef}>
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center gap-2 p-1 pr-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition text-left border border-slate-200/80 dark:border-slate-700/80 bg-white/60 dark:bg-slate-900/60 shadow-2xs shrink-0"
+              className="flex items-center gap-1.5 p-1 pr-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition text-left border border-slate-200/80 dark:border-slate-700/80 bg-white/60 dark:bg-slate-900/60 shadow-2xs shrink-0"
             >
               <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-blue-600 via-blue-700 to-indigo-600 text-white flex items-center justify-center font-extrabold text-[11px] shadow-xs shrink-0">
                 {currentUser ? currentUser.name.split(' ').map(n => n[0]).slice(0, 2).join('') : 'U'}
               </div>
-              <div className="hidden sm:block">
-                <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5 leading-tight">
-                  <span className="truncate max-w-[80px] lg:max-w-[100px] xl:max-w-[140px]">{currentUser ? currentUser.name : 'Tamu'}</span>
+              <div className="hidden sm:block min-w-0">
+                <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1 leading-tight">
+                  <span className="truncate max-w-[70px] md:max-w-[85px] xl:max-w-[120px]">{currentUser ? currentUser.name : 'Tamu'}</span>
                   {currentUser && (
                     <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded-full border shrink-0 ${
                       currentUser.role === 'admin'
@@ -418,15 +431,12 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
                   )}
                   <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
                 </div>
-                <div className="hidden xl:block text-[10px] text-slate-400 font-medium truncate max-w-[140px] leading-tight mt-0.5">
-                  {currentUser ? currentUser.position : ''}
-                </div>
               </div>
             </button>
 
             {/* Profile & Auth Menu */}
             {showUserMenu && currentUser && (
-              <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 py-2 z-50 animate-fadeIn">
+              <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 py-2 z-50 animate-fadeIn">
                 <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
                   <div className="flex items-start justify-between">
                     <div>
@@ -445,142 +455,49 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
                     <span className="text-slate-300 dark:text-slate-700">&bull;</span>
                     <span>Dept: {currentUser.department}</span>
                   </div>
-                </div>
-
-                {/* Quick Account Switcher for Testing/Demo */}
-                <div className="px-3 py-2.5">
-                  <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 px-1 pb-1.5 flex items-center justify-between">
-                    <span>Simulasi Akun Demo</span>
-                    <span className="text-[10px] text-slate-400">Pilih Entitas</span>
-                  </div>
-
-                  {/* Filter Pills PT Demo */}
-                  <div className="flex items-center gap-1 mb-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-[10px] font-bold">
-                    <button
-                      type="button"
-                      onClick={() => setDemoCompanyTab('ALL')}
-                      className={`flex-1 py-1 rounded transition text-center cursor-pointer ${
-                        demoCompanyTab === 'ALL'
-                          ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs font-extrabold'
-                          : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
-                      }`}
-                    >
-                      Semua
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDemoCompanyTab('IMK')}
-                      className={`flex-1 py-1 rounded transition text-center flex items-center justify-center cursor-pointer ${
-                        demoCompanyTab === 'IMK'
-                          ? 'bg-emerald-600 text-white shadow-2xs font-extrabold'
-                          : 'text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
-                      }`}
-                    >
-                      IMK
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDemoCompanyTab('UMI')}
-                      className={`flex-1 py-1 rounded transition text-center flex items-center justify-center cursor-pointer ${
-                        demoCompanyTab === 'UMI'
-                          ? 'bg-indigo-600 text-white shadow-2xs font-extrabold'
-                          : 'text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40'
-                      }`}
-                    >
-                      UMI
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDemoCompanyTab('DJI')}
-                      className={`flex-1 py-1 rounded transition text-center flex items-center justify-center cursor-pointer ${
-                        demoCompanyTab === 'DJI'
-                          ? 'bg-blue-600 text-white shadow-2xs font-extrabold'
-                          : 'text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40'
-                      }`}
-                    >
-                      DJI
-                    </button>
-                  </div>
-
-                  <div className="space-y-1 mt-1 max-h-56 overflow-y-auto pr-1 scrollbar-thin">
-                    {demoEmployeesList.length === 0 ? (
-                      <div className="py-3 text-center text-xs text-slate-400 font-medium">
-                        Tidak ada personil untuk unit {demoCompanyTab}.
-                      </div>
-                    ) : (
-                      demoEmployeesList.map(emp => {
-                      const empId = emp.nip || emp.nik || '';
-                      const empComp = (emp.companyCode || (empId.startsWith('UMI') ? 'UMI' : empId.startsWith('IMK') ? 'IMK' : (empId === '123463' ? 'ALL' : 'DJI'))).toUpperCase();
-                      const badgeClass = empComp === 'UMI'
-                        ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300'
-                        : empComp === 'IMK'
-                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
-                        : empComp === 'ALL'
-                        ? 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300'
-                        : 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300';
-
-                      return (
-                        <button
-                          key={emp.id || emp.nip || emp.nik}
-                          onClick={() => {
-                            setCurrentUser(emp);
-                            if (empComp && empComp !== 'ALL') {
-                              setSelectedCompanyFilter(empComp);
-                            }
-                            try {
-                              localStorage.setItem('dji_auth_user', JSON.stringify(emp));
-                            } catch (e) {
-                              // ignore
-                            }
-                            setShowUserMenu(false);
-                            showToast(`Beralih ke ${emp.name} [${empComp}] (${emp.position})`, 'info');
-                          }}
-                          className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition cursor-pointer ${
-                            currentUser.id === emp.id || (currentUser.nip || currentUser.nik) === (emp.nip || emp.nik)
-                              ? 'bg-blue-50 text-blue-700 font-bold dark:bg-blue-950 dark:text-blue-300'
-                              : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
-                          }`}
-                        >
-                          <div className="text-left truncate flex-1 pr-2">
-                            <div className="flex items-center gap-1.5 truncate">
-                              <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-bold ${badgeClass}`}>
-                                {empComp}
-                              </span>
-                              <span className="truncate">{emp.name}</span>
-                            </div>
-                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal truncate mt-0.5">
-                              NIP: {emp.nip || emp.nik} • {emp.position}
-                            </div>
-                          </div>
-                          {(currentUser.id === emp.id || (currentUser.nip || currentUser.nik) === (emp.nip || emp.nik)) && <Check className="w-4 h-4 text-blue-600 flex-shrink-0" />}
-                        </button>
-                      );
-                    })
+                  {currentUser.companyName && (
+                    <div className="mt-1 text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                      {currentUser.companyName}
+                    </div>
                   )}
-                  </div>
                 </div>
 
-                <div className="border-t border-slate-100 dark:border-slate-800 px-3 pt-2 mt-1 space-y-1">
+                <div className="px-3 pt-2 space-y-1">
                   {isAdmin && (
                     <button
+                      type="button"
                       onClick={() => {
                         setActiveMenu('settings');
                         setShowUserMenu(false);
                       }}
-                      className="w-full text-left px-2.5 py-1.5 text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg flex items-center gap-2 transition"
+                      className="w-full text-left px-2.5 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg flex items-center gap-2 transition cursor-pointer"
                     >
                       <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
                       Pengaturan Sistem & Database
                     </button>
                   )}
+
+                  {/* Change Password Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      setActiveMenu('change-password');
+                    }}
+                    className="w-full text-left px-2.5 py-1.5 text-xs text-slate-700 dark:text-slate-300 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-800 rounded-lg flex items-center gap-2 transition cursor-pointer font-medium"
+                  >
+                    <KeyRound className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-500" />
+                    <span>Ubah Kata Sandi</span>
+                  </button>
                   
                   {/* Logout Button */}
                   <button
+                    type="button"
                     onClick={() => {
                       setShowUserMenu(false);
                       logout();
                     }}
-                    className="w-full text-left px-2.5 py-2 text-xs font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg flex items-center gap-2 transition"
+                    className="w-full text-left px-2.5 py-2 text-xs font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg flex items-center gap-2 transition cursor-pointer"
                   >
                     <LogOut className="w-3.5 h-3.5 text-rose-500" />
                     Keluar (Logout)
@@ -591,6 +508,12 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
           </div>
         </div>
       </div>
+
+      {/* Modal Scanner Barcode / QR */}
+      <BarcodeScannerModal
+        isOpen={showBarcodeScanner}
+        onClose={() => setShowBarcodeScanner(false)}
+      />
     </header>
   );
 }

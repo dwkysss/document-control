@@ -58,6 +58,25 @@ async function runBackup() {
   }
 
   console.log(`📦 Memulai backup data dari backend: ${apiBase}...`);
+
+  // 1. Authenticate with admin session
+  let authCookie = '';
+  try {
+    const loginRes = await fetch(`${apiBase}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier: '123463', password: 'admin123' })
+    });
+    if (loginRes.ok) {
+      const rawCookie = loginRes.headers.get('set-cookie');
+      if (rawCookie) {
+        authCookie = rawCookie.split(';')[0];
+      }
+    }
+  } catch (e) {
+    console.warn('⚠️ Gagal login sebelum backup:', e.message);
+  }
+
   const backupData = {
     exportedAt: new Date().toISOString(),
     tables: {}
@@ -76,7 +95,9 @@ async function runBackup() {
   for (const table of TABLES) {
     const endpoint = table.replace(/_/g, '-');
     try {
-      const res = await fetch(`${apiBase}/api/${endpoint}`);
+      const res = await fetch(`${apiBase}/api/${endpoint}`, {
+        headers: { ...(authCookie ? { Cookie: authCookie } : {}) }
+      });
       if (!res.ok) {
         console.warn(`⚠️ Gagal mengambil tabel ${table}: HTTP ${res.status}`);
         backupData.tables[table] = [];

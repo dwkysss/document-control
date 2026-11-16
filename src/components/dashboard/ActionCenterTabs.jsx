@@ -133,7 +133,7 @@ export default function ActionCenterTabs({
                     <div className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] text-slate-600 dark:text-slate-400">
                       <span>Diajukan oleh <strong className="font-semibold text-slate-800 dark:text-slate-200">{doc.creator}</strong></span>
                       <span className="text-slate-300 dark:text-slate-600">&bull;</span>
-                      <span>untuk <strong className="font-semibold text-slate-800 dark:text-slate-200">{doc.verifierTeam || 'Document Control'}</strong></span>
+                      <span>diverifikasi oleh <strong className="font-semibold text-slate-800 dark:text-slate-200">{doc.verifiedBy || 'Document Control (DCO)'}</strong></span>
                     </div>
                   </div>
 

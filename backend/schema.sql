@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS public.companies (
   tagline TEXT,
   color TEXT DEFAULT 'blue',
   badge_color TEXT,
+  logo_url TEXT,
   active BOOLEAN DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
 );

@@ -39,7 +39,6 @@ export default function NewRegistrationView() {
     documentTypes,
     employees,
     allEmployees,
-    verifierTeams,
     documents,
     currentUser,
     systemSettings,
@@ -94,7 +93,7 @@ export default function NewRegistrationView() {
 
   const [title, setTitle] = useState('');
   const [createdDate, setCreatedDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [selectedVerifierTeam, setSelectedVerifierTeam] = useState('Document Control Team');
+  const [selectedVerifierTeam, setSelectedVerifierTeam] = useState('Document Control (DCO)');
 
   // 1. Ambil daftar Reviewer (Atasan) strictly terikat ke Unit Perusahaan yang dipilih (Zero Cross-PT Leak)
   const availableReviewers = React.useMemo(() => {
@@ -102,12 +101,12 @@ export default function NewRegistrationView() {
     const addedKeys = new Set();
     const sourceEmps = allEmployees?.length > 0 ? allEmployees : (employees || []);
 
-    // Filter seluruh pegawai aktif hanya dari perusahaan yang bersangkutan
+    // Filter seluruh pegawai aktif hanya dari perusahaan yang bersangkutan (termasuk Holding ALL)
     const companyEmps = sourceEmps.filter(e => {
       if (e.status === 'Nonaktif') return false;
       const empId = e.nip || e.nik;
       const empComp = (e.companyCode || (empId?.startsWith('UMI') ? 'UMI' : empId?.startsWith('IMK') ? 'IMK' : 'DJI')).toUpperCase();
-      return empComp === targetCompany;
+      return empComp === targetCompany || empComp === 'ALL';
     });
 
     // A. Prioritaskan Kepala Departemen di Master Departemen HANYA jika ia terdaftar sebagai karyawan di PT ini
@@ -169,7 +168,7 @@ export default function NewRegistrationView() {
         // Dokumen Level 1 (Policy) mengizinkan MR Unit dan Pengesahan Akhir Direksi Holding
         return empComp === targetCompany || empComp === 'ALL' || empComp === 'DJI';
       }
-      return empComp === targetCompany;
+      return empComp === targetCompany || empComp === 'ALL';
     });
 
     const list = companyEmps.filter(e =>
@@ -189,28 +188,46 @@ export default function NewRegistrationView() {
     const docType = (documentTypes || []).find(t => t.code === (typeCode || selectedType));
     const level = docType?.level || 2;
     const cleanDept = (deptCode || selectedDept || '').toUpperCase();
+    const creatorNip = currentUser?.nip || currentUser?.nik;
 
     if (level === 1) {
       // Level 1 (Policy): Telaah mutu ISO oleh Management Representative (MR) unit terkait
       const mr = availableReviewers.find(
-        e => (e.position || '').toUpperCase().includes('MR') ||
+        e => ((e.position || '').toUpperCase().includes('MR') ||
           (e.position || '').toUpperCase().includes('MANAGEMENT REPRESENTATIVE') ||
-          e.role === 'approver'
+          e.role === 'approver') &&
+          (e.nip || e.nik) !== creatorNip
       );
       if (mr) return mr.nip || mr.nik;
     }
 
-    // 1. Cari reviewer yang departemennya sesuai dalam PT yang dipilih
-    const deptMatch = availableReviewers.find(r => (r.department || '').toUpperCase() === cleanDept);
+    // 1. Cari reviewer yang departemennya sesuai dalam PT yang dipilih (kecuali jika orang tersebut adalah pembuat dokumen sendiri)
+    const deptMatch = availableReviewers.find(r =>
+      (r.department || '').toUpperCase() === cleanDept &&
+      (r.nip || r.nik) !== creatorNip
+    );
     if (deptMatch) return deptMatch.nip || deptMatch.nik;
 
-    // 2. Jika belum ada kepala seksi di departemen ini, alihkan ke MR unit terkait
+    // 2. Jika belum ada reviewer lain di departemen ini (atau pembuat adalah Kepala Departemen):
+    // Alihkan langsung ke Management Representative (MR) unit terkait
     const mr = availableReviewers.find(r =>
-      (r.department || '').toUpperCase() === 'HRGA' ||
+      ((r.department || '').toUpperCase() === 'HRGA' ||
       (r.position || '').toUpperCase().includes('MR') ||
-      r.role === 'approver'
+      r.role === 'approver') &&
+      (r.nip || r.nik) !== creatorNip
     );
     if (mr) return mr.nip || mr.nik;
+
+    const gm = availableReviewers.find(r =>
+      (r.department === 'MGMT' ||
+      (r.position || '').toUpperCase().includes('GENERAL MANAGER') ||
+      (r.position || '').toUpperCase().includes('DIREKSI')) &&
+      (r.nip || r.nik) !== creatorNip
+    );
+    if (gm) return gm.nip || gm.nik;
+
+    const otherCandidate = availableReviewers.find(r => (r.nip || r.nik) !== creatorNip);
+    if (otherCandidate) return otherCandidate.nip || otherCandidate.nik;
 
     if (availableReviewers.length > 0) return availableReviewers[0].nip || availableReviewers[0].nik;
 
@@ -854,10 +871,14 @@ export default function NewRegistrationView() {
                     <Info className="w-4 h-4 text-sky-600 dark:text-sky-400 flex-shrink-0 mt-0.5" />
                     <div className="text-xs">
                       <p className="font-bold text-sky-900 dark:text-sky-200">
-                        Mode Pendaftaran Document Control
+                        {currentUser?.role === 'admin' ? 'Mode Pendaftaran Administrator' : 'Mode Pendaftaran Document Control'}
                       </p>
                       <p className="text-sky-800 dark:text-sky-300 mt-0.5 leading-relaxed">
-                        Sebagai Document Control Officer (DCO), berkas yang Anda daftarkan otomatis lolos verifikasi format dan langsung diteruskan ke Management Representative (<strong>{activeApprover?.name || 'MR'}</strong>) untuk pengesahan resmi.
+                        {currentUser?.role === 'admin' ? (
+                          <>Sebagai <strong>Administrator</strong>, berkas yang Anda daftarkan otomatis lolos verifikasi format dan langsung diteruskan ke Management Representative (<strong>{activeApprover?.name || 'MR'}</strong>) untuk pengesahan resmi.</>
+                        ) : (
+                          <>Sebagai <strong>Document Control Officer (DCO)</strong>, berkas yang Anda daftarkan otomatis lolos verifikasi format dan langsung diteruskan ke Management Representative (<strong>{activeApprover?.name || 'MR'}</strong>) untuk pengesahan resmi.</>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -1025,7 +1046,7 @@ export default function NewRegistrationView() {
                             : 'Diperiksa oleh (Atasan Dept)'}
                       </p>
                       <p className="font-bold text-slate-900 dark:text-white text-xs truncate">
-                        {docLevel === 1 ? (selectedVerifierTeam || 'Document Control Team') : (activeReviewer?.name || '-')}
+                        {docLevel === 1 ? 'Document Control (DCO)' : (activeReviewer?.name || '-')}
                       </p>
                     </div>
                   </div>
@@ -1045,7 +1066,7 @@ export default function NewRegistrationView() {
                             : 'Verifikasi Tata Naskah (Doc Control)'}
                       </p>
                       <p className="font-bold text-slate-900 dark:text-white text-xs truncate">
-                        {docLevel === 1 ? (activeReviewer?.name || '-') : isFastTrack ? (selectedVerifierTeam || 'Document Control Team') : (selectedVerifierTeam || 'Document Control Team')}
+                        {docLevel === 1 ? (activeReviewer?.name || '-') : 'Document Control (DCO)'}
                       </p>
                     </div>
                   </div>

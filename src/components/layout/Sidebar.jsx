@@ -51,7 +51,10 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
     canManageSettings,
     canUserViewPendingDoc,
     canUserViewDraftDoc,
-    canUserViewRejectedDoc
+    canUserViewRejectedDoc,
+    canApproveUser,
+    pendingEmployeesCount,
+    totalPendingUserActionsCount
   } = useDocumentControl();
 
   // Active Company Scope Resolution (Seamless synchronization with header & active session)
@@ -135,53 +138,69 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
       )}
 
       <aside
-        className={`fixed lg:sticky top-0 left-0 h-screen bg-[#0a1628] text-slate-300 border-r border-[#1b2d49] z-40 transition-all duration-300 flex flex-col ${
+        className={`fixed lg:sticky top-0 left-0 h-screen bg-[#0a1628] text-slate-300 border-r border-[#1b2d49] z-40 transition-all duration-300 flex flex-col shadow-2xl shadow-slate-950/25 rounded-r-[24px] lg:rounded-r-[28px] overflow-hidden ${
           isCollapsed ? 'w-20' : 'w-64 xl:w-72'
         } ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
         {/* Brand Header (Dynamic per Active Unit / Holding) */}
         {(() => {
           const renderCompanyIcon = () => {
+            // Central Holding View (ALL units): use the custom 3D document-shield app logo
             if (activeCompanyCode === 'ALL') {
               return (
-                <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-xs flex-shrink-0">
-                  <FileText className="w-5 h-5" strokeWidth={2.2} />
+                <div className="w-10 h-10 flex items-center justify-center shrink-0 transition-transform duration-200 hover:scale-105">
+                  <img
+                    src="/app-logo.png"
+                    alt="Document Control Logo"
+                    className="w-full h-full object-contain drop-shadow-md"
+                  />
                 </div>
               );
             }
 
-            const compLogo = activeCompanyObj?.logoUrl || (activeCompanyCode === 'DJI' ? '/dji-logo.png' : null);
-
+            const compLogo = activeCompanyObj?.logoUrl || activeCompanyObj?.logo_url || (activeCompanyCode === 'DJI' ? '/dji-logo.png' : null);
             if (compLogo) {
               return (
-                <div className="w-10 h-10 rounded-lg bg-white p-1 flex items-center justify-center shadow-xs flex-shrink-0 overflow-hidden border border-slate-200">
+                <div className="w-10 h-10 rounded-xl bg-white p-1 flex items-center justify-center shadow-md shadow-slate-950/40 shrink-0 overflow-hidden border border-slate-700/60 transition-transform hover:scale-105">
                   <img src={compLogo} alt={`${activeCompanyCode} Logo`} className="w-full h-full object-contain" />
                 </div>
               );
             }
 
+            // Fallback for company without uploaded logo: high-contrast company monogram badge
+            const badgeBg = activeCompanyCode === 'UMI' ? 'bg-indigo-600' : activeCompanyCode === 'IMK' ? 'bg-emerald-600' : 'bg-blue-600';
             return (
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center shadow-xs flex-shrink-0 font-bold text-white text-xs tracking-wider ${
-                activeCompanyCode === 'UMI' ? 'bg-indigo-600' : activeCompanyCode === 'IMK' ? 'bg-emerald-600' : 'bg-blue-600'
-              }`}>
+              <div className={`w-10 h-10 rounded-xl ${badgeBg} flex items-center justify-center font-black text-xs text-white shadow-md shadow-slate-950/40 shrink-0 border border-white/20 transition-transform hover:scale-105`}>
                 {activeCompanyCode}
               </div>
             );
           };
 
+          // Small text underneath title: shows active company name when activeCompanyCode !== 'ALL'
+          const companySubLabel = activeCompanyCode !== 'ALL'
+            ? (activeCompanyObj?.name || (activeCompanyCode === 'DJI' ? 'PT DENTELLE JAYA INFINITEX' : activeCompanyCode === 'UMI' ? 'PT ULTIMO MODA INDOTEX' : activeCompanyCode === 'IMK' ? 'PT IMK' : `UNIT ${activeCompanyCode}`))
+            : (isHoldingAdmin ? 'HOLDING GROUP (MULTI-PT)' : null);
+
           return (
-            <div className="p-3.5 sm:p-4 border-b border-[#172740] flex items-center gap-3 bg-[#07101e] min-w-0">
+            <div className={`h-16 px-4 border-b border-[#172740]/80 flex items-center bg-gradient-to-r from-[#07101e] via-[#091527] to-[#07101e] min-w-0 shrink-0 ${
+              isCollapsed ? 'justify-center px-0' : 'gap-3'
+            }`}>
               {renderCompanyIcon()}
               {!isCollapsed && (
                 <div className="overflow-hidden min-w-0 flex-1">
-                  <h2 className="font-bold text-xs sm:text-[13px] tracking-tight text-white leading-tight font-sans" title={displayCompanyName}>
-                    {displayCompanyName}
-                  </h2>
-                  {displaySubtitle ? (
-                    <p className="text-[10px] text-sky-400 font-semibold tracking-wider uppercase truncate mt-0.5">
-                      {displaySubtitle}
-                    </p>
-                  ) : null}
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-[14px] tracking-tight text-white font-sans leading-tight">
+                      Document Control
+                    </span>
+                  </div>
+                  {companySubLabel && (
+                    <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 shadow-[0_0_6px_#34d399]" title="Sistem Aktif & Terkendali" />
+                      <p className="text-[10px] text-slate-400 font-medium tracking-wide uppercase truncate" title={companySubLabel}>
+                        {companySubLabel}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -189,7 +208,7 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
         })()}
 
         {/* Navigation Menu List */}
-        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1.5 scrollbar-thin">
+        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1.5 [scrollbar-width:thin] [scrollbar-color:#1e293b_transparent]">
           {/* 1. Dashboard */}
           <button
             onClick={() => handleNavClick('dashboard', ['Dashboard', 'Overview'])}
@@ -412,13 +431,24 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
                 className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-bold text-slate-200 hover:bg-[#13233c] transition"
               >
                 <div className="flex items-center gap-3">
-                  <Database className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                  <div className="relative">
+                    <Database className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                    {canApproveUser && (totalPendingUserActionsCount || pendingEmployeesCount) > 0 && isCollapsed && (
+                      <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                    )}
+                  </div>
                   {!isCollapsed && (
                     <span className="flex items-center gap-1.5">
                       <span>Master Data</span>
-                      <span className="text-[8px] font-extrabold uppercase px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                        Admin
-                      </span>
+                      {canApproveUser && (totalPendingUserActionsCount || pendingEmployeesCount) > 0 ? (
+                        <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                          {totalPendingUserActionsCount || pendingEmployeesCount} Menunggu
+                        </span>
+                      ) : (
+                        <span className="text-[8px] font-extrabold uppercase px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                          Admin
+                        </span>
+                      )}
                     </span>
                   )}
                 </div>
@@ -450,6 +480,11 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
                     }`}
                   >
                     <span>Karyawan</span>
+                    {canApproveUser && (totalPendingUserActionsCount || pendingEmployeesCount) > 0 && (
+                      <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-1.5 py-0.2 rounded-full font-bold">
+                        {totalPendingUserActionsCount || pendingEmployeesCount}
+                      </span>
+                    )}
                   </button>
                   <button
                     onClick={() => handleNavClick('master-dept', ['Dashboard', 'Master Data', 'Departemen'])}

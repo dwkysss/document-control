@@ -298,19 +298,14 @@ export default function DashboardAnalytics({
                     key={tier.level}
                     className={`${tier.widthClass} transition cursor-default`}
                   >
-                    <div className={`p-2.5 rounded-xl border ${tier.borderAccent} ${tier.bgBox} shadow-2xs flex items-center justify-between gap-2`}>
+                    <div className={`p-2 sm:p-2.5 rounded-xl border ${tier.borderAccent} ${tier.bgBox} shadow-2xs flex items-center justify-between gap-2`}>
                       <div className="flex items-center gap-2 min-w-0">
                         <span className={`w-5 h-5 rounded-md bg-gradient-to-r ${tier.gradient} text-white font-bold text-[10px] flex items-center justify-center shrink-0`}>
                           L{tier.level}
                         </span>
-                        <div className="min-w-0">
-                          <p className="text-[11px] font-bold text-slate-800 dark:text-slate-100 truncate">
-                            {tier.short}
-                          </p>
-                          <p className="text-[10px] text-slate-600 dark:text-slate-400 truncate hidden sm:block">
-                            {tier.desc}
-                          </p>
-                        </div>
+                        <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                          {tier.short}
+                        </p>
                       </div>
                       <div className="text-right shrink-0">
                         <span className="font-mono font-bold text-xs text-slate-900 dark:text-white">

@@ -36,6 +36,25 @@ async function initDatabase() {
       ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS company_code TEXT DEFAULT 'DJI';
       ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS company_name TEXT DEFAULT 'PT Dentelle Jaya Infinitex';
       ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS password_hash TEXT;
+      ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS pending_password_hash TEXT;
+      ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS password_reset_requested_at TIMESTAMP WITH TIME ZONE;
+
+      CREATE TABLE IF NOT EXISTS public.notifications (
+        id TEXT PRIMARY KEY,
+        recipient_nip TEXT,
+        recipient_role TEXT,
+        company_code TEXT DEFAULT 'DJI',
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        type TEXT DEFAULT 'info',
+        doc_id TEXT,
+        link TEXT,
+        is_read BOOLEAN DEFAULT FALSE,
+        read_at TIMESTAMP WITH TIME ZONE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_notifications_recipient ON public.notifications (recipient_nip, recipient_role, company_code);
+      CREATE INDEX IF NOT EXISTS idx_notifications_created ON public.notifications (created_at DESC);
 
       DO $$
       BEGIN
