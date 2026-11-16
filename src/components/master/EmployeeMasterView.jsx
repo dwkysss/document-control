@@ -769,6 +769,20 @@ export default function EmployeeMasterView() {
                               >
                                 <XCircle className="w-4 h-4 shrink-0" />
                               </button>
+                              {isAdmin && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (confirm(`Yakin ingin menghapus permanen data pengajuan ${emp.name}?`)) {
+                                      deleteEmployee(emp.id || emp.nip);
+                                    }
+                                  }}
+                                  className="p-1 text-slate-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-md transition cursor-pointer shrink-0"
+                                  title="Hapus Permanen Data Pengajuan"
+                                >
+                                  <Trash2 className="w-4 h-4 shrink-0" />
+                                </button>
+                              )}
                             </div>
                           ) : (
                             <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold italic">
@@ -815,7 +829,7 @@ export default function EmployeeMasterView() {
                               type="button"
                               onClick={() => {
                                 if (confirm(`Yakin ingin menghapus data ${emp.name}?`)) {
-                                  deleteEmployee(emp.id);
+                                  deleteEmployee(emp.id || emp.nip);
                                 }
                               }}
                               className="p-1.5 text-slate-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-md cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600"

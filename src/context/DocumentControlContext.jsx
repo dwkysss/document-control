@@ -2834,18 +2834,32 @@ export function DocumentControlProvider({ children }) {
     showToast('Data Pegawai berhasil diperbarui!', 'success');
   };
 
-  const deleteEmployee = (id) => {
-    const emp = employees.find(e => e.id === id);
-    setEmployees(prev => prev.filter(e => e.id !== id));
-    addAuditLog('DELETE_EMPLOYEE', emp?.nip || emp?.nik || id, emp?.name || 'Pegawai', `Menghapus pegawai: ${emp?.name || id} (NIP: ${emp?.nip || emp?.nik || '-'})`);
+  const deleteEmployee = async (id) => {
+    const emp = (employees || []).find(e => e.id === id || e.nip === id);
+    const targetId = emp?.id || id;
+    const targetNip = emp?.nip || emp?.nik || id;
 
-    if (isSupabaseConfigured && supabase) {
-      supabase.from('employees').delete().eq('id', id).then(({ error }) => {
-        if (error) console.warn('Supabase deleteEmployee warning:', error);
-      });
+    if (targetNip === '123463' || targetId === 'emp-8') {
+      showToast('Akun Super Admin sistem tidak dapat dihapus.', 'danger');
+      return;
     }
 
-    showToast('Data Pegawai berhasil dihapus.', 'info');
+    try {
+      if (isSupabaseConfigured && supabase) {
+        const { error } = await supabase.from('employees').delete().eq('id', targetId);
+        if (error) {
+          console.warn('Backend deleteEmployee error:', error);
+          showToast(`Gagal menghapus dari database: ${error.message || 'Akses ditolak'}`, 'danger');
+          return;
+        }
+      }
+      setEmployees(prev => (prev || []).filter(e => e.id !== targetId && e.nip !== targetNip));
+      addAuditLog('DELETE_EMPLOYEE', targetNip, emp?.name || 'Pegawai', `Menghapus pegawai: ${emp?.name || targetNip} (NIP: ${targetNip})`);
+      showToast('Data Pegawai berhasil dihapus.', 'info');
+    } catch (err) {
+      console.warn('Delete employee error:', err);
+      showToast(`Gagal menghapus: ${err.message}`, 'danger');
+    }
   };
 
   // Self-Registration for new users

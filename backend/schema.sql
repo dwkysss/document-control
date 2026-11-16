@@ -48,6 +48,8 @@ CREATE TABLE IF NOT EXISTS public.employees (
   position TEXT NOT NULL,
   email TEXT,
   password_hash TEXT,
+  pending_password_hash TEXT,
+  password_reset_requested_at TIMESTAMP WITH TIME ZONE,
   role TEXT DEFAULT 'staff' NOT NULL,
   status TEXT DEFAULT 'Aktif' NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
@@ -134,6 +136,23 @@ CREATE TABLE IF NOT EXISTS public.system_settings (
   periodic_review_months INTEGER DEFAULT 12,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
+-- 9. Notifications Table (In-App Real-time)
+CREATE TABLE IF NOT EXISTS public.notifications (
+  id TEXT PRIMARY KEY,
+  recipient_nip TEXT,
+  recipient_role TEXT,
+  company_code TEXT DEFAULT 'ALL',
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  type TEXT DEFAULT 'info',
+  doc_id TEXT,
+  link TEXT,
+  is_read BOOLEAN DEFAULT false,
+  read_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_notifications_recipient ON public.notifications(recipient_nip, recipient_role);
 
 -- Indexes for lightning fast queries
 CREATE INDEX IF NOT EXISTS idx_documents_status ON public.documents(status);

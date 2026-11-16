@@ -661,12 +661,7 @@ app.use('/api', (req, res, next) => {
     return requireRole('admin', 'doc_control', 'approver', 'reviewer', 'staff')(req, res, next);
   }
   if (pathName.startsWith('/audit-logs')) return sendError(res, 403, 'Audit logs are created by the server only.');
-  if (pathName.startsWith('/employees/') && (
-    pathName.endsWith('/approve') || 
-    pathName.endsWith('/reject') ||
-    pathName.endsWith('/approve-reset') ||
-    pathName.endsWith('/reject-reset')
-  )) {
+  if (pathName.startsWith('/employees')) {
     return requireRole('admin', 'approver')(req, res, next);
   }
   return requireRole('admin')(req, res, next);
@@ -995,8 +990,12 @@ app.post('/api/employees', async (req, res) => {
 
 app.delete('/api/employees/:id', async (req, res) => {
   try {
-    await query('DELETE FROM public.employees WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
+    const target = req.params.id;
+    if (target === 'emp-8' || target === '123463') {
+      return sendError(res, 400, 'Akun Super Admin sistem tidak dapat dihapus.');
+    }
+    const result = await query('DELETE FROM public.employees WHERE id = $1 OR UPPER(nip) = UPPER($1)', [target]);
+    res.json({ success: true, deletedCount: result.rowCount });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
