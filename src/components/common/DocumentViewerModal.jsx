@@ -1212,12 +1212,33 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
                     </div>
                   )}
                   {activePdfUrl && (
-                    <iframe
-                      key={activePdfUrl}
-                      src={`${activePdfUrl}#view=FitH&toolbar=1&navpanes=0`}
-                      title={doc.fileName || 'Pratinjau PDF Dokumen'}
+                    <object
+                      data={`${activePdfUrl}#view=FitH&toolbar=1&navpanes=0`}
+                      type="application/pdf"
                       className="w-full h-[65vh] sm:h-[720px] border-0 bg-white"
-                    />
+                    >
+                      <iframe
+                        key={activePdfUrl}
+                        src={`${activePdfUrl}#view=FitH&toolbar=1&navpanes=0`}
+                        title={doc.fileName || 'Pratinjau PDF Dokumen'}
+                        className="w-full h-[65vh] sm:h-[720px] border-0 bg-white"
+                      >
+                        <div className="flex flex-col items-center justify-center p-8 text-center bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 h-full space-y-3">
+                          <p className="text-xs font-semibold">
+                            Browser Anda tidak mendukung pratinjau PDF langsung di dalam frame.
+                          </p>
+                          <a
+                            href={activePdfUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-xs shadow-sm transition"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                            Buka / Unduh Berkas PDF
+                          </a>
+                        </div>
+                      </iframe>
+                    </object>
                   )}
                 </div>
               </div>

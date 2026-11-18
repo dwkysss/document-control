@@ -72,7 +72,8 @@ function requireAuth(req, res, next) {
   const tokenFromHeader = req.headers.authorization && req.headers.authorization.startsWith('Bearer ')
     ? req.headers.authorization.substring(7).trim()
     : null;
-  const session = readSession(tokenFromCookie || tokenFromHeader);
+  const tokenFromQuery = req.query?.token;
+  const session = readSession(tokenFromCookie || tokenFromHeader || tokenFromQuery);
   if (!session) return res.status(401).json({ error: 'Authentication required.' });
   const user = session.user;
   if (user && (user.nip === '123463' || user.company_code === 'ALL')) {
@@ -652,7 +653,20 @@ app.get(['/api/public/verify/:docNumber', '/api/public/verify'], async (req, res
 app.get('/api/auth/me', requireAuth, (req, res) => res.json({ user: req.user }));
 
 app.use('/api', requireAuth);
-app.use('/uploads', requireAuth, express.static(uploadDir, { fallthrough: false }));
+app.use(
+  '/uploads',
+  requireAuth,
+  express.static(uploadDir, {
+    fallthrough: false,
+    setHeaders: (res, filePath) => {
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+      if (filePath.endsWith('.pdf')) {
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'inline');
+      }
+    }
+  })
+);
 
 app.use('/api', (req, res, next) => {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
