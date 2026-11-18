@@ -819,7 +819,7 @@ export default function ActiveDocumentsView() {
                 <th className="py-3 px-3 text-center">Rev.</th>
                 <th className="py-3 px-3">Tgl. berlaku</th>
                 <th className="py-3 px-3">Tinjauan berkala</th>
-                <th className="py-3 px-3 text-right">Tindakan</th>
+                <th className="py-3 px-3 text-right sticky right-0 bg-slate-50 dark:bg-slate-800 z-20 shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.08)] dark:shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.35)] border-l border-slate-200/80 dark:border-slate-700/80">Tindakan</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -853,8 +853,9 @@ export default function ActiveDocumentsView() {
               ) : (
                 paginatedDocs.map((doc, idx) => {
                   const reviewInfo = getPeriodicReviewInfo(doc, reviewIntervalMonths, documentTypes, systemSettings);
+                  const isActionOpen = openActionDocId === doc.id;
                   return (
-                    <tr key={doc.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                    <tr key={doc.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
                       <td className="py-4 px-4">
                         <div className="flex min-w-0 items-start gap-2.5">
                           <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
@@ -879,10 +880,10 @@ export default function ActiveDocumentsView() {
                           {reviewInfo.label}
                         </span>
                       </td>
-                      <td className="py-4 px-3 text-right">
+                      <td className={`py-4 px-3 text-right sticky right-0 bg-white group-hover:bg-slate-50 dark:bg-slate-900 dark:group-hover:bg-slate-800 transition-colors shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.08)] dark:shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.35)] border-l border-slate-100 dark:border-slate-800 ${isActionOpen ? 'z-30' : 'z-10'}`}>
                         <div
                           className="relative inline-block text-left"
-                          ref={openActionDocId === doc.id ? actionDropdownRef : null}
+                          ref={isActionOpen ? actionDropdownRef : null}
                         >
                           <button
                             type="button"

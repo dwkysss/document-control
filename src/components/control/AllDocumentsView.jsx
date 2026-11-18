@@ -422,15 +422,15 @@ export default function AllDocumentsView() {
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full min-w-[1120px] table-fixed text-left border-collapse text-sm">
             <colgroup>
-              <col className="w-[30%]" />
+              <col className="w-[28%]" />
               <col className="w-[7%]" />
               <col className="w-[7%]" />
-              <col className="w-[9%]" />
-              <col className="w-[14%]" />
+              <col className="w-[8%]" />
+              <col className="w-[13%]" />
               <col className="w-[6%]" />
               <col className="w-[9%]" />
               <col className="w-[10%]" />
-              <col className="w-[8%]" />
+              <col className="w-[12%]" />
             </colgroup>
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
@@ -442,7 +442,7 @@ export default function AllDocumentsView() {
                 <th className="py-3 px-3 text-center">Rev.</th>
                 <th className="py-3 px-3">Status</th>
                 <th className="py-3 px-3">Tgl. registrasi</th>
-                <th className="py-3 px-3 text-right">Aksi</th>
+                <th className="py-3 px-3 text-right sticky right-0 bg-slate-50 dark:bg-slate-800 z-20 shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.08)] dark:shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.35)] border-l border-slate-200/80 dark:border-slate-700/80">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -454,7 +454,7 @@ export default function AllDocumentsView() {
                 </tr>
               ) : (
                 paginatedDocs.map((doc, idx) => (
-                  <tr key={doc.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                  <tr key={doc.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
                     <td className="py-3.5 px-4">
                       <div className="flex min-w-0 items-start gap-2.5">
                         <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
@@ -474,7 +474,7 @@ export default function AllDocumentsView() {
                     <td className="py-3.5 px-3 whitespace-nowrap text-xs text-slate-700 dark:text-slate-300">
                       {formatRegisterDate(doc.createdDate)}
                     </td>
-                    <td className="py-3.5 px-3">
+                    <td className="py-3.5 px-3 sticky right-0 bg-white group-hover:bg-slate-50 dark:bg-slate-900 dark:group-hover:bg-slate-800 transition-colors shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.08)] dark:shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.35)] border-l border-slate-100 dark:border-slate-800 z-10">
                       <div className="flex flex-wrap items-center justify-end gap-1">
                         <button
                           type="button"
