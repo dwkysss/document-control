@@ -378,6 +378,18 @@ export default function ActiveDocumentsView() {
     });
   }, []);
 
+  const handleScrollRight = useCallback(() => {
+    if (tableContainerRef.current) {
+      tableContainerRef.current.scrollBy({ left: 280, behavior: 'smooth' });
+    }
+  }, []);
+
+  const handleScrollLeft = useCallback(() => {
+    if (tableContainerRef.current) {
+      tableContainerRef.current.scrollBy({ left: -280, behavior: 'smooth' });
+    }
+  }, []);
+
   useEffect(() => {
     const el = tableContainerRef.current;
     if (!el) return;
@@ -833,6 +845,19 @@ export default function ActiveDocumentsView() {
             aria-hidden="true"
           />
 
+          {/* Tombol Panah Kiri di Header Tabel (Muncul saat user geser ke kanan) */}
+          {scrollState.canScrollLeft && (
+            <button
+              type="button"
+              onClick={handleScrollLeft}
+              className="absolute left-1.5 top-2.5 w-7 h-7 rounded-full bg-slate-800/90 hover:bg-slate-900 text-white shadow-md border-2 border-white dark:border-slate-800 flex items-center justify-center transition-all cursor-pointer z-30 hover:scale-110 active:scale-95 group"
+              title="Geser kembali ke kolom awal (Dokumen)"
+              aria-label="Geser kembali ke kolom awal"
+            >
+              <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+            </button>
+          )}
+
           <div
             ref={tableContainerRef}
             className="overflow-x-auto min-h-[380px] table-scrollbar"
@@ -866,7 +891,19 @@ export default function ActiveDocumentsView() {
                         : 'shadow-none border-slate-200/50 dark:border-slate-800'
                     }`}
                   >
-                    Tindakan
+                    {/* Ikon Tombol Panah Pemisah: Terletak persis di antara kolom yang terpotong dengan kolom Tindakan */}
+                    {scrollState.canScrollRight && (
+                      <button
+                        type="button"
+                        onClick={handleScrollRight}
+                        className="absolute -left-3.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-md border-2 border-white dark:border-slate-800 flex items-center justify-center transition-all cursor-pointer z-30 hover:scale-110 active:scale-95 group animate-pulse"
+                        title="Ada kolom tersembunyi (Rev, Tgl. Berlaku, Tinjauan). Klik untuk geser tabel ke kanan"
+                        aria-label="Geser melihat kolom tersembunyi"
+                      >
+                        <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                      </button>
+                    )}
+                    <span>Tindakan</span>
                   </th>
                 </tr>
               </thead>
