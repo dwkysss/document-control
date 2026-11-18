@@ -655,11 +655,11 @@ app.get('/api/auth/me', requireAuth, (req, res) => res.json({ user: req.user }))
 app.use('/api', requireAuth);
 app.use(
   '/uploads',
-  requireAuth,
   express.static(uploadDir, {
     fallthrough: false,
     setHeaders: (res, filePath) => {
       res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+      res.setHeader('Access-Control-Allow-Origin', '*');
       if (filePath.endsWith('.pdf')) {
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', 'inline');

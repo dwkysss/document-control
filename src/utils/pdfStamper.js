@@ -40,7 +40,10 @@ async function getPdfBytes(fileUrl) {
   if (fileUrl.startsWith('data:')) {
     return dataUrlToUint8Array(fileUrl);
   }
-  const res = await fetch(fileUrl, { credentials: 'include' });
+  const normalized = (fileUrl.startsWith('http') || fileUrl.startsWith('/') || fileUrl.startsWith('blob:'))
+    ? fileUrl
+    : `/${fileUrl}`;
+  const res = await fetch(normalized, { credentials: 'include' });
   if (!res.ok) throw new Error(`Gagal mengambil berkas PDF (HTTP ${res.status})`);
   const arrayBuf = await res.arrayBuffer();
   return new Uint8Array(arrayBuf);

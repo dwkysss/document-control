@@ -163,8 +163,11 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
           }
         } else if (doc.fileUrl.startsWith('blob:')) {
           setBlobUrl(doc.fileUrl);
-        } else if (doc.fileUrl.startsWith('http') || doc.fileUrl.startsWith('/')) {
-          fetch(doc.fileUrl, { credentials: 'include' })
+        } else if (doc.fileUrl.startsWith('http') || doc.fileUrl.startsWith('/') || !doc.fileUrl.startsWith('data:')) {
+          const fetchTarget = (doc.fileUrl.startsWith('http') || doc.fileUrl.startsWith('/') || doc.fileUrl.startsWith('blob:'))
+            ? doc.fileUrl
+            : `/${doc.fileUrl}`;
+          fetch(fetchTarget, { credentials: 'include' })
             .then(res => {
               if (!res.ok) throw new Error(`HTTP error ${res.status}`);
               return res.blob();
