@@ -523,12 +523,6 @@ export default function ActiveDocumentsView() {
               <span>{isMobile ? `Terkendali (${normalDocs.length})` : `Terkendali Normal (${normalDocs.length})`}</span>
             </button>
           </div>
-
-          <div className="flex items-center justify-between sm:justify-end gap-3 text-[11px] text-slate-400">
-            <span>
-              Interval Peninjauan ISO: <strong className="text-slate-700 dark:text-slate-300">{reviewIntervalMonths} Bulan</strong>
-            </span>
-          </div>
         </div>
 
         {/* Multi Filter Controls Grid */}
