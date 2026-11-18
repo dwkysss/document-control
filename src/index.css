@@ -109,6 +109,48 @@ textarea:focus-visible {
   background: #94a3b8;
 }
 
+/* Ergonomic, clear horizontal scrollbar for data tables */
+.table-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 #f1f5f9;
+}
+
+.dark .table-scrollbar {
+  scrollbar-color: #475569 #0f172a;
+}
+
+.table-scrollbar::-webkit-scrollbar {
+  height: 8px;
+}
+
+.table-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 9999px;
+}
+
+.dark .table-scrollbar::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+.table-scrollbar::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 9999px;
+  border: 1.5px solid #f1f5f9;
+}
+
+.dark .table-scrollbar::-webkit-scrollbar-thumb {
+  background: #475569;
+  border: 1.5px solid #0f172a;
+}
+
+.table-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+.dark .table-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
 /* Card glassmorphism & soft depth */
 .glass-panel {
   background: rgba(255, 255, 255, 0.95);

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import {
   FileText,
   Search,
@@ -17,7 +17,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
+  ArrowLeftRight
 } from 'lucide-react';
 import Badge, { CompanyBadge, FileFormatBadge } from '../common/Badge';
 import Modal from '../common/Modal';
@@ -116,6 +117,33 @@ export default function AllDocumentsView() {
     }
     return pages;
   }, [currentPage, totalPages]);
+
+  // Ref & State untuk deteksi scroll horizontal tabel (Dynamic Scroll Indicators)
+  const tableContainerRef = useRef(null);
+  const [scrollState, setScrollState] = useState({ canScrollLeft: false, canScrollRight: false });
+
+  const updateScrollIndicators = useCallback(() => {
+    const el = tableContainerRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    const maxScroll = scrollWidth - clientWidth;
+    setScrollState({
+      canScrollLeft: scrollLeft > 6,
+      canScrollRight: maxScroll > 6 && scrollLeft < maxScroll - 6,
+    });
+  }, []);
+
+  useEffect(() => {
+    const el = tableContainerRef.current;
+    if (!el) return;
+    updateScrollIndicators();
+    el.addEventListener('scroll', updateScrollIndicators, { passive: true });
+    window.addEventListener('resize', updateScrollIndicators);
+    return () => {
+      el.removeEventListener('scroll', updateScrollIndicators);
+      window.removeEventListener('resize', updateScrollIndicators);
+    };
+  }, [updateScrollIndicators, paginatedDocs]);
 
   const handleExportExcel = () => {
     exportToExcel(filteredDocs, `Master_Register_DJI`);
@@ -419,63 +447,89 @@ export default function AllDocumentsView() {
         </div>
 
         {/* Desktop Table (hidden md:block) */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full min-w-[1120px] table-fixed text-left border-collapse text-sm">
-            <colgroup>
-              <col className="w-[28%]" />
-              <col className="w-[7%]" />
-              <col className="w-[7%]" />
-              <col className="w-[8%]" />
-              <col className="w-[13%]" />
-              <col className="w-[6%]" />
-              <col className="w-[9%]" />
-              <col className="w-[10%]" />
-              <col className="w-[12%]" />
-            </colgroup>
-            <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                <th className="py-3 px-4">Dokumen</th>
-                <th className="py-3 px-3">Jenis</th>
-                <th className="py-3 px-3 text-center">Format</th>
-                <th className="py-3 px-3">Dept.</th>
-                <th className="py-3 px-3">Pembuat</th>
-                <th className="py-3 px-3 text-center">Rev.</th>
-                <th className="py-3 px-3">Status</th>
-                <th className="py-3 px-3">Tgl. registrasi</th>
-                <th className="py-3 px-3 text-right sticky right-0 bg-slate-50 dark:bg-slate-800 z-20 shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.08)] dark:shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.35)] border-l border-slate-200/80 dark:border-slate-700/80">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {paginatedDocs.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="py-8 text-center text-slate-500">
-                    Tidak ada dokumen yang sesuai dengan kriteria filter.
-                  </td>
+        <div className="hidden md:block relative">
+          {/* Indikator Gradien Kiri (Muncul saat user scroll ke kanan) */}
+          <div
+            className={`pointer-events-none absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-slate-900/10 dark:from-black/40 to-transparent z-15 transition-opacity duration-200 ${
+              scrollState.canScrollLeft ? 'opacity-100' : 'opacity-0'
+            }`}
+            aria-hidden="true"
+          />
+
+          <div
+            ref={tableContainerRef}
+            className="overflow-x-auto min-h-[380px] table-scrollbar"
+          >
+            <table className="w-full min-w-[1120px] table-fixed text-left border-collapse text-sm">
+              <colgroup>
+                <col className="w-[28%]" />
+                <col className="w-[7%]" />
+                <col className="w-[7%]" />
+                <col className="w-[8%]" />
+                <col className="w-[13%]" />
+                <col className="w-[6%]" />
+                <col className="w-[9%]" />
+                <col className="w-[10%]" />
+                <col className="w-[12%]" />
+              </colgroup>
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                  <th className="py-3 px-4">Dokumen</th>
+                  <th className="py-3 px-3">Jenis</th>
+                  <th className="py-3 px-3 text-center">Format</th>
+                  <th className="py-3 px-3">Dept.</th>
+                  <th className="py-3 px-3">Pembuat</th>
+                  <th className="py-3 px-3 text-center">Rev.</th>
+                  <th className="py-3 px-3">Status</th>
+                  <th className="py-3 px-3">Tgl. registrasi</th>
+                  <th
+                    className={`py-3 px-3 text-right sticky right-0 bg-slate-50 dark:bg-slate-800 z-20 border-l transition-shadow duration-200 ${
+                      scrollState.canScrollRight
+                        ? 'shadow-[-10px_0_16px_-4px_rgba(0,0,0,0.12)] dark:shadow-[-10px_0_16px_-4px_rgba(0,0,0,0.55)] border-slate-200/90 dark:border-slate-700/90'
+                        : 'shadow-none border-slate-200/50 dark:border-slate-800'
+                    }`}
+                  >
+                    Aksi
+                  </th>
                 </tr>
-              ) : (
-                paginatedDocs.map((doc, idx) => (
-                  <tr key={doc.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
-                    <td className="py-3.5 px-4">
-                      <div className="flex min-w-0 items-start gap-2.5">
-                        <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
-                        <div className="min-w-0"><div className="truncate font-mono text-xs font-bold text-slate-900 dark:text-white" title={doc.docNumber}>{doc.docNumber}</div><div className="mt-1 truncate text-xs text-slate-700 dark:text-slate-300" title={doc.title}>{doc.title}</div></div>
-                      </div>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {paginatedDocs.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="py-8 text-center text-slate-500">
+                      Tidak ada dokumen yang sesuai dengan kriteria filter.
                     </td>
-                    <td className="py-3.5 px-3 text-xs font-semibold text-slate-700 dark:text-slate-300">{doc.type}</td>
-                    <td className="py-3.5 px-3 text-center">
-                      <FileFormatBadge doc={doc} />
-                    </td>
-                    <td className="py-3.5 px-3 text-xs text-slate-700 dark:text-slate-300">{doc.department}</td>
-                    <td className="py-3.5 px-3 text-xs text-slate-700 dark:text-slate-300"><span className="block truncate" title={doc.creator}>{doc.creator}</span></td>
-                    <td className="py-3.5 px-3 text-center font-mono text-xs font-bold tabular-nums">{doc.revision}</td>
-                    <td className="py-3.5 px-3">
-                      <Badge status={doc.status} size="sm" />
-                    </td>
-                    <td className="py-3.5 px-3 whitespace-nowrap text-xs text-slate-700 dark:text-slate-300">
-                      {formatRegisterDate(doc.createdDate)}
-                    </td>
-                    <td className="py-3.5 px-3 sticky right-0 bg-white group-hover:bg-slate-50 dark:bg-slate-900 dark:group-hover:bg-slate-800 transition-colors shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.08)] dark:shadow-[-6px_0_12px_-4px_rgba(0,0,0,0.35)] border-l border-slate-100 dark:border-slate-800 z-10">
-                      <div className="flex flex-wrap items-center justify-end gap-1">
+                  </tr>
+                ) : (
+                  paginatedDocs.map((doc, idx) => (
+                    <tr key={doc.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                      <td className="py-3.5 px-4">
+                        <div className="flex min-w-0 items-start gap-2.5">
+                          <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
+                          <div className="min-w-0"><div className="truncate font-mono text-xs font-bold text-slate-900 dark:text-white" title={doc.docNumber}>{doc.docNumber}</div><div className="mt-1 truncate text-xs text-slate-700 dark:text-slate-300" title={doc.title}>{doc.title}</div></div>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-3 text-xs font-semibold text-slate-700 dark:text-slate-300">{doc.type}</td>
+                      <td className="py-3.5 px-3 text-center">
+                        <FileFormatBadge doc={doc} />
+                      </td>
+                      <td className="py-3.5 px-3 text-xs text-slate-700 dark:text-slate-300">{doc.department}</td>
+                      <td className="py-3.5 px-3 text-xs text-slate-700 dark:text-slate-300"><span className="block truncate" title={doc.creator}>{doc.creator}</span></td>
+                      <td className="py-3.5 px-3 text-center font-mono text-xs font-bold tabular-nums">{doc.revision}</td>
+                      <td className="py-3.5 px-3">
+                        <Badge status={doc.status} size="sm" />
+                      </td>
+                      <td className="py-3.5 px-3 whitespace-nowrap text-xs text-slate-700 dark:text-slate-300">
+                        {formatRegisterDate(doc.createdDate)}
+                      </td>
+                      <td
+                        className={`py-3.5 px-3 sticky right-0 bg-white group-hover:bg-slate-50 dark:bg-slate-900 dark:group-hover:bg-slate-800 transition-colors border-l z-10 ${
+                          scrollState.canScrollRight
+                            ? 'shadow-[-10px_0_16px_-4px_rgba(0,0,0,0.12)] dark:shadow-[-10px_0_16px_-4px_rgba(0,0,0,0.55)] border-slate-200/80 dark:border-slate-800'
+                            : 'shadow-none border-slate-100 dark:border-slate-850'
+                        }`}
+                      >
+                        <div className="flex flex-wrap items-center justify-end gap-1">
                         <button
                           type="button"
                           onClick={() => setViewingDocument(doc)}
@@ -527,6 +581,7 @@ export default function AllDocumentsView() {
             </tbody>
           </table>
         </div>
+      </div>
 
         {/* Footer Pagination Lengkap */}
         <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
@@ -554,6 +609,13 @@ export default function AllDocumentsView() {
               <strong className="text-slate-900 dark:text-white font-bold">{Math.min(startIndex + pageSize, totalEntries)}</strong> dari{' '}
               <strong className="text-slate-900 dark:text-white font-bold">{totalEntries}</strong> dokumen
             </span>
+
+            {scrollState.canScrollRight && (
+              <span className="hidden xl:inline-flex items-center gap-1.5 text-[11px] text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 px-2.5 py-0.5 rounded-full border border-blue-200/80 dark:border-blue-800/80 font-semibold shadow-2xs">
+                <ArrowLeftRight className="w-3 h-3 text-blue-600 dark:text-blue-400 shrink-0" />
+                <span>Geser ke samping untuk kolom lengkap</span>
+              </span>
+            )}
           </div>
 
           {/* Kanan: Navigasi Halaman */}
