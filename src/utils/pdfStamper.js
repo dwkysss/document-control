@@ -40,7 +40,7 @@ async function getPdfBytes(fileUrl) {
   if (fileUrl.startsWith('data:')) {
     return dataUrlToUint8Array(fileUrl);
   }
-  const res = await fetch(fileUrl);
+  const res = await fetch(fileUrl, { credentials: 'include' });
   if (!res.ok) throw new Error(`Gagal mengambil berkas PDF (HTTP ${res.status})`);
   const arrayBuf = await res.arrayBuffer();
   return new Uint8Array(arrayBuf);
@@ -176,7 +176,7 @@ export async function stampOfficialLetterheadOnPDF(docData, systemSettings = {},
   try {
     // 1. Muat dokumen PDF asli pengguna
     const originalPdfBytes = await getPdfBytes(fileUrl);
-    const srcDoc = await PDFDocument.load(originalPdfBytes);
+    const srcDoc = await PDFDocument.load(originalPdfBytes, { ignoreEncryption: true });
     const pdfDoc = await PDFDocument.create();
 
     const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -474,11 +474,11 @@ export async function stampOfficialLetterheadOnPDF(docData, systemSettings = {},
       let offsetY = 0;
 
       if (isCoverMode) {
-        // Mode Cover: Naskah asli di halaman 2+ diberi running header tipis & footer rapi
-        const topLimit = height - 26;
-        const bottomLimit = marginB + footerH + gap;
+        // Mode Cover: Naskah asli di halaman 2+ diberi running header resmi berornamen & footer rapi
+        const topLimit = height - 70;
+        const bottomLimit = 48;
         const availH = topLimit - bottomLimit;
-        const availW = width - 24;
+        const availW = width - 48;
 
         scale = Math.min(availW / width, availH / height);
         const scaledW = width * scale;
@@ -531,31 +531,148 @@ export async function stampOfficialLetterheadOnPDF(docData, systemSettings = {},
         rotate: degrees(45),
       });
 
-      // 3. JIKA MODE COVER: Running Header Tipis di Halaman 2+
+      // 3. JIKA MODE COVER: Running Header Resmi di Halaman 2+ (sesuai template grafis cover)
       if (isCoverMode) {
-        const runHeaderX = 18;
-        const runHeaderW = width - 36;
-        newPage.drawLine({
-          start: { x: runHeaderX, y: height - 20 },
-          end: { x: runHeaderX + runHeaderW, y: height - 20 },
-          color: rgb(0.88, 0.91, 0.96),
-          thickness: 0.6,
+        const cCyan = rgb(0 / 255, 175 / 255, 239 / 255);   // Exact cyan #00AFEF
+        const cAmber = rgb(255 / 255, 192 / 255, 0 / 255);  // Exact amber #FFC000
+        const cNavy = rgb(31 / 255, 58 / 255, 114 / 255);   // Exact Deep Navy #1F3A72
+
+        // a. Garis Pita Cyan di tepi atas kanan (mulai dari ~29.5% lebar halaman hingga tepi kanan)
+        const cyanBarH = width * (21 / 698); // ~18pt pada A4
+        const cyanBarX = width * 0.295;
+        const cyanBarW = width - cyanBarX;
+        newPage.drawRectangle({
+          x: cyanBarX,
+          y: height - cyanBarH,
+          width: cyanBarW,
+          height: cyanBarH,
+          color: cCyan,
         });
-        newPage.drawText(`${companyName} | ${docData.docNumber} (Rev: ${docData.revision || '00'})`, {
-          x: runHeaderX,
-          y: height - 16,
-          size: 7,
+
+        // b. Pita Diagonal Amber di sudut kanan atas (memotong pita cyan)
+        // Dimensi proporsional presisi:
+        // Titik atas: x1 = 0.827*w, x2 = 0.898*w di y = 0 (tepi atas)
+        // Titik kanan: y1 = 0.0487*w, y2 = 0.0845*w di x = w (tepi kanan)
+        const amberX1 = width * 0.827;
+        const amberX2 = width * 0.898;
+        const amberY1 = width * (34 / 698);
+        const amberY2 = width * (59 / 698);
+        newPage.drawSvgPath(`M ${amberX1.toFixed(1)} 0 L ${amberX2.toFixed(1)} 0 L ${width.toFixed(1)} ${amberY1.toFixed(1)} L ${width.toFixed(1)} ${amberY2.toFixed(1)} Z`, {
+          x: 0,
+          y: height,
+          color: cAmber,
+        });
+
+        // c. Logo Perusahaan di Kiri Atas
+        const logoMarginL = width * 0.095; // ~56pt pada A4
+        if (logoImg) {
+          const lAspect = logoImg.width / logoImg.height;
+          const maxLW = 85;
+          const maxLH = 28;
+          let lW = maxLW;
+          let lH = lW / lAspect;
+          if (lH > maxLH) {
+            lH = maxLH;
+            lW = lH * lAspect;
+          }
+          newPage.drawImage(logoImg, {
+            x: logoMarginL,
+            y: height - 18 - lH,
+            width: lW,
+            height: lH,
+          });
+        } else if (compCode === 'UMI') {
+          newPage.drawRectangle({
+            x: logoMarginL,
+            y: height - 18 - 20,
+            width: 82,
+            height: 20,
+            color: rgb(79 / 255, 70 / 255, 229 / 255),
+          });
+          newPage.drawText('ULTIMO MODA', {
+            x: logoMarginL + 10,
+            y: height - 18 - 14,
+            size: 8,
+            font: helveticaBold,
+            color: rgb(1, 1, 1),
+          });
+        } else if (compCode === 'IMK') {
+          newPage.drawRectangle({
+            x: logoMarginL,
+            y: height - 18 - 20,
+            width: 82,
+            height: 20,
+            color: rgb(5 / 255, 150 / 255, 105 / 255),
+          });
+          newPage.drawText('PT IMK', {
+            x: logoMarginL + 20,
+            y: height - 18 - 14,
+            size: 8,
+            font: helveticaBold,
+            color: rgb(1, 1, 1),
+          });
+        } else {
+          newPage.drawText(companyName, {
+            x: logoMarginL,
+            y: height - 28,
+            size: 10,
+            font: helveticaBold,
+            color: rgb(16 / 255, 42 / 255, 78 / 255),
+          });
+          newPage.drawText('Infinite Creativity & Productivity', {
+            x: logoMarginL,
+            y: height - 38,
+            size: 6,
+            font: helvetica,
+            color: rgb(100 / 255, 116 / 255, 139 / 255),
+          });
+        }
+
+        // d. Judul Dokumen (Bold Navy, rata kanan ke garis batas 0.868*w)
+        // & Nomor Dokumen (Bold Navy, rata kanan tepat di bawah judul)
+        const textRightX = width * 0.868;
+        const maxTextW = textRightX - (logoMarginL + 95);
+
+        // Judul Dokumen
+        const rawTitle = String(docData.title || '').toUpperCase();
+        let titleSize = 10.5;
+        let titleW = helveticaBold.widthOfTextAtSize(rawTitle, titleSize);
+        let displayTitle = rawTitle;
+        if (titleW > maxTextW) {
+          titleSize = 9.5;
+          titleW = helveticaBold.widthOfTextAtSize(displayTitle, titleSize);
+          if (titleW > maxTextW) {
+            while (titleW > maxTextW && displayTitle.length > 5) {
+              displayTitle = displayTitle.slice(0, -1);
+              titleW = helveticaBold.widthOfTextAtSize(displayTitle + '...', titleSize);
+            }
+            displayTitle += '...';
+          }
+        }
+
+        const titleBaselineY = height - width * (48 / 698); // ~height - 41 pada A4
+        newPage.drawText(displayTitle, {
+          x: textRightX - titleW,
+          y: titleBaselineY,
+          size: titleSize,
           font: helveticaBold,
-          color: rgb(0.39, 0.45, 0.55),
+          color: cNavy,
         });
-        const titleSnippet = String(docData.title || '').toUpperCase().substring(0, 45);
-        const titleSnippetW = helvetica.widthOfTextAtSize(titleSnippet, 7);
-        newPage.drawText(titleSnippet, {
-          x: runHeaderX + runHeaderW - titleSnippetW,
-          y: height - 16,
-          size: 7,
-          font: helvetica,
-          color: rgb(0.39, 0.45, 0.55),
+
+        // Nomor Dokumen
+        const docNumText = docData.revision && !String(docData.docNumber || '').endsWith(docData.revision)
+          ? `${docData.docNumber || '-'} (Rev: ${docData.revision})`
+          : (docData.docNumber || '-');
+        const numSize = 9.0;
+        const numW = helveticaBold.widthOfTextAtSize(docNumText, numSize);
+
+        const numBaselineY = height - width * (64 / 698); // ~height - 55 pada A4
+        newPage.drawText(docNumText, {
+          x: textRightX - numW,
+          y: numBaselineY,
+          size: numSize,
+          font: helveticaBold,
+          color: cNavy,
         });
       } else if (shouldAddLetterhead) {
         // JIKA MODE HEADER: KOP SURAT RESMI DI ATAS DOKUMEN
@@ -732,37 +849,86 @@ export async function stampOfficialLetterheadOnPDF(docData, systemSettings = {},
         }
       }
 
-      // 4. FOOTER RESMI ISO & PENOMORAN HALAMAN (Bersih tanpa kotak kurungan)
-      const footerBoxX = 18;
-      const footerBoxW = width - 36;
+      // 4. FOOTER RESMI ISO & PENOMORAN HALAMAN
+      if (isCoverMode) {
+        // FOOTER RESMI MODE COVER (Sesuai Standar Template Cover ISO)
+        const footerX = 36;
+        const footerW = width - 72;
+        const cRoyalBlue = rgb(68 / 255, 113 / 255, 196 / 255); // #4471C4
+        const cDisclText = rgb(30 / 255, 41 / 255, 59 / 255);
+        const cPageNum = rgb(165 / 255, 165 / 255, 165 / 255); // #A5A5A5
 
-      // Garis pemisah horizontal tipis di atas footer
-      newPage.drawLine({
-        start: { x: footerBoxX, y: marginB + footerH + 4 },
-        end: { x: footerBoxX + footerBoxW, y: marginB + footerH + 4 },
-        color: rgb(0.88, 0.91, 0.96),
-        thickness: 0.6,
-      });
+        // a. Garis Pita Biru Horizontal
+        newPage.drawRectangle({
+          x: footerX,
+          y: 38,
+          width: footerW,
+          height: 2.6,
+          color: cRoyalBlue,
+        });
 
-      const footerLeft = "DOKUMEN RESMI TERKENDALI — " + companyName + " | NO: " + docData.docNumber + " | REV: " + (docData.revision || "00");
-      newPage.drawText(footerLeft, {
-        x: footerBoxX + 10,
-        y: marginB + 5.5,
-        size: 6.8,
-        font: helvetica,
-        color: rgb(0.35, 0.42, 0.52),
-      });
+        // b. Teks Disclaimer Dua Baris di Kiri Bawah
+        const disclLine1 = 'DILARANG MENGGANDAKAN DOKUMEN INI TANPA SEIZIN';
+        const disclLine2 = companyName.toUpperCase();
 
-      // Penomoran Halaman Otomatis Presisi di Kanan Bawah
-      const pageNumStr = "Halaman " + (i + 1) + " dari " + totalPages;
-      const pageNumW = helveticaBold.widthOfTextAtSize(pageNumStr, 7.2);
-      newPage.drawText(pageNumStr, {
-        x: footerBoxX + footerBoxW - pageNumW - 10,
-        y: marginB + 5.5,
-        size: 7.2,
-        font: helveticaBold,
-        color: rgb(0.08, 0.18, 0.35),
-      });
+        newPage.drawText(disclLine1, {
+          x: footerX,
+          y: 25,
+          size: 6.8,
+          font: helvetica,
+          color: cDisclText,
+        });
+
+        newPage.drawText(disclLine2, {
+          x: footerX,
+          y: 15,
+          size: 6.8,
+          font: helvetica,
+          color: cDisclText,
+        });
+
+        // c. Nomor Halaman di Kanan Bawah
+        const pageNumStr = String(i + 2);
+        const pageNumW = helvetica.widthOfTextAtSize(pageNumStr, 8.5);
+        newPage.drawText(pageNumStr, {
+          x: footerX + footerW - pageNumW,
+          y: 19,
+          size: 8.5,
+          font: helvetica,
+          color: cPageNum,
+        });
+      } else {
+        const footerBoxX = 18;
+        const footerBoxW = width - 36;
+
+        // Garis pemisah horizontal tipis di atas footer
+        newPage.drawLine({
+          start: { x: footerBoxX, y: marginB + footerH + 4 },
+          end: { x: footerBoxX + footerBoxW, y: marginB + footerH + 4 },
+          color: rgb(0.88, 0.91, 0.96),
+          thickness: 0.6,
+        });
+
+        const footerLeft = "DOKUMEN RESMI TERKENDALI — " + companyName + " | NO: " + docData.docNumber + " | REV: " + (docData.revision || "00");
+        newPage.drawText(footerLeft, {
+          x: footerBoxX + 10,
+          y: marginB + 5.5,
+          size: 6.8,
+          font: helvetica,
+          color: rgb(0.35, 0.42, 0.52),
+        });
+
+        // Penomoran Halaman Otomatis Presisi di Kanan Bawah
+        const pageNumStr = "Halaman " + (i + 1) + " dari " + totalPages;
+        const pageNumW = helveticaBold.widthOfTextAtSize(pageNumStr, 7.2);
+        newPage.drawText(pageNumStr, {
+          x: footerBoxX + footerBoxW - pageNumW - 10,
+          y: marginB + 5.5,
+          size: 7.2,
+          font: helveticaBold,
+          color: rgb(0.08, 0.18, 0.35),
+        });
+      }
     }
 
     // 5. Simpan hasil stempel PDF dan unduh ke perangkat pengguna

@@ -88,7 +88,7 @@ export default function DashboardOverview() {
   };
 
   return (
-    <div className="space-y-6 pb-6 animate-fadeIn">
+    <div className="space-y-4 sm:space-y-6 pb-6 animate-fadeIn">
       {/* 1. Control Tower Executive Header */}
       <ControlTowerHeader
         currentUser={currentUser}

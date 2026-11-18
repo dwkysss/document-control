@@ -163,10 +163,10 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
           }
         } else if (doc.fileUrl.startsWith('blob:')) {
           setBlobUrl(doc.fileUrl);
-        } else if (doc.fileUrl.startsWith('http')) {
-          fetch(doc.fileUrl)
+        } else if (doc.fileUrl.startsWith('http') || doc.fileUrl.startsWith('/')) {
+          fetch(doc.fileUrl, { credentials: 'include' })
             .then(res => {
-              if (!res.ok) throw new Error('Network error');
+              if (!res.ok) throw new Error(`HTTP error ${res.status}`);
               return res.blob();
             })
             .then(blob => {
@@ -176,14 +176,14 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
               createdUrl = URL.createObjectURL(cleanBlob);
               setBlobUrl(createdUrl);
             })
-            .catch(err => {
-              console.warn('Could not fetch remote file for blob preview:', err);
+            .catch(async err => {
+              console.warn('Could not fetch file for blob preview:', err);
               if (isMounted) {
-                // Jika berkas PDF dan host remote tidak dapat diakses, siapkan pratinjau PDF client-side
+                // Jika berkas PDF tidak dapat diakses atau host storage offline, siapkan pratinjau PDF client-side
                 if (isPdfFile) {
                   try {
-                    const fallbackBlob = exportControlledDocumentPDF(doc, systemSettings, null, { returnBlob: true });
-                    if (fallbackBlob) {
+                    const fallbackBlob = await exportControlledDocumentPDF(doc, systemSettings, null, { returnBlob: true });
+                    if (fallbackBlob && isMounted) {
                       setIsPdfFallback(true);
                       createdUrl = URL.createObjectURL(fallbackBlob);
                       setBlobUrl(createdUrl);
@@ -655,218 +655,236 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
       isOpen={isOpen}
       onClose={onClose}
       maxWidth="max-w-6xl"
-      title={(
-        <div className="flex items-center gap-2 flex-wrap min-w-0">
-          <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} size="sm" />
-          <Badge status={doc.status} size="sm" />
-          <span className="font-mono font-bold text-slate-900 dark:text-white text-sm sm:text-base tracking-tight">
-            {doc.docNumber}
-          </span>
-          <span className="text-slate-300 dark:text-slate-600 hidden sm:inline">—</span>
-          <span className="text-slate-700 dark:text-slate-200 text-sm font-semibold truncate max-w-xs md:max-w-md" title={doc.title}>
-            {doc.title}
-          </span>
-        </div>
-      )}
-      subtitle={(
-        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex-wrap">
-          <span>{docCompanyName}</span>
-          <span className="text-slate-300 dark:text-slate-600">|</span>
-          <span>Dept: <strong className="text-slate-700 dark:text-slate-300">{doc.department || '-'}</strong></span>
-          <span className="text-slate-300 dark:text-slate-600">|</span>
-          <span>Rev: <strong className="text-slate-700 dark:text-slate-300">{doc.revision || '00'}</strong></span>
-          {doc.fileSize && (
-            <>
-              <span className="text-slate-300 dark:text-slate-600">|</span>
-              <span className="inline-flex items-center gap-1 font-mono text-[11px] text-slate-600 dark:text-slate-300">
-                <Paperclip className="w-3 h-3 text-slate-400" />
-                {doc.fileSize}
-              </span>
-            </>
-          )}
-        </div>
-      )}
-      headerRight={(
-        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-          {/* Segmented Control Mode Tata Letak Dokumen: Kop Surat vs 1 Lembar Cover */}
-          {doc.fileUrl && (
-            <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs">
-              <button
-                type="button"
-                onClick={() => {
-                  setIncludeLetterhead(true);
-                  setDocumentLayoutMode('header');
-                }}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md font-semibold transition cursor-pointer ${
-                  documentLayoutMode === 'header'
-                    ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-2xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                }`}
-                title="Mode Kop Surat: Kop resmi langsung disematkan di bagian atas lembar dokumen"
-              >
-                <Stamp className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Kop Surat</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setIncludeLetterhead(true);
-                  setDocumentLayoutMode('cover');
-                }}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md font-semibold transition cursor-pointer ${
-                  documentLayoutMode === 'cover'
-                    ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                }`}
-                title="Mode 1 Lembar Cover: Sisipkan 1 Halaman Sampul Depan ISO 9001 resmi terpisah di Halaman 1"
-              >
-                <Layers className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">1 Lembar Cover</span>
-              </button>
+      customHeader={(
+        <div className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-800/80 shrink-0">
+          {/* Baris 1: Informasi Dokumen & Tombol Tutup [X] */}
+          <div className="flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-3 gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap min-w-0">
+                <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} size="sm" />
+                <Badge status={doc.status} size="sm" />
+                <span className="font-mono font-bold text-slate-900 dark:text-white text-xs sm:text-base tracking-tight whitespace-nowrap">
+                  {doc.docNumber}
+                </span>
+                <span className="text-slate-300 dark:text-slate-600 hidden sm:inline">—</span>
+                <span className="text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-semibold truncate max-w-[150px] sm:max-w-xs md:max-w-md" title={doc.title}>
+                  {doc.title}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex-wrap">
+                <span className="truncate max-w-[130px] sm:max-w-none">{docCompanyName}</span>
+                <span className="text-slate-300 dark:text-slate-600">|</span>
+                <span>Dept: <strong className="text-slate-700 dark:text-slate-300">{doc.department || '-'}</strong></span>
+                <span className="text-slate-300 dark:text-slate-600">|</span>
+                <span>Rev: <strong className="text-slate-700 dark:text-slate-300">{doc.revision || '00'}</strong></span>
+                {doc.fileSize && (
+                  <>
+                    <span className="text-slate-300 dark:text-slate-600 hidden sm:inline">|</span>
+                    <span className="hidden sm:inline-flex items-center gap-1 font-mono text-[10px] text-slate-600 dark:text-slate-300">
+                      <Paperclip className="w-3 h-3 text-slate-400" />
+                      {doc.fileSize}
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
-          )}
 
-          {/* Buka Layar Penuh di Tab Baru */}
-          {activePdfUrl && isPdfFile && (
-            <a
-              href={activePdfUrl}
-              target="_blank"
-              rel="noreferrer"
-              title="Buka Layar Penuh di Tab Baru"
-              className="p-1.5 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition cursor-pointer"
+            {/* Tombol Tutup Modal [X] */}
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg hover:bg-slate-200/60 dark:hover:bg-slate-700 transition cursor-pointer shrink-0"
+              title="Tutup (Esc)"
+              aria-label="Tutup Modal"
             >
-              <ExternalLink className="w-4 h-4" />
-            </a>
-          )}
+              <X className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+          </div>
 
-          {/* Validasi QR Code ISO */}
-          <button
-            type="button"
-            onClick={() => setShowQrVerifyInfo(!showQrVerifyInfo)}
-            title="Validasi QR Code Integritas Dokumen"
-            className={`p-1.5 rounded-lg transition cursor-pointer ${
-              showQrVerifyInfo
-                ? 'text-blue-600 bg-blue-50 dark:bg-blue-950/60 dark:text-blue-400'
-                : 'text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-            }`}
-          >
-            <QrCode className="w-4 h-4" />
-          </button>
-
-          {/* Cetak Stiker Label Arsip */}
-          <button
-            type="button"
-            onClick={() => setShowLabelModal(true)}
-            title="Cetak Stiker Label Arsip Dokumen (Ordner / Map)"
-            className="p-1.5 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition cursor-pointer"
-          >
-            <Tag className="w-4 h-4" />
-          </button>
-
-          {/* Ganti File */}
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            title={doc.fileUrl ? 'Ganti Berkas Fisik Dokumen' : 'Unggah Berkas Fisik Dokumen'}
-            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition cursor-pointer"
-          >
-            <UploadCloud className="w-3.5 h-3.5 text-slate-500" />
-            <span className="hidden md:inline">{doc.fileUrl ? 'Ganti File' : 'Unggah'}</span>
-          </button>
-
-          {/* Tombol Aksi Download Cerdas Berdasarkan Tipe Dokumen */}
-          {isExcelFile ? (
-            <>
-              {/* Tombol Sekunder: Ekspor PDF Terkendali */}
-              <button
-                type="button"
-                onClick={handleDownloadOfficialPDF}
-                disabled={isProcessingDownload}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition cursor-pointer shrink-0"
-                title={documentLayoutMode === 'cover'
-                  ? 'Ekspor PDF Terkendali Resmi dengan 1 Halaman Cover ISO & Matriks Otorisasi'
-                  : 'Ekspor PDF Terkendali Resmi dengan Kop Surat ISO & Matriks Otorisasi'}
-              >
-                <Download className="w-3.5 h-3.5 text-blue-600" />
-                <span className="hidden sm:inline">
-                  {isProcessingDownload ? 'Memproses...' : (documentLayoutMode === 'cover' ? 'Ekspor PDF (+ Cover)' : 'Ekspor PDF (+ Kop)')}
-                </span>
-              </button>
-
-              {/* Tombol Utama: Unduh Excel Asli */}
-              <button
-                type="button"
-                onClick={handleDownloadRawFile}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-lg shadow-sm transition cursor-pointer shrink-0"
-                title="Unduh berkas spreadsheet Excel asli (.xlsx)"
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5" />
-                <span>Unduh Excel (.xlsx)</span>
-              </button>
-            </>
-          ) : isWordFile ? (
-            <>
-              {/* Tombol Sekunder: Ekspor PDF Terkendali */}
-              <button
-                type="button"
-                onClick={handleDownloadOfficialPDF}
-                disabled={isProcessingDownload}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition cursor-pointer shrink-0"
-                title={documentLayoutMode === 'cover'
-                  ? 'Ekspor PDF Terkendali Resmi dengan 1 Halaman Cover ISO & Matriks Otorisasi'
-                  : 'Ekspor PDF Terkendali Resmi dengan Kop Surat ISO & Matriks Otorisasi'}
-              >
-                <Download className="w-3.5 h-3.5 text-blue-600" />
-                <span className="hidden sm:inline">
-                  {isProcessingDownload ? 'Memproses...' : (documentLayoutMode === 'cover' ? 'Ekspor PDF (+ Cover)' : 'Ekspor PDF (+ Kop)')}
-                </span>
-              </button>
-
-              {/* Tombol Utama: Unduh Word Asli */}
-              <button
-                type="button"
-                onClick={handleDownloadRawFile}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-lg shadow-sm transition cursor-pointer shrink-0"
-                title="Unduh berkas dokumen Microsoft Word asli (.docx)"
-              >
-                <FileText className="w-3.5 h-3.5" />
-                <span>Unduh Word (.docx)</span>
-              </button>
-            </>
-          ) : (
-            <>
-              {/* Jika PDF: Tombol Sekunder Berkas Asli jika ada */}
+          {/* Baris 2: Toolbar Aksi Dokumen */}
+          <div className="px-3 sm:px-6 py-2 border-t border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-900/60 flex items-center justify-between gap-1.5 sm:gap-2">
+            {/* Alat Bantu / Mode Tampilan */}
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+              {/* Segmented Control Mode Tata Letak Dokumen: Kop Surat vs 1 Lembar Cover */}
               {doc.fileUrl && (
-                <button
-                  type="button"
-                  onClick={handleDownloadRawFile}
-                  title="Unduh Berkas PDF Asli Mentah (Tanpa Stempel Kop)"
-                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition cursor-pointer"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span className="hidden lg:inline">PDF Asli</span>
-                </button>
+                <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIncludeLetterhead(true);
+                      setDocumentLayoutMode('header');
+                    }}
+                    className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-md text-[11px] sm:text-xs font-semibold transition cursor-pointer ${
+                      documentLayoutMode === 'header'
+                        ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-2xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                    }`}
+                    title="Mode Kop Surat: Kop resmi langsung disematkan di bagian atas lembar dokumen"
+                  >
+                    <Stamp className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Kop Surat</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIncludeLetterhead(true);
+                      setDocumentLayoutMode('cover');
+                    }}
+                    className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-md text-[11px] sm:text-xs font-semibold transition cursor-pointer ${
+                      documentLayoutMode === 'cover'
+                        ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                    }`}
+                    title="Mode 1 Lembar Cover: Sisipkan 1 Halaman Sampul Depan ISO 9001 resmi terpisah di Halaman 1"
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">1 Lembar Cover</span>
+                  </button>
+                </div>
               )}
 
-              {/* Tombol Utama: Unduh PDF Resmi */}
+              {/* Buka Layar Penuh di Tab Baru */}
+              {activePdfUrl && isPdfFile && (
+                <a
+                  href={activePdfUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  title="Buka Layar Penuh di Tab Baru"
+                  className="p-1.5 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition cursor-pointer"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              )}
+
+              {/* Validasi QR Code ISO */}
               <button
                 type="button"
-                onClick={handleDownloadOfficialPDF}
-                disabled={isProcessingDownload}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-lg shadow-sm transition cursor-pointer shrink-0"
-                title={documentLayoutMode === 'cover'
-                  ? 'Unduh PDF Resmi ISO dengan 1 Lembar Cover Depan Terpisah & Penomoran Halaman'
-                  : 'Unduh PDF Resmi ISO dengan Kop Surat Langsung & Penomoran Halaman'}
+                onClick={() => setShowQrVerifyInfo(!showQrVerifyInfo)}
+                title="Validasi QR Code Integritas Dokumen"
+                className={`p-1.5 rounded-lg transition cursor-pointer ${
+                  showQrVerifyInfo
+                    ? 'text-blue-600 bg-blue-50 dark:bg-blue-950/60 dark:text-blue-400'
+                    : 'text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
               >
-                <Download className="w-3.5 h-3.5" />
-                <span>
-                  {isProcessingDownload 
-                    ? 'Memproses...' 
-                    : (documentLayoutMode === 'cover' ? 'Unduh PDF + Cover' : (includeLetterhead ? 'Unduh PDF + Kop' : 'Unduh PDF'))}
-                </span>
+                <QrCode className="w-4 h-4" />
               </button>
-            </>
-          )}
+
+              {/* Cetak Stiker Label Arsip */}
+              <button
+                type="button"
+                onClick={() => setShowLabelModal(true)}
+                title="Cetak Stiker Label Arsip Dokumen (Ordner / Map)"
+                className="p-1.5 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition cursor-pointer"
+              >
+                <Tag className="w-4 h-4" />
+              </button>
+
+              {/* Ganti File */}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                title={doc.fileUrl ? 'Ganti Berkas Fisik Dokumen' : 'Unggah Berkas Fisik Dokumen'}
+                className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1 text-xs font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition cursor-pointer"
+              >
+                <UploadCloud className="w-3.5 h-3.5 text-slate-500" />
+                <span className="hidden md:inline">{doc.fileUrl ? 'Ganti File' : 'Unggah'}</span>
+              </button>
+            </div>
+
+            {/* Kanan: Tombol Aksi Unduh */}
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              {isExcelFile ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleDownloadOfficialPDF}
+                    disabled={isProcessingDownload}
+                    className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition cursor-pointer shrink-0"
+                    title={documentLayoutMode === 'cover'
+                      ? 'Ekspor PDF Terkendali Resmi dengan 1 Halaman Cover ISO & Matriks Otorisasi'
+                      : 'Ekspor PDF Terkendali Resmi dengan Kop Surat ISO & Matriks Otorisasi'}
+                  >
+                    <Download className="w-3.5 h-3.5 text-blue-600" />
+                    <span className="hidden sm:inline">
+                      {isProcessingDownload ? 'Memproses...' : (documentLayoutMode === 'cover' ? 'Ekspor PDF (+ Cover)' : 'Ekspor PDF (+ Kop)')}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleDownloadRawFile}
+                    className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-lg shadow-sm transition cursor-pointer shrink-0"
+                    title="Unduh berkas spreadsheet Excel asli (.xlsx)"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5" />
+                    <span>Excel</span>
+                  </button>
+                </>
+              ) : isWordFile ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleDownloadOfficialPDF}
+                    disabled={isProcessingDownload}
+                    className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition cursor-pointer shrink-0"
+                    title={documentLayoutMode === 'cover'
+                      ? 'Ekspor PDF Terkendali Resmi dengan 1 Halaman Cover ISO & Matriks Otorisasi'
+                      : 'Ekspor PDF Terkendali Resmi dengan Kop Surat ISO & Matriks Otorisasi'}
+                  >
+                    <Download className="w-3.5 h-3.5 text-blue-600" />
+                    <span className="hidden sm:inline">
+                      {isProcessingDownload ? 'Memproses...' : (documentLayoutMode === 'cover' ? 'Ekspor PDF (+ Cover)' : 'Ekspor PDF (+ Kop)')}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleDownloadRawFile}
+                    className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-lg shadow-sm transition cursor-pointer shrink-0"
+                    title="Unduh berkas dokumen Microsoft Word asli (.docx)"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>Word</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  {doc.fileUrl && (
+                    <button
+                      type="button"
+                      onClick={handleDownloadRawFile}
+                      title="Unduh Berkas PDF Asli Mentah (Tanpa Stempel Kop)"
+                      className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition cursor-pointer"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span className="hidden lg:inline">PDF Asli</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleDownloadOfficialPDF}
+                    disabled={isProcessingDownload}
+                    className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-lg shadow-sm transition cursor-pointer shrink-0"
+                    title={documentLayoutMode === 'cover'
+                      ? 'Unduh PDF Resmi ISO dengan 1 Lembar Cover Depan Terpisah & Penomoran Halaman'
+                      : 'Unduh PDF Resmi ISO dengan Kop Surat Langsung & Penomoran Halaman'}
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">
+                      {isProcessingDownload 
+                        ? 'Memproses...' 
+                        : (documentLayoutMode === 'cover' ? 'Unduh PDF + Cover' : (includeLetterhead ? 'Unduh PDF + Kop' : 'Unduh PDF'))}
+                    </span>
+                    <span className="sm:hidden">
+                      {isProcessingDownload ? 'Memproses...' : 'Unduh PDF'}
+                    </span>
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       )}
     >
@@ -1185,7 +1203,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
                     </button>
                   </div>
                 )}
-                <div className="relative w-full bg-slate-900 rounded-xl overflow-hidden shadow-inner border border-slate-700 min-h-[620px]">
+                <div className="relative w-full bg-slate-900 rounded-xl overflow-hidden shadow-inner border border-slate-700 min-h-[420px] sm:min-h-[620px]">
                   {isStampingPreview && !stampedPdfUrl && (
                     <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-900/90 backdrop-blur-xs text-white">
                       <RefreshCw className="w-7 h-7 animate-spin text-blue-500 mb-2.5" />
@@ -1196,9 +1214,9 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
                   {activePdfUrl && (
                     <iframe
                       key={activePdfUrl}
-                      src={`${activePdfUrl}#toolbar=1&navpanes=0`}
+                      src={`${activePdfUrl}#view=FitH&toolbar=1&navpanes=0`}
                       title={doc.fileName || 'Pratinjau PDF Dokumen'}
-                      className="w-full h-[720px] border-0 bg-white"
+                      className="w-full h-[65vh] sm:h-[720px] border-0 bg-white"
                     />
                   )}
                 </div>
@@ -1575,11 +1593,11 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
             {/* Header Strip Matriks */}
             <div
               onClick={() => setShowSignOffMatrix(!showSignOffMatrix)}
-              className="px-4 py-2.5 flex items-center justify-between cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/60 transition select-none"
+              className="px-3.5 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/60 transition select-none"
             >
-              <div className="flex items-center gap-2">
-                <UserCheck className="w-4 h-4 text-blue-600" />
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+              <div className="flex items-center gap-2 min-w-0">
+                <UserCheck className="w-4 h-4 text-blue-600 shrink-0" />
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
                   Matriks Otorisasi & Rekam Jejak Pengesahan
                 </span>
                 <span className="text-[10px] text-slate-400 font-mono hidden sm:inline">
@@ -1588,45 +1606,45 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
               </div>
               <button
                 type="button"
-                className="text-slate-400 hover:text-slate-600 text-xs flex items-center gap-1 font-semibold"
+                className="text-slate-400 hover:text-slate-600 text-xs flex items-center gap-1 font-semibold shrink-0"
               >
-                <span>{showSignOffMatrix ? 'Sembunyikan' : 'Tampilkan'}</span>
+                <span className="hidden xs:inline">{showSignOffMatrix ? 'Sembunyikan' : 'Tampilkan'}</span>
                 {showSignOffMatrix ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </button>
             </div>
 
-            {/* Konten Matriks 4 Tahap */}
+            {/* Konten Matriks 4 Tahap (Grid 2 Kolom di Mobile, 4 Kolom di Layar Lebar) */}
             {showSignOffMatrix && (
-              <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+              <div className="p-2.5 sm:p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 text-xs">
                 {/* 01. Dibuat Oleh (Staff) */}
-                <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                <div className="p-2.5 sm:p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-1 sm:space-y-1.5">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-500 truncate">
                       01. Pembuat
                     </span>
-                    <span className="text-[9.5px] px-1.5 py-0.2 rounded font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300">
+                    <span className="text-[9px] sm:text-[9.5px] px-1.5 py-0.2 rounded font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300 shrink-0">
                       Disubmit
                     </span>
                   </div>
-                  <p className="font-bold text-slate-900 dark:text-white truncate" title={doc.creator}>
+                  <p className="font-bold text-slate-900 dark:text-white text-xs truncate" title={doc.creator}>
                     {doc.creator}
                   </p>
-                  <p className="text-[11px] text-slate-500 truncate">
+                  <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">
                     {doc.creatorPosition || 'Staff Pembuat'}
                   </p>
-                  <p className="text-[10px] text-slate-400 font-mono flex items-center gap-1 pt-1 border-t border-slate-100 dark:border-slate-800">
-                    <Clock className="w-3 h-3 text-slate-400 shrink-0" />
-                    {formatDocumentDate(doc.createdDate)}
+                  <p className="text-[9.5px] sm:text-[10px] text-slate-400 font-mono flex items-center gap-1 pt-1 border-t border-slate-100 dark:border-slate-800">
+                    <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-slate-400 shrink-0" />
+                    <span className="truncate">{formatDocumentDate(doc.createdDate)}</span>
                   </p>
                 </div>
 
                 {/* 02. Diperiksa (Reviewer / Atasan) */}
-                <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">
+                <div className="p-2.5 sm:p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-1 sm:space-y-1.5">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400 truncate">
                       02. Reviewer
                     </span>
-                    <span className={`text-[9.5px] px-1.5 py-0.2 rounded font-bold ${
+                    <span className={`text-[9px] sm:text-[9.5px] px-1.5 py-0.2 rounded font-bold shrink-0 ${
                       doc.reviewedBy
                         ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
                         : isNeedsRevision
@@ -1636,25 +1654,25 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
                       {doc.reviewedBy ? 'Disetujui' : isNeedsRevision ? 'Perlu Revisi' : 'Menunggu'}
                     </span>
                   </div>
-                  <p className="font-bold text-slate-900 dark:text-white truncate" title={doc.reviewedBy || doc.targetReviewer || 'Atasan Departemen'}>
+                  <p className="font-bold text-slate-900 dark:text-white text-xs truncate" title={doc.reviewedBy || doc.targetReviewer || 'Atasan Departemen'}>
                     {doc.reviewedBy || doc.targetReviewer || 'Atasan Departemen'}
                   </p>
-                  <p className="text-[11px] text-slate-500 truncate">
+                  <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">
                     Pemeriksa Alur Kerja
                   </p>
-                  <p className="text-[10px] text-slate-400 font-mono flex items-center gap-1 pt-1 border-t border-slate-100 dark:border-slate-800">
-                    <Clock className="w-3 h-3 text-slate-400 shrink-0" />
-                    {doc.reviewedDate || 'Belum ditinjau'}
+                  <p className="text-[9.5px] sm:text-[10px] text-slate-400 font-mono flex items-center gap-1 pt-1 border-t border-slate-100 dark:border-slate-800">
+                    <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-slate-400 shrink-0" />
+                    <span className="truncate">{doc.reviewedDate ? formatDocumentDate(doc.reviewedDate) : 'Belum ditinjau'}</span>
                   </p>
                 </div>
 
                 {/* 03. Verifikasi (DCO / Document Control) */}
-                <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                <div className="p-2.5 sm:p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-1 sm:space-y-1.5">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 truncate">
                       03. Verifikasi DCO
                     </span>
-                    <span className={`text-[9.5px] px-1.5 py-0.2 rounded font-bold ${
+                    <span className={`text-[9px] sm:text-[9.5px] px-1.5 py-0.2 rounded font-bold shrink-0 ${
                       doc.verifiedBy
                         ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
                         : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
@@ -1662,25 +1680,25 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
                       {doc.verifiedBy ? 'Terverifikasi' : 'Menunggu'}
                     </span>
                   </div>
-                  <p className="font-bold text-slate-900 dark:text-white truncate" title={doc.verifiedBy || 'Document Control (DCO)'}>
+                  <p className="font-bold text-slate-900 dark:text-white text-xs truncate" title={doc.verifiedBy || 'Document Control (DCO)'}>
                     {doc.verifiedBy || 'Document Control (DCO)'}
                   </p>
-                  <p className="text-[11px] text-slate-500 truncate">
+                  <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">
                     Format & Penomoran ISO
                   </p>
-                  <p className="text-[10px] text-slate-400 font-mono flex items-center gap-1 pt-1 border-t border-slate-100 dark:border-slate-800">
-                    <Clock className="w-3 h-3 text-slate-400 shrink-0" />
-                    {doc.verifiedDate || 'Belum diverifikasi'}
+                  <p className="text-[9.5px] sm:text-[10px] text-slate-400 font-mono flex items-center gap-1 pt-1 border-t border-slate-100 dark:border-slate-800">
+                    <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-slate-400 shrink-0" />
+                    <span className="truncate">{doc.verifiedDate ? formatDocumentDate(doc.verifiedDate) : 'Belum diverifikasi'}</span>
                   </p>
                 </div>
 
                 {/* 04. Pengesahan (MR / Top Management) */}
-                <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                <div className="p-2.5 sm:p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-1 sm:space-y-1.5">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 truncate">
                       04. Pengesah (MR)
                     </span>
-                    <span className={`text-[9.5px] px-1.5 py-0.2 rounded font-bold ${
+                    <span className={`text-[9px] sm:text-[9.5px] px-1.5 py-0.2 rounded font-bold shrink-0 ${
                       doc.approvedBy || doc.status === 'AKTIF'
                         ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
                         : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
@@ -1688,15 +1706,21 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
                       {doc.approvedBy || doc.status === 'AKTIF' ? 'Disahkan' : 'Menunggu'}
                     </span>
                   </div>
-                  <p className="font-bold text-slate-900 dark:text-white truncate" title={doc.approvedBy || doc.targetApprover || (doc.status === 'AKTIF' ? 'Management Rep.' : '-')}>
+                  <p className="font-bold text-slate-900 dark:text-white text-xs truncate" title={doc.approvedBy || doc.targetApprover || (doc.status === 'AKTIF' ? 'Management Rep.' : '-')}>
                     {doc.approvedBy || doc.targetApprover || (doc.status === 'AKTIF' ? (docCompanyCode === 'UMI' ? 'RATNA SARI' : docCompanyCode === 'IMK' ? 'BAMBANG WIJAYA' : 'BABAN RACHMAT SUBAGJA') : 'MR / Direksi')}
                   </p>
-                  <p className="text-[11px] text-slate-500 truncate">
+                  <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">
                     {doc.approverPosition || 'Management Representative'}
                   </p>
-                  <p className="text-[10px] text-slate-400 font-mono flex items-center gap-1 pt-1 border-t border-slate-100 dark:border-slate-800">
-                    <Clock className="w-3 h-3 text-slate-400 shrink-0" />
-                    {doc.approvedDate || 'Menunggu otoritas'}
+                  <p className="text-[9.5px] sm:text-[10px] text-slate-400 font-mono flex items-center gap-1 pt-1 border-t border-slate-100 dark:border-slate-800">
+                    <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-slate-400 shrink-0" />
+                    <span className="truncate">
+                      {doc.approvedDate
+                        ? formatDocumentDate(doc.approvedDate)
+                        : doc.status === 'AKTIF'
+                        ? formatDocumentDate(doc.effectiveDate || doc.createdDate)
+                        : 'Menunggu otoritas'}
+                    </span>
                   </p>
                 </div>
               </div>
@@ -1704,11 +1728,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
           </div>
         </div>
 
-        {/* Footer Disclaimer */}
-        <div className="pt-2 flex items-center justify-between text-[10.5px] text-slate-400">
-          <span>Sistem Manajemen Dokumen Terkendali — {docCompanyName}</span>
-          <span>Standar Sistem Manajemen Mutu</span>
-        </div>
+
       </div>
 
       {/* Modal Cetak Label Barcode / Stiker Arsip */}

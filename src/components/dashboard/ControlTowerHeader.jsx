@@ -1,4 +1,5 @@
 import React from 'react';
+import { ClipboardList, FilePenLine, FilePlus2, FolderOpen } from 'lucide-react';
 
 export default function ControlTowerHeader({
   currentUser,
@@ -49,11 +50,11 @@ export default function ControlTowerHeader({
   };
 
   return (
-    <div className="relative rounded-2xl bg-[#102a4e] text-white p-5 sm:p-6 shadow-sm border border-slate-800 overflow-hidden">
-      <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+    <div className="relative rounded-2xl bg-[#102a4e] text-white p-4 sm:p-6 shadow-sm border border-slate-800 overflow-hidden">
+      <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 sm:gap-5">
         {/* Left Column: Greeting & Info */}
         <div className="space-y-2 max-w-2xl">
-          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white">
+          <h1 className="text-lg sm:text-2xl font-extrabold tracking-tight text-white">
             {getGreeting()}, {currentUser?.name?.split(' ')[0] || 'Rekan'}!
           </h1>
           <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
@@ -64,53 +65,72 @@ export default function ControlTowerHeader({
           </p>
 
           {/* User Profile Meta */}
-          <div className="flex flex-wrap items-center gap-2 pt-0.5 text-xs text-slate-300">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 pt-0.5 text-xs text-slate-300">
             <span className="font-semibold text-white tracking-wide">{currentUser?.name}</span>
-            <span className="text-slate-400">&bull;</span>
-            <span className="text-sky-300 font-mono font-medium">{currentUser?.department}</span>
-            <span className="text-slate-400">&bull;</span>
-            <span className="px-2.5 py-0.5 rounded-full bg-blue-500/20 text-sky-200 border border-blue-400/30 text-[11px] font-semibold">
+            <span className="h-3 w-px bg-slate-500/80" aria-hidden="true" />
+            <span className="font-mono font-medium text-sky-300">{currentUser?.department}</span>
+            <span className="h-3 w-px bg-slate-500/80" aria-hidden="true" />
+            <span className="rounded-full border border-blue-400/30 bg-blue-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-sky-200">
               {getRoleLabel(currentUser?.role)}
             </span>
           </div>
         </div>
 
         {/* Right Column: Quick Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2.5 flex-shrink-0 w-full sm:w-auto">
+        <div className="grid grid-cols-3 gap-2 md:flex md:flex-wrap md:items-center md:justify-end md:gap-2.5 md:w-auto flex-shrink-0">
           {isViewer ? (
             <button
+              type="button"
               onClick={() => navigateTo('ctrl-active', ['Dashboard', 'Document Control', 'Dokumen Aktif'])}
-              className="flex-1 sm:flex-initial px-4 py-2.5 min-h-[44px] flex items-center justify-center bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer"
+              className="relative h-14 w-full rounded-xl bg-emerald-600 text-white shadow-xs transition hover:bg-emerald-500 active:scale-98 md:h-12 md:w-auto md:px-4 flex items-center justify-center gap-2 cursor-pointer"
+              aria-label="Buka Master Dokumen Aktif"
+              title="Buka Master Dokumen Aktif"
             >
-              Buka Master Dokumen Aktif
+              <FolderOpen className="h-5 w-5" aria-hidden="true" />
+              <span className="absolute bottom-1.5 left-2 text-[9px] font-semibold leading-none text-emerald-100 md:hidden">Aktif</span>
+              <span className="hidden md:inline text-xs font-bold">Dokumen Aktif</span>
             </button>
           ) : (
             <>
               {canRegisterDocument && (
                 <button
+                  type="button"
                   onClick={() => navigateTo('reg-new', ['Dashboard', 'Registrasi Dokumen', 'Dokumen Baru'])}
-                  className="flex-1 sm:flex-initial px-4 py-2.5 min-h-[44px] flex items-center justify-center bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer active:scale-98"
+                  className="relative h-14 w-full rounded-xl bg-blue-600 text-white shadow-xs transition hover:bg-blue-500 active:scale-98 md:h-12 md:w-auto md:px-4 flex items-center justify-center gap-2 cursor-pointer"
+                  aria-label="Buat dokumen baru"
+                  title="Buat dokumen baru"
                 >
-                  + Dokumen Baru
+                  <FilePlus2 className="h-5 w-5" aria-hidden="true" />
+                  <span className="absolute bottom-1.5 left-2 text-[9px] font-semibold leading-none text-blue-100 md:hidden">Baru</span>
+                  <span className="hidden md:inline text-xs font-bold">Dokumen Baru</span>
                 </button>
               )}
 
               {canRequestRevision && (
                 <button
+                  type="button"
                   onClick={() => navigateTo('rev-new', ['Dashboard', 'Document Revision', 'Pengajuan Revisi'])}
-                  className="flex-1 sm:flex-initial px-4 py-2.5 min-h-[44px] flex items-center justify-center bg-slate-800 hover:bg-slate-700 text-indigo-200 hover:text-white rounded-xl text-xs font-bold border border-indigo-500/40 transition cursor-pointer active:scale-98"
+                  className="relative h-14 w-full rounded-xl border border-indigo-500/40 bg-slate-800 text-indigo-200 transition hover:bg-slate-700 hover:text-white active:scale-98 md:h-12 md:w-auto md:px-4 flex items-center justify-center gap-2 cursor-pointer"
+                  aria-label="Ajukan revisi dokumen"
+                  title="Ajukan revisi dokumen"
                 >
-                  Ajukan Revisi
+                  <FilePenLine className="h-5 w-5" aria-hidden="true" />
+                  <span className="absolute bottom-1.5 left-2 text-[9px] font-semibold leading-none text-indigo-200 md:hidden">Revisi</span>
+                  <span className="hidden md:inline text-xs font-bold">Ajukan Revisi</span>
                 </button>
               )}
 
               {canAccessReports && (
                 <button
+                  type="button"
                   onClick={() => navigateTo('rep-register', ['Dashboard', 'Report', 'Register Dokumen'])}
-                  className="flex-1 sm:flex-initial px-3.5 py-2.5 min-h-[44px] flex items-center justify-center bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-semibold border border-slate-700 transition cursor-pointer active:scale-98"
-                  title="Unduh Master Register Dokumen Terkendali ISO"
+                  className="relative h-14 w-full rounded-xl border border-slate-700 bg-slate-800/80 text-slate-200 transition hover:bg-slate-700 hover:text-white active:scale-98 md:h-12 md:w-auto md:px-4 flex items-center justify-center gap-2 cursor-pointer"
+                  aria-label="Buka register dokumen ISO"
+                  title="Buka register dokumen ISO"
                 >
-                  Register ISO
+                  <ClipboardList className="h-5 w-5" aria-hidden="true" />
+                  <span className="absolute bottom-1.5 left-2 text-[9px] font-semibold leading-none text-slate-300 md:hidden">Register</span>
+                  <span className="hidden md:inline text-xs font-semibold">Register ISO</span>
                 </button>
               )}
             </>

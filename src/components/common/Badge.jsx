@@ -66,3 +66,61 @@ export function CompanyBadge({ companyCode, size = 'sm' }) {
     </span>
   );
 }
+
+export function getDocumentFileFormat(doc) {
+  const fileNameLower = (doc?.fileName || '').toLowerCase();
+  const fileTypeLower = (doc?.fileType || '').toLowerCase();
+
+  if (
+    fileTypeLower.includes('word') ||
+    fileTypeLower.includes('officedocument.wordprocessingml') ||
+    /\.(docx?|doc)$/i.test(fileNameLower)
+  ) {
+    return {
+      type: 'DOCX',
+      label: 'DOCX',
+      style: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800',
+    };
+  }
+
+  if (
+    fileTypeLower.includes('sheet') ||
+    fileTypeLower.includes('excel') ||
+    /\.(xlsx?|csv)$/i.test(fileNameLower)
+  ) {
+    return {
+      type: 'XLSX',
+      label: 'XLSX',
+      style: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800',
+    };
+  }
+
+  if (
+    fileTypeLower.startsWith('image/') ||
+    /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(fileNameLower)
+  ) {
+    return {
+      type: 'IMG',
+      label: 'IMG',
+      style: 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800',
+    };
+  }
+
+  return {
+    type: 'PDF',
+    label: 'PDF',
+    style: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800',
+  };
+}
+
+export function FileFormatBadge({ doc, size = 'sm' }) {
+  const format = getDocumentFileFormat(doc);
+  return (
+    <span
+      className={`inline-flex items-center font-mono font-bold rounded tracking-wider border px-1.5 py-0.5 text-[10px] ${format.style}`}
+      title={`Format Berkas: ${format.label}`}
+    >
+      {format.label}
+    </span>
+  );
+}

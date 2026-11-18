@@ -473,19 +473,19 @@ export default function NewRegistrationView() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 pb-20 sm:space-y-6 sm:pb-0">
       {/* 2-Column Main Workspace */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12 xl:gap-6">
 
         {/* Left 8-Cols: Main Document Information Form */}
-        <div className="xl:col-span-8 space-y-6">
+        <div className="space-y-4 xl:col-span-8 xl:space-y-6">
 
           {/* Card: INFORMASI DOKUMEN */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-card border border-slate-200 dark:border-slate-800 overflow-hidden">
             {/* Header: Bersih & Profesional */}
-            <div className="bg-[#102a4e] text-white px-5 sm:px-6 py-4 flex items-center justify-between border-b border-slate-800/40">
+            <div className="flex items-center justify-between border-b border-slate-800/40 bg-[#102a4e] px-4 py-3 text-white sm:px-6 sm:py-4">
               <div>
-                <h2 className="text-sm font-bold tracking-wider uppercase flex items-center gap-2">
+                <h2 className="flex items-center gap-2 text-xs font-bold tracking-wide uppercase sm:text-sm sm:tracking-wider">
                   <FileText className="w-4 h-4 text-sky-400" />
                   INFORMASI REGISTRASI DOKUMEN
                 </h2>
@@ -497,18 +497,15 @@ export default function NewRegistrationView() {
 
 
             {/* Active Form Inputs */}
-            <div className="p-5 sm:p-6 space-y-5">
+            <div className="space-y-3 p-4 sm:space-y-4 sm:p-5">
               {/* Row 0: Pilihan Perusahaan Tujuan (Multi-Company) - Hanya ditampilkan untuk Akun Admin Holding */}
               {(!currentUser?.companyCode || currentUser.companyCode === 'ALL') && (
-                <div className="space-y-2 pb-1">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
-                      <Building2 className="w-4 h-4 text-blue-600" />
-                      Pilih Perusahaan Pemilik Dokumen <span className="text-red-500">*</span>
-                    </label>
-
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-blue-600" />
+                    Perusahaan Pemilik <span className="text-red-500">*</span>
+                  </label>
+                  <div className="grid grid-cols-3 gap-1.5">
                     {(companies || []).map((c) => {
                       const isSelected = selectedCompany === c.code;
                       return (
@@ -519,13 +516,15 @@ export default function NewRegistrationView() {
                             setSelectedCompany(c.code);
                             setSelectedCompanyFilter(c.code);
                           }}
-                          className={`p-3 rounded-xl border text-left transition relative flex flex-col justify-between cursor-pointer ${isSelected
-                            ? 'bg-blue-50/70 dark:bg-blue-950/40 border-blue-500 ring-2 ring-blue-500/30 shadow-sm'
+                          aria-pressed={isSelected}
+                          aria-label={`Pilih ${c.name}`}
+                          className={`relative flex min-h-[52px] flex-col justify-between rounded-lg border p-2 text-left transition cursor-pointer ${isSelected
+                            ? 'bg-blue-50/70 dark:bg-blue-950/40 border-blue-500 ring-1 ring-blue-500/30 shadow-sm'
                             : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
                             }`}
                         >
-                          <div className="flex items-center justify-between w-full mb-1">
-                            <span className={`px-2 py-0.5 rounded font-mono font-bold text-xs ${c.code === 'DJI'
+                          <div className="flex w-full items-center justify-between">
+                            <span className={`rounded px-1.5 py-0.5 font-mono text-[10px] font-bold ${c.code === 'DJI'
                               ? 'bg-blue-600 text-white'
                               : c.code === 'UMI'
                                 ? 'bg-indigo-600 text-white'
@@ -534,10 +533,10 @@ export default function NewRegistrationView() {
                               {c.code}
                             </span>
                             {isSelected && (
-                              <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                              <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                             )}
                           </div>
-                          <div className="font-bold text-xs text-slate-900 dark:text-white line-clamp-1">
+                          <div className="text-[9px] font-medium leading-tight text-slate-500 dark:text-slate-400 line-clamp-1 mt-1">
                             {c.name}
                           </div>
                         </button>
@@ -547,16 +546,16 @@ export default function NewRegistrationView() {
                 </div>
               )}
 
-              {/* Row 1: Jenis Dokumen & Departemen */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Row 1: Jenis Dokumen & Departemen – inline on mobile with 2-col grid */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">
                     Jenis Dokumen <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={selectedType}
                     onChange={(e) => setSelectedType(e.target.value)}
-                    className="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2.5 font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition shadow-sm"
+                    className="h-9 w-full rounded-md border border-slate-300 bg-white px-2.5 text-xs font-medium text-slate-800 shadow-xs transition focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                   >
                     {documentTypes.map((t) => (
                       <option key={t.id} value={t.code}>
@@ -567,15 +566,15 @@ export default function NewRegistrationView() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">
                     Departemen Pemilik <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={selectedDept}
                     onChange={(e) => setSelectedDept(e.target.value)}
                     disabled={Boolean(currentUser?.department)}
-                    className={`w-full text-xs rounded-lg px-3 py-2.5 font-medium transition shadow-sm ${currentUser?.department
-                      ? 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 cursor-not-allowed select-none'
+                    className={`h-9 w-full text-xs rounded-md px-2.5 font-medium transition shadow-xs ${currentUser?.department
+                      ? 'bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 cursor-not-allowed select-none'
                       : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500'
                       }`}
                   >
@@ -589,49 +588,42 @@ export default function NewRegistrationView() {
               </div>
 
               {/* Row 2: Tanggal Pembuatan & Pembuat Dokumen */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">
                     Tanggal Pembuatan <span className="text-red-500">*</span>
                   </label>
-                  <div className="relative">
-                    <input
-                      type="date"
-                      required
-                      value={createdDate}
-                      onChange={(e) => setCreatedDate(e.target.value)}
-                      className="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2.5 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition shadow-sm"
-                    />
-                  </div>
+                  <input
+                    type="date"
+                    required
+                    value={createdDate}
+                    onChange={(e) => setCreatedDate(e.target.value)}
+                    className="h-9 w-full rounded-md border border-slate-300 bg-white px-2.5 text-xs text-slate-800 shadow-xs transition focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  />
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-200">
-                      Pembuat Dokumen <span className="text-red-500">*</span>
-                    </label>
-
-                  </div>
-                  <div className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg select-none">
-                    <div className="flex items-center gap-2.5 overflow-hidden">
-                      <div className="w-7 h-7 rounded-full bg-blue-600 text-white font-bold text-[11px] flex items-center justify-center flex-shrink-0 shadow-xs">
-                        {activeCreator.name
-                          ? activeCreator.name.split(' ').map(n => n[0]).slice(0, 2).join('')
-                          : 'US'}
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">
+                    Pembuat Dokumen <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex h-9 items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-2.5 dark:border-slate-700 dark:bg-slate-800/80 select-none">
+                    <div className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0">
+                      {activeCreator.name
+                        ? activeCreator.name.split(' ').map(n => n[0]).slice(0, 2).join('')
+                        : 'US'}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1 truncate">
+                        <span className="font-semibold text-slate-900 dark:text-white text-xs truncate">
+                          {activeCreator.name}
+                        </span>
+                        <span className="text-[8px] px-1 py-px rounded bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300 font-bold uppercase shrink-0">
+                          {activeCreator.role || 'STAFF'}
+                        </span>
                       </div>
-                      <div className="truncate text-xs">
-                        <div className="flex items-center gap-1.5 truncate">
-                          <span className="font-bold text-slate-900 dark:text-white truncate">
-                            {activeCreator.name}
-                          </span>
-                          <span className="text-[8px] px-1.5 py-0.2 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300 font-bold uppercase shrink-0">
-                            {activeCreator.role || 'STAFF'}
-                          </span>
-                        </div>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate font-mono">
-                          NIP: {activeCreator.nip || activeCreator.nik} • {activeCreator.department}
-                        </p>
-                      </div>
+                      <p className="text-[9px] text-slate-500 dark:text-slate-400 font-mono truncate leading-none mt-px">
+                        NIP: {activeCreator.nip || activeCreator.nik} • {activeCreator.department}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -639,47 +631,48 @@ export default function NewRegistrationView() {
 
               {/* Row 3: Judul Dokumen (Full Width with Character Counter) */}
               <div>
-                <div className="flex justify-between items-center mb-1.5">
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-200">
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200">
                     Judul Dokumen Resmi <span className="text-red-500">*</span>
                   </label>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-                    {title.length}/200 karakter
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
+                    {title.length}/200
                   </span>
                 </div>
                 <textarea
                   rows={2}
                   maxLength={200}
                   value={title}
-
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Contoh: INSTRUKSI KERJA PENGOPERASIAN MESIN..."
-                  className="w-full text-xs uppercase font-medium bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition placeholder:normal-case placeholder:text-slate-400 shadow-sm"
+                  className="w-full text-xs uppercase font-medium bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md px-2.5 py-2 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition placeholder:normal-case placeholder:text-slate-400 resize-none leading-relaxed"
                 />
               </div>
 
+              {/* Catatan & Lampiran — selalu tampil (tidak di-collapse) */}
+              <div className="space-y-3">
               {/* Catatan Pengajuan */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">
                   Catatan Pengajuan (Opsional)
                 </label>
                 <textarea
                   rows={2}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Tuliskan catatan pengajuan atau rincian perubahan dokumen jika diperlukan..."
-                  className="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                  placeholder="Tuliskan catatan atau rincian perubahan dokumen..."
+                  className="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md px-2.5 py-2 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition resize-none"
                 />
               </div>
 
               {/* Lampiran Berkas Dokumen (Upload PDF / Word / Excel) */}
-              <div className="pt-1">
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-200">
-                    Lampiran Berkas Resmi (PDF / Word / Excel)
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200">
+                    Lampiran Berkas (PDF / Word / Excel)
                   </label>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
-                    Opsional (Maks. 25 MB)
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                    Maks. 25 MB
                   </span>
                 </div>
 
@@ -751,17 +744,18 @@ export default function NewRegistrationView() {
                   </div>
                 )}
               </div>
+              </div>
 
               {/* Opsi Penyesuaian Pejabat Manual (Collapsible / Default Tertutup) */}
-              <div className="pt-1">
+              <div>
                 <button
                   type="button"
                   onClick={() => setShowCustomApprover(!showCustomApprover)}
-                  className="w-full sm:w-auto min-h-[44px] px-3.5 py-2.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-blue-700 bg-slate-100/90 hover:bg-blue-50/80 dark:text-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 flex items-center justify-between sm:justify-start gap-2.5 transition cursor-pointer shadow-xs"
+                  className="flex h-9 w-full items-center justify-between rounded-md border border-slate-200 bg-slate-50/80 px-3 text-left text-xs font-semibold text-slate-500 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400"
                 >
-                  <div className="flex items-center gap-2">
-                    <Sliders className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                    <span>{showCustomApprover ? 'Sembunyikan Penyesuaian Pejabat' : 'Sesuaikan Pejabat Penyetuju (Khusus Pengganti / Cuti)'}</span>
+                  <div className="flex items-center gap-1.5">
+                    <Sliders className="w-3 h-3 text-slate-400 shrink-0" />
+                    <span>{showCustomApprover ? 'Sembunyikan Penyesuaian Pejabat' : 'Sesuaikan Pejabat Penyetuju (Pengganti / Cuti)'}</span>
                   </div>
                   {showCustomApprover ? (
                     <ChevronUp className="w-3.5 h-3.5 text-slate-400 shrink-0" />
@@ -771,16 +765,16 @@ export default function NewRegistrationView() {
                 </button>
 
                 {showCustomApprover && (
-                  <div className="mt-3 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3">
+                  <div className="mt-2 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2.5">
                     {isFastTrack ? (
                       /* Fast-Track (Level 3 & 4): 1 Kolom Tunggal Kepala Departemen */
-                      <div className="space-y-1.5">
+                      <div className="space-y-1">
                         <div className="flex items-center justify-between">
-                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-200">
-                            Kepala Departemen (Pemeriksa & Penyetuju Teknis) <span className="text-red-500">*</span>
+                          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200">
+                            Kepala Departemen <span className="text-red-500">*</span>
                           </label>
-                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/60 dark:text-emerald-300 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
-                            <Zap className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/60 dark:text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
+                            <Zap className="w-2.5 h-2.5 shrink-0" />
                             <span>Jalur Cepat L{docLevel}</span>
                           </span>
                         </div>
@@ -791,7 +785,7 @@ export default function NewRegistrationView() {
                             setSelectedReviewerNip(newNip);
                             setSelectedApproverNip(newNip);
                           }}
-                          className="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition shadow-sm"
+                          className="h-9 w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md px-2.5 font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
                         >
                           {availableReviewers.map((emp) => (
                             <option key={emp.nip || emp.nik} value={emp.nip || emp.nik}>
@@ -802,13 +796,11 @@ export default function NewRegistrationView() {
                       </div>
                     ) : (
                       /* Standard (Level 1 & 2): 2 Kolom Berdampingan */
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                         {/* 1. Reviewer */}
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">
-                            {docLevel === 1
-                              ? 'Penelaah Mutu ISO (MR)'
-                              : 'Reviewer (Atasan Departemen)'} <span className="text-red-500">*</span>
+                          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">
+                            {docLevel === 1 ? 'Penelaah Mutu ISO (MR)' : 'Reviewer (Atasan Dept)'} <span className="text-red-500">*</span>
                           </label>
                           <select
                             value={selectedReviewerNip}
@@ -820,7 +812,7 @@ export default function NewRegistrationView() {
                                 if (alt) setSelectedApproverNip(alt.nip || alt.nik);
                               }
                             }}
-                            className="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition shadow-sm"
+                            className="h-9 w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md px-2.5 font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
                           >
                             {(docLevel === 1 ? availableApprovers : availableReviewers).map((emp) => (
                               <option key={emp.nip || emp.nik} value={emp.nip || emp.nik}>
@@ -832,15 +824,13 @@ export default function NewRegistrationView() {
 
                         {/* 2. Approver */}
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">
-                            {docLevel === 1
-                              ? 'Pengesah (General Manager / Direksi)'
-                              : 'Pengesah (Management Representative / MR)'} <span className="text-red-500">*</span>
+                          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">
+                            {docLevel === 1 ? 'Pengesah (GM / Direksi)' : 'Pengesah (MR)'} <span className="text-red-500">*</span>
                           </label>
                           <select
                             value={selectedApproverNip}
                             onChange={(e) => setSelectedApproverNip(e.target.value)}
-                            className="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition shadow-sm"
+                            className="h-9 w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md px-2.5 font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
                           >
                             {availableApprovers.map((emp) => (
                               <option key={emp.nip || emp.nik} value={emp.nip || emp.nik}>
@@ -853,11 +843,9 @@ export default function NewRegistrationView() {
                     )}
 
                     {!isFastTrack && selectedReviewerNip === selectedApproverNip && (
-                      <div className="p-2 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-lg flex items-start gap-2 text-xs text-amber-800 dark:text-amber-300">
-                        <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-600 mt-0.5" />
-                        <p className="leading-relaxed">
-                          Reviewer dan Approver sama (<strong>{activeReviewer?.name}</strong>). Disarankan memilih Direksi/GM.
-                        </p>
+                      <div className="p-2 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-md flex items-start gap-1.5 text-xs text-amber-800 dark:text-amber-300">
+                        <AlertCircle className="w-3 h-3 shrink-0 text-amber-600 mt-px" />
+                        <p>Reviewer dan Approver sama (<strong>{activeReviewer?.name}</strong>). Disarankan memilih Direksi/GM.</p>
                       </div>
                     )}
                   </div>
@@ -866,27 +854,25 @@ export default function NewRegistrationView() {
 
               {/* Info Khusus DCO & Admin: Verifikasi Otomatis Terusan ke MR */}
               {isDcoOrAdmin && (
-                <div className="p-3.5 bg-sky-50/70 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800 rounded-xl space-y-2">
-                  <div className="flex items-start gap-2.5">
-                    <Info className="w-4 h-4 text-sky-600 dark:text-sky-400 flex-shrink-0 mt-0.5" />
-                    <div className="text-xs">
-                      <p className="font-bold text-sky-900 dark:text-sky-200">
-                        {currentUser?.role === 'admin' ? 'Mode Pendaftaran Administrator' : 'Mode Pendaftaran Document Control'}
-                      </p>
-                      <p className="text-sky-800 dark:text-sky-300 mt-0.5 leading-relaxed">
-                        {currentUser?.role === 'admin' ? (
-                          <>Sebagai <strong>Administrator</strong>, berkas yang Anda daftarkan otomatis lolos verifikasi format dan langsung diteruskan ke Management Representative (<strong>{activeApprover?.name || 'MR'}</strong>) untuk pengesahan resmi.</>
-                        ) : (
-                          <>Sebagai <strong>Document Control Officer (DCO)</strong>, berkas yang Anda daftarkan otomatis lolos verifikasi format dan langsung diteruskan ke Management Representative (<strong>{activeApprover?.name || 'MR'}</strong>) untuk pengesahan resmi.</>
-                        )}
-                      </p>
-                    </div>
+                <div className="flex items-start gap-2.5 p-3 bg-sky-50/80 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800/80 rounded-lg">
+                  <Info className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400 flex-shrink-0 mt-px" />
+                  <div className="text-[11px] leading-relaxed">
+                    <span className="font-bold text-sky-900 dark:text-sky-200">
+                      {currentUser?.role === 'admin' ? 'Mode Administrator' : 'Mode Document Control'} —&nbsp;
+                    </span>
+                    <span className="text-sky-800 dark:text-sky-300">
+                      {currentUser?.role === 'admin' ? (
+                        <>Berkas langsung diteruskan ke MR (<strong>{activeApprover?.name || 'MR'}</strong>) tanpa verifikasi format.</>
+                      ) : (
+                        <>Berkas langsung diteruskan ke MR (<strong>{activeApprover?.name || 'MR'}</strong>) tanpa verifikasi format.</>
+                      )}
+                    </span>
                   </div>
                 </div>
               )}
 
               {/* Action Buttons */}
-              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+              <div className="hidden sm:flex sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => {
@@ -894,27 +880,27 @@ export default function NewRegistrationView() {
                     setNotes('');
                     setFileAttachment(null);
                   }}
-                  className="px-3 py-2.5 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition cursor-pointer text-center"
+                  className="px-2.5 py-2 text-xs font-medium text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200 transition cursor-pointer"
                 >
                   Reset Form
                 </button>
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={handleSaveDraft}
-                    className="flex items-center justify-center gap-1.5 px-5 py-2.5 min-h-[44px] text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 border border-slate-300 dark:border-slate-700 rounded-lg transition shadow-xs cursor-pointer active:scale-98"
+                    className="flex items-center justify-center gap-1.5 px-4 py-2 h-9 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 border border-slate-300 dark:border-slate-700 rounded-lg transition shadow-xs cursor-pointer active:scale-98"
                   >
-                    <Save className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                    <Save className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
                     Simpan Draft
                   </button>
                   <button
                     type="button"
                     onClick={handleSubmitVerification}
                     disabled={isSubmitting}
-                    className="flex items-center justify-center gap-2 px-6 py-2.5 min-h-[44px] text-xs font-bold text-white rounded-lg transition shadow-sm hover:shadow cursor-pointer bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-blue-600/20 active:scale-98"
+                    className="flex items-center justify-center gap-1.5 px-5 py-2 h-9 text-xs font-bold text-white rounded-lg transition cursor-pointer bg-blue-600 hover:bg-blue-700 active:bg-blue-800 active:scale-98"
                   >
-                    <Send className="w-4 h-4" />
-                    Ajukan Registrasi Dokumen
+                    <Send className="w-3.5 h-3.5" />
+                    Ajukan Registrasi
                   </button>
                 </div>
               </div>
@@ -1124,6 +1110,27 @@ export default function NewRegistrationView() {
 
       </div>
 
+      {/* Mobile action bar keeps the submission path available throughout this long form. */}
+      <div className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-[auto_1fr] gap-2 border-t border-slate-200 bg-white/95 px-3 py-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur dark:border-slate-800 dark:bg-slate-900/95 sm:hidden">
+        <button
+          type="button"
+          onClick={handleSaveDraft}
+          className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition active:scale-[0.98] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+          aria-label="Simpan sebagai draft"
+        >
+          <Save className="h-4 w-4" aria-hidden="true" />
+          <span>Draft</span>
+        </button>
+        <button
+          type="button"
+          onClick={handleSubmitVerification}
+          disabled={isSubmitting}
+          className="flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <Send className="h-4 w-4" aria-hidden="true" />
+          Ajukan Registrasi
+        </button>
+      </div>
 
     </div>
   );

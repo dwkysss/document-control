@@ -92,20 +92,84 @@ export default function DepartmentMasterView() {
         <button
           onClick={handleOpenAddModal}
           type="button"
-          className="flex items-center gap-1.5 px-4 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-md transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+          className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
         >
           <Plus className="w-4 h-4" />
           Tambah Departemen
         </button>
       </div>
 
-      {/* Table */}
+      {/* Table & Mobile Cards */}
       <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
         <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
           <div><h3 className="text-sm font-bold text-slate-900 dark:text-white">Daftar departemen</h3><p className="mt-0.5 text-xs text-slate-600 dark:text-slate-300">{filtered.length} departemen</p></div>
           <label className="relative w-full sm:w-80"><span className="sr-only">Cari kode, departemen, atau kepala departemen</span><Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" aria-hidden="true" /><input type="search" placeholder="Cari kode, nama, atau kepala" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full rounded-md border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-white" /></label>
         </div>
-        <div className="overflow-x-auto">
+
+        {/* Mobile Card List View (md:hidden) */}
+        <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+          {filtered.length === 0 ? (
+            <div className="p-8 text-center text-slate-500">
+              <Building2 className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-600 mb-2" />
+              <p className="font-bold text-sm text-slate-800 dark:text-slate-200">
+                {searchTerm ? 'Tidak ada departemen yang cocok' : 'Belum ada departemen'}
+              </p>
+              <p className="text-xs text-slate-400 mt-1">
+                {searchTerm ? 'Coba gunakan kata kunci kode atau nama lain.' : 'Klik tombol Tambah Departemen untuk menambahkan.'}
+              </p>
+            </div>
+          ) : (
+            filtered.map((dept) => (
+              <div key={dept.id} className="p-4 space-y-2 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
+                {/* Header: Code & Action Buttons */}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                    {dept.code}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditModal(dept)}
+                      className="p-1.5 text-slate-600 hover:text-blue-700 hover:bg-blue-50 dark:text-slate-300 dark:hover:bg-slate-800 rounded-md transition"
+                      title="Edit Departemen"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirm(`Hapus departemen ${dept.code}?`)) {
+                          deleteDepartment(dept.id);
+                        }
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-md transition"
+                      title="Hapus Departemen"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Name */}
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white leading-snug">
+                  {dept.name}
+                </h3>
+
+                {/* Head of Department */}
+                <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 pt-0.5">
+                  <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <span className="text-slate-400 text-[11px]">Kepala:</span>
+                  <span className="text-slate-700 dark:text-slate-300 font-medium">
+                    {dept.head || 'Belum ditetapkan'}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop Table View (hidden md:block) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full min-w-[760px] text-left border-collapse text-sm">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">

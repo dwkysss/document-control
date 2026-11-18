@@ -13,12 +13,13 @@ import {
   Ban,
   Trash2,
   AlertTriangle,
+  X,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight
 } from 'lucide-react';
-import Badge, { CompanyBadge } from '../common/Badge';
+import Badge, { CompanyBadge, FileFormatBadge } from '../common/Badge';
 import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
 import { exportToExcel, exportToCSV, exportMasterRegisterPDF } from '../../utils/exportUtils';
@@ -56,6 +57,15 @@ export default function AllDocumentsView() {
   const [filterDept, setFilterDept] = useState('ALL');
   const [filterType, setFilterType] = useState('ALL');
   const [filterStatus, setFilterStatus] = useState('ALL');
+
+  // Deteksi tampilan mobile untuk penyingkatan teks filter yang ramah layar kecil
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 640 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -174,62 +184,133 @@ export default function AllDocumentsView() {
       </div>
 
       {/* Multi Filter Bar */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {/* Search Input */}
-        <div className="relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-          <input
-            type="text"
-            placeholder="Cari nomor / judul / pembuat..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 p-3 sm:p-4 space-y-2.5">
+        <div className="space-y-2 sm:space-y-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-3">
+          {/* Search Input */}
+          <div className="relative">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+            <input
+              type="text"
+              placeholder="Cari nomor / judul / pembuat..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* 3 Filter Dropdowns: Pada mobile sejajar 1 baris (3 kolom) dengan teks ringkas & anti-terpotong */}
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-3 sm:contents">
+            {/* Filter Departemen */}
+            <div>
+              <select
+                value={filterDept}
+                onChange={(e) => setFilterDept(e.target.value)}
+                className={`w-full text-[11px] sm:text-xs border rounded-lg px-2 sm:px-3 py-2 font-medium truncate transition ${
+                  filterDept !== 'ALL'
+                    ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-400 text-blue-700 dark:text-blue-300 font-bold'
+                    : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                }`}
+                title="Filter Departemen"
+              >
+                <option value="ALL">{isMobile ? 'Dept' : `Semua Dept. (${departments.length})`}</option>
+                {departments.map(d => (
+                  <option key={d.id} value={d.code}>{d.code}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filter Jenis Dokumen */}
+            <div>
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className={`w-full text-[11px] sm:text-xs border rounded-lg px-2 sm:px-3 py-2 font-medium truncate transition ${
+                  filterType !== 'ALL'
+                    ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-400 text-blue-700 dark:text-blue-300 font-bold'
+                    : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                }`}
+                title="Filter Jenis Dokumen"
+              >
+                <option value="ALL">{isMobile ? 'Jenis' : `Semua Jenis (${documentTypes.length})`}</option>
+                {documentTypes.map(t => (
+                  <option key={t.id} value={t.code}>{t.code}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filter Status */}
+            <div>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className={`w-full text-[11px] sm:text-xs border rounded-lg px-2 sm:px-3 py-2 font-medium truncate transition ${
+                  filterStatus !== 'ALL'
+                    ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-400 text-blue-700 dark:text-blue-300 font-bold'
+                    : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                }`}
+                title="Filter Status"
+              >
+                <option value="ALL">{isMobile ? 'Status' : 'Semua Status'}</option>
+                <option value="AKTIF">AKTIF</option>
+                <option value="VERIFIKASI">VERIFIKASI</option>
+                <option value="DRAFT">DRAFT</option>
+                <option value="OBSOLETE">OBSOLETE</option>
+                <option value="DITOLAK">DITOLAK</option>
+              </select>
+            </div>
+          </div>
         </div>
 
-        {/* Filter Departemen */}
-        <div>
-          <select
-            value={filterDept}
-            onChange={(e) => setFilterDept(e.target.value)}
-            className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-700 dark:text-slate-300 font-medium"
-          >
-            <option value="ALL">Semua Departemen ({departments.length})</option>
-            {departments.map(d => (
-              <option key={d.id} value={d.code}>{d.code} - {d.name}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Filter Jenis Dokumen */}
-        <div>
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-            className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-700 dark:text-slate-300 font-medium"
-          >
-            <option value="ALL">Semua Jenis Dokumen ({documentTypes.length})</option>
-            {documentTypes.map(t => (
-              <option key={t.id} value={t.code}>{t.code} - {t.name}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Filter Status */}
-        <div>
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-700 dark:text-slate-300 font-medium"
-          >
-            <option value="ALL">Semua Status (Aktif, Draft, dll)</option>
-            <option value="AKTIF">AKTIF (Berlaku Resmi)</option>
-            <option value="VERIFIKASI">VERIFIKASI (Review)</option>
-            <option value="DRAFT">DRAFT</option>
-            <option value="OBSOLETE">OBSOLETE (Kadaluarsa)</option>
-            <option value="DITOLAK">DITOLAK</option>
-          </select>
-        </div>
+        {/* Active Filter Indicators & Reset Button (muncul jika ada filter yang aktif) */}
+        {(filterDept !== 'ALL' || filterType !== 'ALL' || filterStatus !== 'ALL' || searchTerm.trim()) && (
+          <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[11px] border-t border-slate-100 dark:border-slate-800">
+            <span className="text-slate-400 text-[10px]">Filter aktif:</span>
+            {filterDept !== 'ALL' && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900 font-medium text-[10px]">
+                Dept: {filterDept}
+                <button type="button" onClick={() => setFilterDept('ALL')} className="hover:text-blue-900 dark:hover:text-white cursor-pointer">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {filterType !== 'ALL' && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-900 font-medium text-[10px]">
+                Jenis: {filterType}
+                <button type="button" onClick={() => setFilterType('ALL')} className="hover:text-purple-900 dark:hover:text-white cursor-pointer">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {filterStatus !== 'ALL' && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900 font-medium text-[10px]">
+                Status: {filterStatus}
+                <button type="button" onClick={() => setFilterStatus('ALL')} className="hover:text-emerald-900 dark:hover:text-white cursor-pointer">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {searchTerm.trim() && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900 font-medium text-[10px]">
+                "{searchTerm}"
+                <button type="button" onClick={() => setSearchTerm('')} className="hover:text-amber-900 dark:hover:text-white cursor-pointer">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setFilterDept('ALL');
+                setFilterType('ALL');
+                setFilterStatus('ALL');
+                setSearchTerm('');
+              }}
+              className="text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 text-[10px] font-semibold underline ml-1 cursor-pointer"
+            >
+              Reset
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Main Master Table & Mobile Card List */}
@@ -266,19 +347,21 @@ export default function AllDocumentsView() {
                   <h3 className="text-sm font-bold text-slate-900 dark:text-white leading-snug line-clamp-2">
                     {doc.title}
                   </h3>
-                  <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-slate-500 dark:text-slate-400">
-                    <div>
-                      <span className="text-slate-400">Dept:</span> <strong className="text-slate-700 dark:text-slate-300">{doc.department}</strong>
-                    </div>
-                    <div>
-                      <span className="text-slate-400">Jenis:</span> <strong className="text-slate-700 dark:text-slate-300">{doc.type}</strong>
-                    </div>
-                    <div>
-                      <span className="text-slate-400">Pembuat:</span> <span className="text-slate-700 dark:text-slate-300 truncate">{doc.creator}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400">Tercatat:</span> <span className="text-slate-700 dark:text-slate-300">{formatRegisterDate(doc.createdDate)}</span>
-                    </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-y-1 gap-x-2 text-[11px] text-slate-500 dark:text-slate-400">
+                    <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-bold text-[10px] text-slate-700 dark:text-slate-300 shrink-0">
+                      {doc.department}
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-semibold text-[10px] text-slate-600 dark:text-slate-400 shrink-0">
+                      {doc.type}
+                    </span>
+                    <FileFormatBadge doc={doc} />
+                    <span className="text-slate-700 dark:text-slate-300 font-medium">
+                      {doc.creator}
+                    </span>
+                    <span className="text-slate-300 dark:text-slate-600">•</span>
+                    <span className="font-mono text-[10px] shrink-0">
+                      {formatRegisterDate(doc.createdDate)}
+                    </span>
                   </div>
                 </div>
 
@@ -338,16 +421,34 @@ export default function AllDocumentsView() {
         {/* Desktop Table (hidden md:block) */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full min-w-[1120px] table-fixed text-left border-collapse text-sm">
-            <colgroup><col className="w-[32%]" /><col className="w-[8%]" /><col className="w-[10%]" /><col className="w-[15%]" /><col className="w-[7%]" /><col className="w-[10%]" /><col className="w-[10%]" /><col className="w-[8%]" /></colgroup>
+            <colgroup>
+              <col className="w-[30%]" />
+              <col className="w-[7%]" />
+              <col className="w-[7%]" />
+              <col className="w-[9%]" />
+              <col className="w-[14%]" />
+              <col className="w-[6%]" />
+              <col className="w-[9%]" />
+              <col className="w-[10%]" />
+              <col className="w-[8%]" />
+            </colgroup>
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                <th className="py-3 px-4">Dokumen</th><th className="py-3 px-3">Jenis</th><th className="py-3 px-3">Dept.</th><th className="py-3 px-3">Pembuat</th><th className="py-3 px-3 text-center">Rev.</th><th className="py-3 px-3">Status</th><th className="py-3 px-3">Tgl. registrasi</th><th className="py-3 px-3 text-right">Aksi</th>
+                <th className="py-3 px-4">Dokumen</th>
+                <th className="py-3 px-3">Jenis</th>
+                <th className="py-3 px-3 text-center">Format</th>
+                <th className="py-3 px-3">Dept.</th>
+                <th className="py-3 px-3">Pembuat</th>
+                <th className="py-3 px-3 text-center">Rev.</th>
+                <th className="py-3 px-3">Status</th>
+                <th className="py-3 px-3">Tgl. registrasi</th>
+                <th className="py-3 px-3 text-right">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {paginatedDocs.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-500">
+                  <td colSpan={9} className="py-8 text-center text-slate-500">
                     Tidak ada dokumen yang sesuai dengan kriteria filter.
                   </td>
                 </tr>
@@ -361,6 +462,9 @@ export default function AllDocumentsView() {
                       </div>
                     </td>
                     <td className="py-3.5 px-3 text-xs font-semibold text-slate-700 dark:text-slate-300">{doc.type}</td>
+                    <td className="py-3.5 px-3 text-center">
+                      <FileFormatBadge doc={doc} />
+                    </td>
                     <td className="py-3.5 px-3 text-xs text-slate-700 dark:text-slate-300">{doc.department}</td>
                     <td className="py-3.5 px-3 text-xs text-slate-700 dark:text-slate-300"><span className="block truncate" title={doc.creator}>{doc.creator}</span></td>
                     <td className="py-3.5 px-3 text-center font-mono text-xs font-bold tabular-nums">{doc.revision}</td>

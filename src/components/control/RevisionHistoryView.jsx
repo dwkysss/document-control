@@ -17,7 +17,7 @@ import {
   ChevronsLeft,
   ChevronsRight
 } from 'lucide-react';
-import Badge from '../common/Badge';
+import Badge, { CompanyBadge, FileFormatBadge } from '../common/Badge';
 import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
 
@@ -166,11 +166,11 @@ export default function RevisionHistoryView() {
         {/* Tier 1: Segmented Filter Tabs Header */}
         <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 bg-slate-50/70 dark:bg-slate-900/70">
           {/* Segmented Filter Pills */}
-          <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/90 rounded-lg shrink-0 overflow-x-auto">
+          <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/90 rounded-lg shrink-0 overflow-x-auto w-full sm:w-auto scrollbar-none">
             <button
               type="button"
               onClick={() => setActiveTab('ALL')}
-              className={`px-3 py-1.5 rounded-md text-xs font-bold transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+              className={`px-3 py-1.5 rounded-md text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
                 activeTab === 'ALL'
                   ? 'bg-white dark:bg-slate-700 text-purple-600 dark:text-purple-400 shadow-2xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -187,7 +187,7 @@ export default function RevisionHistoryView() {
             <button
               type="button"
               onClick={() => setActiveTab('MULTI')}
-              className={`px-3 py-1.5 rounded-md text-xs font-bold transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+              className={`px-3 py-1.5 rounded-md text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
                 activeTab === 'MULTI'
                   ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-2xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -204,7 +204,7 @@ export default function RevisionHistoryView() {
             <button
               type="button"
               onClick={() => setActiveTab('INITIAL')}
-              className={`px-3 py-1.5 rounded-md text-xs font-bold transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+              className={`px-3 py-1.5 rounded-md text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
                 activeTab === 'INITIAL'
                   ? 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-2xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -257,12 +257,12 @@ export default function RevisionHistoryView() {
             )}
           </div>
 
-          {/* Select Dropdowns */}
-          <div className="flex items-center gap-2">
+          {/* Select Dropdowns: Pada mobile dibuat 1 baris sejajar (2 kolom) */}
+          <div className="grid grid-cols-2 gap-2 w-full sm:w-auto sm:flex sm:items-center">
             <select
               value={selectedDept}
               onChange={(e) => setSelectedDept(e.target.value)}
-              className="text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer flex-1 sm:flex-initial"
+              className="w-full sm:w-auto text-[11px] sm:text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg px-2 sm:px-2.5 py-1.5 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer truncate"
             >
               <option value="ALL">Semua Departemen</option>
               {departments.map(d => (
@@ -273,7 +273,7 @@ export default function RevisionHistoryView() {
             <select
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
-              className="text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer flex-1 sm:flex-initial"
+              className="w-full sm:w-auto text-[11px] sm:text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg px-2 sm:px-2.5 py-1.5 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer truncate"
             >
               <option value="ALL">Semua Jenis</option>
               {documentTypes.map(t => (
@@ -283,19 +283,145 @@ export default function RevisionHistoryView() {
           </div>
         </div>
 
-        {/* Dense, Clean Table (100% Width, Zero Empty Holes) */}
-        <div className="overflow-x-auto">
+        {/* Mobile Card List View (md:hidden) */}
+        <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+          {filteredDocs.length === 0 ? (
+            <div className="p-8 text-center text-slate-500">
+              <GitBranch className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-600 mb-2" />
+              <p className="font-bold text-sm text-slate-800 dark:text-slate-200">
+                Tidak ada riwayat dokumen yang cocok
+              </p>
+              <p className="text-xs text-slate-400 mt-1">
+                Coba sesuaikan kata kunci pencarian atau reset filter.
+              </p>
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="mt-3 px-3 py-1.5 text-xs font-semibold text-purple-600 bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 rounded-lg transition cursor-pointer"
+                >
+                  Reset Filter
+                </button>
+              )}
+            </div>
+          ) : (
+            paginatedDocs.map((doc) => {
+              const baseKey = getBaseKey(doc);
+              const seriesCount = versionCountMap[baseKey] || 1;
+              const isMulti = seriesCount > 1;
+
+              return (
+                <div key={doc.id} className="p-4 space-y-2.5 hover:bg-purple-50/20 dark:hover:bg-slate-800/40 transition">
+                  {/* Header: Company + Number + Format + Rev + Status */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
+                      <button
+                        type="button"
+                        onClick={() => setViewingDocument(doc)}
+                        className="font-mono text-xs font-bold text-blue-700 dark:text-blue-300 hover:underline truncate text-left cursor-pointer"
+                        title={doc.docNumber}
+                      >
+                        {doc.docNumber}
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <FileFormatBadge doc={doc} />
+                      <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                        Rev {doc.revision || '00'}
+                      </span>
+                      <Badge status={doc.status} size="sm" />
+                    </div>
+                  </div>
+
+                  {/* Title */}
+                  <h3 className="text-xs font-semibold text-slate-900 dark:text-white leading-snug line-clamp-2">
+                    {doc.title}
+                  </h3>
+
+                  {/* Metadata Row */}
+                  <div className="flex flex-wrap items-center gap-y-1 gap-x-2 text-[11px] text-slate-500 dark:text-slate-400">
+                    <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-bold text-[10px] text-slate-700 dark:text-slate-300 shrink-0">
+                      {doc.department}
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-semibold text-[10px] text-slate-600 dark:text-slate-400 shrink-0">
+                      {doc.type || 'SOP'}
+                    </span>
+                    <span className="text-slate-700 dark:text-slate-300 font-medium">
+                      {doc.creator}
+                    </span>
+                    <span className="text-slate-300 dark:text-slate-600">•</span>
+                    <span className="font-mono text-[10px] shrink-0">
+                      {formatRevisionDate(doc.effectiveDate || doc.createdDate)}
+                    </span>
+                  </div>
+
+                  {/* Catatan Perubahan (jika ada) */}
+                  {(doc.notes || doc.changeReason) && (
+                    <div className="text-[11px] bg-slate-50 dark:bg-slate-800/60 rounded-md p-2 text-slate-600 dark:text-slate-300 italic line-clamp-2 border border-slate-200/60 dark:border-slate-700/60">
+                      "{doc.notes || doc.changeReason}"
+                    </div>
+                  )}
+
+                  {/* Action Buttons: 50:50 Grid */}
+                  <div className="pt-1.5 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setViewingDocument(doc)}
+                      className="h-8 px-3 text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 rounded-lg border border-blue-200/80 dark:border-blue-800/80 transition flex items-center justify-center gap-1.5 active:scale-98 cursor-pointer"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Pratinjau</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedSeriesBaseKey(baseKey)}
+                      className={`h-8 px-3 text-xs font-semibold rounded-lg border transition flex items-center justify-center gap-1.5 active:scale-98 cursor-pointer ${
+                        isMulti
+                          ? 'text-purple-700 dark:text-purple-300 bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 border-purple-200/80 dark:border-purple-800/80 font-bold'
+                          : 'text-slate-700 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+                      }`}
+                    >
+                      <GitBranch className="w-3.5 h-3.5 text-purple-600" />
+                      <span>Silsilah ({seriesCount})</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Dense, Clean Table (Desktop View: hidden md:block) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full min-w-[1240px] table-fixed text-left border-collapse text-sm">
-            <colgroup><col className="w-[28%]" /><col className="w-[9%]" /><col className="w-[12%]" /><col className="w-[11%]" /><col className="w-[12%]" /><col className="w-[18%]" /><col className="w-[10%]" /></colgroup>
+            <colgroup>
+              <col className="w-[26%]" />
+              <col className="w-[8%]" />
+              <col className="w-[7%]" />
+              <col className="w-[11%]" />
+              <col className="w-[11%]" />
+              <col className="w-[11%]" />
+              <col className="w-[16%]" />
+              <col className="w-[10%]" />
+            </colgroup>
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                <th className="py-3 px-4">Dokumen</th><th className="py-3 px-3">Dept.</th><th className="py-3 px-3">Versi</th><th className="py-3 px-3">Tgl. berlaku</th><th className="py-3 px-3">Pembuat</th><th className="py-3 px-3">Catatan revisi</th><th className="py-3 px-3 text-right">Aksi</th>
+                <th className="py-3 px-4">Dokumen</th>
+                <th className="py-3 px-3">Dept.</th>
+                <th className="py-3 px-3 text-center">Format</th>
+                <th className="py-3 px-3">Versi</th>
+                <th className="py-3 px-3">Tgl. berlaku</th>
+                <th className="py-3 px-3">Pembuat</th>
+                <th className="py-3 px-3">Catatan revisi</th>
+                <th className="py-3 px-3 text-right">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filteredDocs.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-14 text-center text-slate-500">
+                  <td colSpan={8} className="py-14 text-center text-slate-500">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <GitBranch className="w-8 h-8 text-slate-300 dark:text-slate-600" />
                       <p className="font-bold text-slate-700 dark:text-slate-300 text-sm">
@@ -346,6 +472,9 @@ export default function RevisionHistoryView() {
                         </div>
                       </td>
                       <td className="py-4 px-3 text-xs text-slate-700 dark:text-slate-300">{doc.department}</td>
+                      <td className="py-4 px-3 text-center">
+                        <FileFormatBadge doc={doc} />
+                      </td>
                       <td className="py-4 px-3">
                         <div className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200">Rev. {doc.revision || '00'}</div>
                         <div className="mt-1"><Badge status={doc.status} size="sm" /></div>

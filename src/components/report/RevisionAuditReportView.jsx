@@ -234,7 +234,7 @@ export default function RevisionAuditReportView() {
   return (
     <div className="space-y-4">
       {/* 1. Header Toolbar */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 p-4 sm:p-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <History className="w-5 h-5 text-blue-600 shrink-0" />
@@ -245,51 +245,51 @@ export default function RevisionAuditReportView() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="grid grid-cols-2 gap-2 w-full sm:w-auto sm:flex sm:items-center">
           {/* Tombol Sinkronisasi Jejak Audit */}
           <button
             type="button"
             onClick={() => syncAuditLogsFromDocuments && syncAuditLogsFromDocuments()}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 rounded-lg transition cursor-pointer"
+            className="flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 rounded-lg transition cursor-pointer text-center"
             title="Sinkronkan ulang jejak audit dari data dokumen terdaftar"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span>Sinkronkan Jejak Audit</span>
+            <RefreshCw className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Sinkronkan</span>
           </button>
 
           {/* Unduh Excel */}
           <button
             type="button"
             onClick={handleExportExcel}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 rounded-lg transition cursor-pointer"
+            className="flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 rounded-lg transition cursor-pointer text-center"
           >
-            <FileSpreadsheet className="w-4 h-4" />
-            <span>Unduh Excel Log</span>
+            <FileSpreadsheet className="w-4 h-4 shrink-0" />
+            <span className="truncate">Unduh Excel</span>
           </button>
         </div>
       </div>
 
       {/* 2. Filter Bar Ringkas */}
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 p-3 sm:p-4">
-        <div className="flex flex-wrap items-center gap-2.5 text-xs">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 text-xs">
           {/* Search Box */}
-          <div className="relative flex-1 min-w-[240px]">
+          <div className="relative flex-1 min-w-0">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
             <input
               type="text"
               placeholder="Cari user, NIP, nomor dokumen, judul, atau kata kunci..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
             />
           </div>
 
-          {/* Filter Tindakan */}
-          <div className="w-full sm:w-auto">
+          {/* Filter Tindakan & Reset */}
+          <div className="flex items-center gap-2">
             <select
               value={filterAction}
               onChange={(e) => setFilterAction(e.target.value)}
-              className="w-full sm:w-auto py-2 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer font-medium"
+              className="flex-1 sm:flex-none sm:w-auto py-2 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer font-medium text-xs"
             >
               <option value="ALL">Semua Jenis Tindakan</option>
               <option value="APPROVE_DOCUMENT">Persetujuan Resmi (APPROVE)</option>
@@ -301,28 +301,124 @@ export default function RevisionAuditReportView() {
               <option value="MASTER_DATA">Perubahan Data Master</option>
               <option value="USER_LOGIN">Aktivitas Login</option>
             </select>
-          </div>
 
-          {/* Reset Filter */}
-          {(searchTerm !== '' || filterAction !== 'ALL') && (
-            <button
-              onClick={() => {
-                setSearchTerm('');
-                setFilterAction('ALL');
-              }}
-              className="flex items-center gap-1 py-2 px-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg font-medium transition cursor-pointer"
-              title="Reset pencarian"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Reset</span>
-            </button>
-          )}
+            {/* Reset Filter */}
+            {(searchTerm !== '' || filterAction !== 'ALL') && (
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setFilterAction('ALL');
+                }}
+                className="shrink-0 flex items-center gap-1 py-2 px-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg font-medium transition cursor-pointer text-xs"
+                title="Reset pencarian"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Reset</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* 3. Tabel Audit Trail */}
+      {/* 3. Container Card & Tabel Audit Trail */}
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Mobile Card List View (md:hidden) */}
+        <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+          {paginatedLogs.length > 0 ? (
+            paginatedLogs.map((log, idx) => {
+              const matchingDoc = documents.find((d) => d.docNumber === log.docNumber);
+              const rowNumber = startIndex + idx + 1;
+
+              return (
+                <div
+                  key={log.id || `audit-m-${startIndex}-${idx}`}
+                  className="p-4 space-y-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition"
+                >
+                  {/* Row 1: No., Timestamp & Action Badge */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="font-mono text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded shrink-0">
+                        #{rowNumber}
+                      </span>
+                      <span className="font-mono text-[10.5px] text-slate-500 dark:text-slate-400 truncate">
+                        {log.timestamp}
+                      </span>
+                    </div>
+                    <div className="shrink-0">
+                      {getActionBadge(log.action)}
+                    </div>
+                  </div>
+
+                  {/* Row 2: Document info (if present) */}
+                  {log.docNumber && (
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400 tracking-tight truncate">
+                          {log.docNumber}
+                        </span>
+                        {matchingDoc && (
+                          <button
+                            type="button"
+                            onClick={() => setViewingDocument && setViewingDocument(matchingDoc)}
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer shrink-0"
+                          >
+                            <Eye className="w-3 h-3" />
+                            <span>Lihat</span>
+                          </button>
+                        )}
+                      </div>
+                      {log.docTitle && (
+                        <h4 className="text-xs font-semibold text-slate-800 dark:text-slate-200 line-clamp-2 leading-snug">
+                          {log.docTitle}
+                        </h4>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Row 3: User Pelaksana */}
+                  <div className="flex items-center justify-between gap-2 text-xs pt-0.5">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <div className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-700 dark:text-slate-300 shrink-0">
+                        {(log.user || 'U').charAt(0).toUpperCase()}
+                      </div>
+                      <span className="font-bold text-slate-900 dark:text-white truncate" title={log.user}>
+                        {log.user}
+                      </span>
+                    </div>
+                    <span className="text-[10.5px] text-slate-400 font-mono shrink-0">
+                      NIP: {log.nip || log.nik || '-'}
+                    </span>
+                  </div>
+
+                  {/* Row 4: Rincian Aktivitas */}
+                  {log.details && (
+                    <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800/80 text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed break-words">
+                      <span className="text-slate-400 mr-1 font-medium">Rincian:</span>
+                      {log.details}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          ) : (
+            <div className="p-8 text-center text-slate-400">
+              <ShieldCheck className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-600 mb-2" />
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                Belum ada jejak audit yang sesuai kriteria pencarian.
+              </p>
+              <button
+                type="button"
+                onClick={() => syncAuditLogsFromDocuments && syncAuditLogsFromDocuments()}
+                className="mt-2 px-3 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+              >
+                Sinkronkan Jejak Audit dari Dokumen Terdaftar
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Desktop Table View (hidden md:block overflow-x-auto) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="bg-[#102a4e] text-white uppercase text-[10px] tracking-wider font-semibold">
@@ -339,7 +435,7 @@ export default function RevisionAuditReportView() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {paginatedLogs.length > 0 ? (
                 paginatedLogs.map((log, idx) => {
-                  const matchingDoc = documents.find(d => d.docNumber === log.docNumber);
+                  const matchingDoc = documents.find((d) => d.docNumber === log.docNumber);
                   const rowNumber = startIndex + idx + 1;
 
                   return (
@@ -424,9 +520,9 @@ export default function RevisionAuditReportView() {
         </div>
 
         {/* 4. FOOTER PAGINATION YANG LENGKAP & RAPI */}
-        <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
           {/* Kiri: Page Size Selector & Info Entri */}
-          <div className="flex items-center gap-3 flex-wrap text-slate-600 dark:text-slate-400">
+          <div className="flex items-center justify-between sm:justify-start w-full sm:w-auto gap-3 text-slate-600 dark:text-slate-400">
             <div className="flex items-center gap-1.5">
               <span>Tampilkan:</span>
               <select
@@ -439,21 +535,19 @@ export default function RevisionAuditReportView() {
                 <option value={50}>50</option>
                 <option value={100}>100</option>
               </select>
-              <span>per halaman</span>
+              <span>/ hal</span>
             </div>
 
-            <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">•</span>
-
-            <span className="font-mono text-[11.5px]">
+            <span className="font-mono text-[11px] sm:text-[11.5px] text-right sm:text-left">
               Menampilkan <strong className="text-slate-900 dark:text-white font-bold">{totalEntries > 0 ? startIndex + 1 : 0}</strong> -{' '}
               <strong className="text-slate-900 dark:text-white font-bold">{Math.min(startIndex + pageSize, totalEntries)}</strong> dari{' '}
-              <strong className="text-slate-900 dark:text-white font-bold">{totalEntries}</strong> entri
+              <strong className="text-slate-900 dark:text-white font-bold">{totalEntries}</strong>
             </span>
           </div>
 
           {/* Kanan: Navigasi Tombol Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center justify-center w-full sm:w-auto gap-1">
               {/* Tombol Pertama */}
               <button
                 type="button"

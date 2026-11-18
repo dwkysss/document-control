@@ -151,23 +151,23 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
   };
 
   return (
-    <header className="sticky top-0 z-30 h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 shadow-2xs flex items-center lg:-ml-8 lg:w-[calc(100%+2rem)] lg:pl-8">
-      <div className="w-full flex items-center justify-between px-4 sm:px-6 gap-2 sm:gap-4 min-w-0">
+    <header className="sticky top-0 z-30 h-14 sm:h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 shadow-2xs flex items-center lg:-ml-8 lg:w-[calc(100%+2rem)] lg:pl-8">
+      <div className="w-full flex items-center justify-between px-3 sm:px-6 gap-1.5 sm:gap-4 min-w-0">
         {/* Left Side: Sidebar Toggle & Breadcrumbs */}
-        <div className="flex items-center gap-2.5 sm:gap-3.5 shrink-0 min-w-0">
+        <div className="flex items-center gap-2 sm:gap-3.5 min-w-0 flex-1 mr-1 sm:mr-0">
           <button
             onClick={onToggleSidebar}
-            className="w-10 h-10 min-w-[44px] min-h-[44px] flex items-center justify-center p-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition active:scale-95 border border-slate-200/60 dark:border-slate-700/60 shadow-2xs flex-shrink-0 cursor-pointer"
+            className="w-8.5 h-8.5 sm:w-10 sm:h-10 flex items-center justify-center text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white rounded-lg sm:rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition active:scale-95 border border-slate-200/70 dark:border-slate-700/70 shadow-2xs flex-shrink-0 cursor-pointer"
             title="Toggle Sidebar"
             aria-label="Toggle Sidebar"
           >
-            <Menu className="w-5 h-5" />
+            <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
 
           <div className="h-5 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block flex-shrink-0" />
 
-          <div className="min-w-0">
-            <h1 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight font-sans whitespace-nowrap">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xs sm:text-base font-bold text-slate-900 dark:text-white tracking-tight font-sans truncate">
               {getPageTitle()}
             </h1>
             <nav className="hidden sm:flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate max-w-[160px] md:max-w-xs">
@@ -191,7 +191,7 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
         </div>
 
         {/* Right Side: Global Search, Notification Center, User Profile */}
-        <div className="flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0 min-w-0">
+        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
           {/* Multi-Company Scope Filter (Desktop Pill & Mobile Select) */}
           {!isCompanyLocked && (
             <>
@@ -200,7 +200,7 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
                 <select
                   value={selectedCompanyFilter}
                   onChange={(e) => setSelectedCompanyFilter(e.target.value)}
-                  className="text-[11px] font-bold bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="h-8 text-[10px] font-bold bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 rounded-lg px-1.5 py-0 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs cursor-pointer"
                   aria-label="Pilih Perusahaan"
                 >
                   <option value="ALL">ALL PT</option>
@@ -250,11 +250,11 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
           <button
             type="button"
             onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
-            className="md:hidden w-10 h-10 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700/80 rounded-xl transition active:scale-95 cursor-pointer shrink-0 shadow-2xs"
+            className="md:hidden w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700/80 rounded-lg sm:rounded-xl transition active:scale-95 cursor-pointer shrink-0 shadow-2xs"
             title="Cari Dokumen"
             aria-label="Cari Dokumen"
           >
-            <Search className="w-4 h-4" />
+            <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
 
           {/* Quick Search dropdown */}
@@ -330,24 +330,24 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
           <button
             type="button"
             onClick={() => setShowBarcodeScanner(true)}
-            className="w-10 h-10 min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700/80 rounded-xl transition active:scale-95 cursor-pointer shrink-0 shadow-2xs"
+            className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700/80 rounded-lg sm:rounded-xl transition active:scale-95 cursor-pointer shrink-0 shadow-2xs"
             title="Pindai / Scan Barcode Dokumen"
             aria-label="Pindai Barcode Dokumen"
           >
-            <ScanBarcode className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <ScanBarcode className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600 dark:text-blue-400" />
           </button>
 
           {/* Notification Bell Dropdown */}
           <div className="relative shrink-0" ref={notifRef}>
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="relative w-10 h-10 min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/50 dark:border-slate-800 transition"
+              className="relative w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white rounded-lg sm:rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700/80 transition shadow-2xs cursor-pointer"
               title="Notifikasi Sistem"
               aria-label="Notifikasi Sistem"
             >
-              <Bell className="w-4 h-4" />
+              <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               {unreadCount > 0 && (
-                <span className="absolute 1.5 -top-0.5 -right-0.5 min-w-4 h-4 px-1 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-xs animate-pulse">
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-rose-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center shadow-xs animate-pulse">
                   {unreadCount}
                 </span>
               )}
@@ -438,9 +438,9 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
           <div className="relative shrink-0" ref={userMenuRef}>
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center gap-1.5 p-1 pr-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition text-left border border-slate-200/80 dark:border-slate-700/80 bg-white/60 dark:bg-slate-900/60 shadow-2xs shrink-0"
+              className="flex items-center gap-1.5 p-0.5 sm:p-1 sm:pr-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition text-left sm:border sm:border-slate-200/80 dark:sm:border-slate-700/80 sm:bg-white/80 dark:sm:bg-slate-900/80 sm:shadow-2xs shrink-0 cursor-pointer"
             >
-              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-blue-600 via-blue-700 to-indigo-600 text-white flex items-center justify-center font-extrabold text-[11px] shadow-xs shrink-0">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-blue-600 via-blue-700 to-indigo-600 text-white flex items-center justify-center font-extrabold text-[11px] shadow-xs shrink-0 ring-1 ring-blue-500/20 sm:ring-0">
                 {currentUser ? currentUser.name.split(' ').map(n => n[0]).slice(0, 2).join('') : 'U'}
               </div>
               <div className="hidden sm:block min-w-0">
@@ -547,7 +547,7 @@ export default function Header({ onToggleSidebar, isSidebarCollapsed }) {
       {isMobileSearchOpen && (
         <div
           ref={mobileSearchRef}
-          className="md:hidden absolute top-16 left-0 right-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 shadow-xl z-50 animate-fadeIn"
+          className="md:hidden absolute top-14 sm:top-16 left-0 right-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 shadow-xl z-50 animate-fadeIn"
         >
           <div className="relative">
             <input

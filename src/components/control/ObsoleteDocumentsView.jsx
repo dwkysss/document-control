@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Archive, Eye, AlertTriangle, Search, Trash2, RotateCcw, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
-import Badge from '../common/Badge';
+import Badge, { CompanyBadge, FileFormatBadge } from '../common/Badge';
 import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
 
@@ -99,7 +99,7 @@ export default function ObsoleteDocumentsView() {
       {/* 2. Unified Container: Toolbar + Table */}
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 overflow-hidden">
         {/* Toolbar Header */}
-        <div className="p-3 sm:p-4 border-b border-slate-200 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/50">
+        <div className="p-3 sm:p-4 border-b border-slate-200 dark:border-slate-800 space-y-2.5 md:space-y-0 md:flex md:items-center md:justify-between md:gap-3 bg-slate-50/50 dark:bg-slate-900/50">
           <div className="relative w-full md:w-72">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
@@ -111,11 +111,12 @@ export default function ObsoleteDocumentsView() {
             />
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
+          {/* 2 Dropdown Filter: Pada mobile dibuat 1 baris sejajar (2 kolom) */}
+          <div className="grid grid-cols-2 gap-2 w-full md:w-auto md:flex md:items-center">
             <select
               value={filterDept}
               onChange={(e) => setFilterDept(e.target.value)}
-              className="text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-rose-500"
+              className="w-full md:w-auto text-[11px] sm:text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 sm:px-2.5 py-1.5 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-rose-500 truncate"
             >
               <option value="ALL">Semua Departemen</option>
               {departments.map(d => (
@@ -123,43 +124,156 @@ export default function ObsoleteDocumentsView() {
               ))}
             </select>
 
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-rose-500"
-            >
-              <option value="ALL">Semua Jenis Dokumen</option>
-              {documentTypes.map(t => (
-                <option key={t.id || t.code} value={t.code}>{t.code} - {t.name}</option>
-              ))}
-            </select>
-
-            {hasActiveFilters && (
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="p-1.5 text-xs text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer"
-                title="Reset Filter"
+            <div className="flex items-center gap-1.5 min-w-0">
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="w-full md:w-auto text-[11px] sm:text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 sm:px-2.5 py-1.5 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-rose-500 truncate"
               >
-                <RotateCcw className="w-3.5 h-3.5" />
-              </button>
-            )}
+                <option value="ALL">Semua Jenis Dokumen</option>
+                {documentTypes.map(t => (
+                  <option key={t.id || t.code} value={t.code}>{t.code} - {t.name}</option>
+                ))}
+              </select>
+
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="p-1.5 text-xs text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer shrink-0"
+                  title="Reset Filter"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Clean Table */}
-        <div className="overflow-x-auto">
+        {/* Mobile Card List View (md:hidden) */}
+        <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+          {filtered.length === 0 ? (
+            <div className="p-8 text-center text-slate-500">
+              <Archive className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-600 mb-2" />
+              <p className="font-bold text-sm text-slate-800 dark:text-slate-200">
+                {obsoleteDocs.length === 0
+                  ? 'Belum Ada Arsip Dokumen Obsolete'
+                  : 'Tidak ada dokumen yang cocok'}
+              </p>
+              <p className="text-xs text-slate-400 mt-1">
+                {obsoleteDocs.length === 0
+                  ? 'Dokumen yang telah digantikan revisi baru atau ditarik akan tersimpan di sini.'
+                  : 'Coba ubah kata kunci pencarian atau reset filter.'}
+              </p>
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="mt-3 px-3 py-1.5 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 rounded-lg transition"
+                >
+                  Reset Filter
+                </button>
+              )}
+            </div>
+          ) : (
+            paginatedDocs.map((doc) => (
+              <div key={doc.id} className="p-4 space-y-2.5 hover:bg-rose-50/20 dark:hover:bg-slate-800/40 transition">
+                {/* Header: Number & Badges */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
+                    <span className="font-mono text-xs font-bold text-slate-500 line-through truncate" title={doc.docNumber}>
+                      {doc.docNumber}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <FileFormatBadge doc={doc} />
+                    <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
+                      Rev {doc.revision}
+                    </span>
+                    <Badge status={doc.status} size="sm" />
+                  </div>
+                </div>
+
+                {/* Title */}
+                <h3 className="text-xs font-semibold text-slate-800 dark:text-slate-200 leading-snug line-clamp-2">
+                  {doc.title}
+                </h3>
+
+                {/* Metadata Row */}
+                <div className="flex flex-wrap items-center gap-y-1 gap-x-2 text-[11px] text-slate-500 dark:text-slate-400">
+                  <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-bold text-[10px] text-slate-700 dark:text-slate-300 shrink-0">
+                    {doc.department}
+                  </span>
+                  <span className="text-slate-700 dark:text-slate-300 font-medium">
+                    {doc.creator}
+                  </span>
+                  {doc.supersededBy && (
+                    <>
+                      <span className="text-slate-300 dark:text-slate-600">•</span>
+                      <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 truncate" title={`Digantikan: ${doc.supersededBy}`}>
+                        Digantikan: {doc.supersededBy}
+                      </span>
+                    </>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="pt-1.5 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setViewingDocument(doc)}
+                    className="flex-1 h-8 px-3 text-xs font-semibold text-rose-800 dark:text-rose-200 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 rounded-lg border border-rose-200/80 dark:border-rose-800/80 transition flex items-center justify-center gap-1.5 active:scale-98"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Lihat Arsip</span>
+                  </button>
+
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => setDocToDelete(doc)}
+                      className="h-8 px-3 text-xs font-semibold text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-lg border border-slate-200 dark:border-slate-700 transition flex items-center justify-center active:scale-98"
+                      title="Hapus Dokumen Obsolete"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Clean Table (Desktop View: hidden md:block) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full min-w-[1080px] table-fixed text-left border-collapse text-sm">
-            <colgroup><col className="w-[32%]" /><col className="w-[9%]" /><col className="w-[14%]" /><col className="w-[8%]" /><col className="w-[19%]" /><col className="w-[8%]" /><col className="w-[10%]" /></colgroup>
+            <colgroup>
+              <col className="w-[30%]" />
+              <col className="w-[8%]" />
+              <col className="w-[7%]" />
+              <col className="w-[12%]" />
+              <col className="w-[7%]" />
+              <col className="w-[18%]" />
+              <col className="w-[8%]" />
+              <col className="w-[10%]" />
+            </colgroup>
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                <th className="py-3 px-4">Dokumen arsip</th><th className="py-3 px-3">Dept.</th><th className="py-3 px-3">Pembuat</th><th className="py-3 px-3 text-center">Rev.</th><th className="py-3 px-3">Digantikan oleh</th><th className="py-3 px-3">Status</th><th className="py-3 px-3 text-right">Aksi</th>
+                <th className="py-3 px-4">Dokumen arsip</th>
+                <th className="py-3 px-3">Dept.</th>
+                <th className="py-3 px-3 text-center">Format</th>
+                <th className="py-3 px-3">Pembuat</th>
+                <th className="py-3 px-3 text-center">Rev.</th>
+                <th className="py-3 px-3">Digantikan oleh</th>
+                <th className="py-3 px-3">Status</th>
+                <th className="py-3 px-3 text-right">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-14 text-center text-slate-500">
+                  <td colSpan={8} className="py-14 text-center text-slate-500">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <Archive className="w-8 h-8 text-slate-300 dark:text-slate-600" />
                       <p className="font-bold text-slate-700 dark:text-slate-300 text-sm">
@@ -194,6 +308,9 @@ export default function ObsoleteDocumentsView() {
                       </div>
                     </td>
                     <td className="py-4 px-3 text-xs font-semibold text-slate-700 dark:text-slate-300">{doc.department}</td>
+                    <td className="py-4 px-3 text-center">
+                      <FileFormatBadge doc={doc} />
+                    </td>
                     <td className="py-4 px-3 text-xs text-slate-700 dark:text-slate-300"><span className="block truncate" title={doc.creator}>{doc.creator}</span></td>
                     <td className="py-4 px-3 text-center font-mono text-xs font-bold text-rose-800 dark:text-rose-300">
                       {doc.revision}

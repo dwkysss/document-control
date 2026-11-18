@@ -231,14 +231,14 @@ function MainAppContent() {
         />
 
         {/* Dynamic Page Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto">
-          <ErrorBoundary>
+        <main className="flex-1 w-full max-w-[1600px] mx-auto px-3 py-4 sm:p-6 lg:p-8">
+          <ErrorBoundary key={activeMenu}>
             {renderActiveView()}
           </ErrorBoundary>
         </main>
 
         {/* Bottom Footer */}
-        <footer className="py-4 text-center text-xs text-slate-500 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 mt-auto">
+        <footer className="mt-auto hidden border-t border-slate-200 bg-white py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-center text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900 sm:block">
           <p>© 2026 {systemSettings.companyName || 'PT DJI'} - {systemSettings.systemName || 'Document Control System'}. All rights reserved.</p>
         </footer>
       </div>

@@ -129,19 +129,31 @@ export default function LoginView() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-slate-100/80 p-3 sm:p-5 font-sans antialiased text-slate-800 relative selection:bg-blue-600 selection:text-white overflow-hidden">
-      
-      {/* Subtle Soft Ambient Light Accents */}
+    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#070e1b] p-3 sm:p-5 font-sans antialiased text-slate-800 relative selection:bg-blue-600 selection:text-white overflow-hidden">
+
+      {/* Deep Enterprise Ambient Light & Spatial Grid */}
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-1/4 w-[600px] h-[400px] bg-blue-100/60 rounded-full blur-[140px]" />
-        <div className="absolute bottom-0 left-1/4 w-[500px] h-[350px] bg-sky-100/50 rounded-full blur-[130px]" />
+        {/* Spatial Engineering Dot Grid */}
+        <div
+          className="absolute inset-0 opacity-20"
+          style={{
+            backgroundImage: 'radial-gradient(#38bdf8 1px, transparent 1px)',
+            backgroundSize: '24px 24px',
+          }}
+        />
+        {/* Radial Vignette Mask */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_25%,#070e1b_85%)]" />
+
+        {/* Ambient Soft Glowing Orbs */}
+        <div className="absolute top-1/4 left-1/3 -translate-x-1/2 -translate-y-1/2 w-[650px] h-[500px] bg-blue-600/15 rounded-full blur-[140px]" />
+        <div className="absolute bottom-1/4 right-1/4 w-[550px] h-[450px] bg-sky-500/10 rounded-full blur-[130px]" />
       </div>
 
       {/* Main Split Card Container - Elevated & Perfectly Centered */}
-      <div className="w-full max-w-4xl lg:max-w-[890px] bg-white rounded-[28px] sm:rounded-[32px] shadow-[0_20px_50px_-12px_rgba(15,23,42,0.12),0_4px_16px_rgba(15,23,42,0.06)] border border-slate-200/90 overflow-hidden flex flex-col md:flex-row relative z-10 my-auto">
+      <div className="w-full max-w-4xl lg:max-w-[890px] bg-white rounded-[28px] sm:rounded-[32px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7),0_0_40px_rgba(56,189,248,0.08)] border border-slate-700/60 overflow-hidden flex flex-col md:flex-row relative z-10 my-auto">
 
         {/* ================= LEFT COLUMN: PT DJI Dark Navy Brand Panel ================= */}
-        <div 
+        <div
           onMouseMove={(e) => {
             const rect = e.currentTarget.getBoundingClientRect();
             const x = ((e.clientX - rect.left) / rect.width - 0.5) * 22;
@@ -151,7 +163,7 @@ export default function LoginView() {
           onMouseLeave={() => setMousePos({ x: 0, y: 0 })}
           className="w-full md:w-[48%] bg-[#0a1628] p-5 sm:p-7 flex flex-col justify-between relative overflow-hidden text-white min-h-[300px] md:min-h-[480px] group cursor-default"
         >
-          
+
           {/* Subtle Ambient Radial Glow */}
           <div className="absolute top-0 right-0 w-80 h-80 bg-blue-600/15 rounded-full blur-[90px] pointer-events-none" />
           <div className="absolute bottom-0 left-0 w-80 h-80 bg-sky-500/10 rounded-full blur-[90px] pointer-events-none" />
@@ -172,11 +184,11 @@ export default function LoginView() {
 
           {/* Center 3D Interactive Floating Machine Element */}
           <div className="my-auto py-2 relative flex flex-col items-center justify-center z-10">
-            
+
 
 
             {/* 3D Floating Stage Container with Interactive Parallax */}
-            <div 
+            <div
               style={{
                 transform: `perspective(900px) rotateY(${mousePos.x || -6}deg) rotateX(${mousePos.y || 6}deg) translateZ(25px)`,
                 transition: mousePos.x === 0 ? 'transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1)' : 'transform 0.1s ease-out',
@@ -185,7 +197,7 @@ export default function LoginView() {
               className="relative w-full flex flex-col items-center justify-center my-1"
             >
               {/* Subtle 3D Spatial Grid Backdrop */}
-              <div 
+              <div
                 className="absolute inset-0 -inset-x-4 opacity-15 pointer-events-none rounded-2xl"
                 style={{
                   backgroundImage: 'radial-gradient(#38bdf8 1px, transparent 1px)',
@@ -207,7 +219,7 @@ export default function LoginView() {
               </div>
 
               {/* 3D Ground Contact Shadow & Cyan Floor Glow Plane */}
-              <div 
+              <div
                 className="w-4/5 h-6 mt-2 bg-gradient-to-r from-transparent via-sky-400/30 to-transparent rounded-[100%] blur-md pointer-events-none"
                 style={{
                   transform: 'rotateX(78deg) translateZ(-15px) scaleY(0.7)',
@@ -232,7 +244,7 @@ export default function LoginView() {
         {/* ================= RIGHT COLUMN: Form Panel (Enterprise Clean White) ================= */}
         <div className="w-full md:w-[52%] p-6 sm:p-7 lg:p-8 flex flex-col justify-between relative bg-white">
           <div className="w-full max-w-[380px] mx-auto my-auto py-1">
-            
+
             {/* ================= MODE: LOGIN ================= */}
             {authMode === 'login' && (
               <>

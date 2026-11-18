@@ -28,7 +28,7 @@ import {
   ScanBarcode,
   ChevronDown
 } from 'lucide-react';
-import Badge, { CompanyBadge } from '../common/Badge';
+import Badge, { CompanyBadge, FileFormatBadge } from '../common/Badge';
 import Modal from '../common/Modal';
 import DocumentLabelModal from '../common/DocumentLabelModal';
 import BarcodeScannerModal from '../common/BarcodeScannerModal';
@@ -107,6 +107,7 @@ export default function ActiveDocumentsView() {
     documents,
     departments = [],
     documentTypes = [],
+    companies = [],
     selectedCompanyFilter,
     currentUser,
     canRequestRevision,
@@ -133,6 +134,30 @@ export default function ActiveDocumentsView() {
   const [filterDept, setFilterDept] = useState('ALL');
   const [filterType, setFilterType] = useState('ALL');
   const [sortBy, setSortBy] = useState('DATE_DESC');
+
+  // Responsive detection untuk tampilan mobile (anti-potong & layout tombol rapi)
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 640);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Resolusi nama entitas perusahaan sesuai filter aktif (Holding Group jika ALL)
+  const activeCompanyScopeName = useMemo(() => {
+    if (!selectedCompanyFilter || selectedCompanyFilter === 'ALL') {
+      return 'Holding Group (Multi-PT)';
+    }
+    const matched = (companies || []).find(c => c.code === selectedCompanyFilter);
+    if (matched) return matched.name;
+    if (selectedCompanyFilter === 'DJI') return 'PT Dentelle Jaya Infinitex';
+    if (selectedCompanyFilter === 'IMK') return 'PT IMK';
+    if (selectedCompanyFilter === 'UMI') return 'PT Ultimo Moda Indotex';
+    return `PT ${selectedCompanyFilter}`;
+  }, [selectedCompanyFilter, companies]);
 
   // Modal State untuk Pembatalan (Admin)
   const [docToCancel, setDocToCancel] = useState(null);
@@ -380,7 +405,7 @@ export default function ActiveDocumentsView() {
             Dokumen Aktif & Terkendali (Controlled Copies)
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Daftar seluruh dokumen resmi yang sedang berlaku operasional di lingkungan {systemSettings.companyName || 'PT DENTELLE JAYA INFINITEX'}.
+            Daftar seluruh dokumen resmi yang sedang berlaku operasional di lingkungan {activeCompanyScopeName}.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -399,61 +424,67 @@ export default function ActiveDocumentsView() {
       {/* Filter Tabs & Multi Filter Bar */}
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 p-4 space-y-4">
         {/* Quick Filter Tabs */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div className="grid grid-cols-2 gap-1.5 w-full sm:flex sm:flex-wrap sm:w-auto">
             <button
+              type="button"
               onClick={() => setFilterMode('ALL')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+              className={`px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition flex items-center justify-center gap-1.5 text-center ${
+                !userDept || myDeptDocs.length === 0 ? 'col-span-2 sm:col-span-1' : ''
+              } ${
                 filterMode === 'ALL'
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
               }`}
             >
-              Semua Dokumen Aktif ({activeDocs.length})
+              {isMobile ? `Semua (${activeDocs.length})` : `Semua Dokumen Aktif (${activeDocs.length})`}
             </button>
 
             {/* Quick Tab: Dokumen Departemen Saya (Sangat berguna untuk Karyawan/Operator) */}
             {userDept && myDeptDocs.length > 0 && (
               <button
+                type="button"
                 onClick={() => setFilterMode('MY_DEPT')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                className={`px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition flex items-center justify-center gap-1.5 text-center truncate ${
                   filterMode === 'MY_DEPT'
                     ? 'bg-indigo-600 text-white shadow-sm'
                     : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 border border-indigo-200 dark:border-indigo-900'
                 }`}
                 title={`Hanya tampilkan dokumen departemen ${userDept}`}
               >
-                <Building2 className="w-3.5 h-3.5" />
-                Departemen Saya: {userDept} ({myDeptDocs.length})
+                <Building2 className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{isMobile ? `Dept Saya (${myDeptDocs.length})` : `Departemen Saya: ${userDept} (${myDeptDocs.length})`}</span>
               </button>
             )}
 
             <button
+              type="button"
               onClick={() => setFilterMode('DUE')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+              className={`px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition flex items-center justify-center gap-1.5 text-center ${
                 filterMode === 'DUE'
                   ? 'bg-amber-600 text-white shadow-sm'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
               }`}
             >
-              <Clock className="w-3.5 h-3.5 text-amber-500" />
-              Perlu Review Berkala ({reviewDueDocs.length})
+              <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+              <span>{isMobile ? `Review (${reviewDueDocs.length})` : `Perlu Review Berkala (${reviewDueDocs.length})`}</span>
             </button>
 
             <button
+              type="button"
               onClick={() => setFilterMode('NORMAL')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+              className={`px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition flex items-center justify-center gap-1.5 text-center ${
                 filterMode === 'NORMAL'
                   ? 'bg-emerald-600 text-white shadow-sm'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
               }`}
             >
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-              Terkendali Normal ({normalDocs.length})
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+              <span>{isMobile ? `Terkendali (${normalDocs.length})` : `Terkendali Normal (${normalDocs.length})`}</span>
             </button>
           </div>
 
-          <div className="flex items-center gap-3 text-[11px] text-slate-400">
+          <div className="flex items-center justify-between sm:justify-end gap-3 text-[11px] text-slate-400">
             <span>
               Interval Peninjauan ISO: <strong className="text-slate-700 dark:text-slate-300">{reviewIntervalMonths} Bulan</strong>
             </span>
@@ -461,7 +492,7 @@ export default function ActiveDocumentsView() {
         </div>
 
         {/* Multi Filter Controls Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-center">
+        <div className="space-y-2.5 sm:space-y-0 sm:grid sm:grid-cols-2 lg:grid-cols-12 sm:gap-3 items-center">
           {/* 1. Search Box with Scan QR Button (col-span-4) */}
           <div className="lg:col-span-4 flex items-center gap-1.5">
             <div className="relative flex-1">
@@ -493,70 +524,87 @@ export default function ActiveDocumentsView() {
             </button>
           </div>
 
-          {/* 2. Filter Departemen (col-span-3) */}
-          <div className="lg:col-span-3">
-            <select
-              value={filterDept}
-              onChange={(e) => setFilterDept(e.target.value)}
-              className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="ALL">Semua Departemen ({activeDocs.length})</option>
-              {availableDepartments.map(d => {
-                const count = deptCountMap[d.code.toUpperCase()] || 0;
-                return (
-                  <option key={d.id || d.code} value={d.code}>
-                    {d.code} - {d.name} ({count})
-                  </option>
-                );
-              })}
-            </select>
-          </div>
-
-          {/* 3. Filter Jenis Dokumen (col-span-3) */}
-          <div className="lg:col-span-3">
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="ALL">Semua Jenis Dokumen ({activeDocs.length})</option>
-              {availableDocTypes.map(t => {
-                const count = typeCountMap[t.code.toUpperCase()] || 0;
-                return (
-                  <option key={t.id || t.code} value={t.code}>
-                    {t.code} - {t.name} ({count})
-                  </option>
-                );
-              })}
-            </select>
-          </div>
-
-          {/* 4. Sort By & Reset (col-span-2) */}
-          <div className="lg:col-span-2 flex items-center gap-2">
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-2 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-              title="Urutkan dokumen"
-            >
-              <option value="DATE_DESC">Tgl Berlaku (Terbaru)</option>
-              <option value="DATE_ASC">Tgl Berlaku (Terlama)</option>
-              <option value="DOC_ASC">No. Dokumen (A - Z)</option>
-              <option value="DOC_DESC">No. Dokumen (Z - A)</option>
-              <option value="TITLE_ASC">Judul Dokumen (A - Z)</option>
-              <option value="REV_DESC">Revisi Tertinggi</option>
-            </select>
-
-            {hasActiveFilters && (
-              <button
-                onClick={resetFilters}
-                className="px-2.5 py-2 text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 border border-rose-200 dark:border-rose-900 rounded-lg transition flex items-center gap-1 flex-shrink-0"
-                title="Reset semua filter ke standar"
+          {/* 3 Dropdown Filter di Mobile: 1 Baris Sejajar (3 Kolom) dengan teks ringkas anti-terpotong */}
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-3 sm:contents">
+            {/* 2. Filter Departemen (col-span-3) */}
+            <div className="lg:col-span-3">
+              <select
+                value={filterDept}
+                onChange={(e) => setFilterDept(e.target.value)}
+                className={`w-full text-[11px] sm:text-xs border rounded-lg px-2 sm:px-3 py-2 font-medium truncate transition focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  filterDept !== 'ALL'
+                    ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-400 text-blue-700 dark:text-blue-300 font-bold'
+                    : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                }`}
+                title="Filter Departemen"
               >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span className="hidden xl:inline">Reset</span>
-              </button>
-            )}
+                <option value="ALL">{isMobile ? 'Dept' : `Semua Dept. (${activeDocs.length})`}</option>
+                {availableDepartments.map(d => {
+                  const count = deptCountMap[d.code.toUpperCase()] || 0;
+                  return (
+                    <option key={d.id || d.code} value={d.code}>
+                      {isMobile ? d.code : `${d.code} - ${d.name} (${count})`}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+
+            {/* 3. Filter Jenis Dokumen (col-span-3) */}
+            <div className="lg:col-span-3">
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className={`w-full text-[11px] sm:text-xs border rounded-lg px-2 sm:px-3 py-2 font-medium truncate transition focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  filterType !== 'ALL'
+                    ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-400 text-blue-700 dark:text-blue-300 font-bold'
+                    : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                }`}
+                title="Filter Jenis Dokumen"
+              >
+                <option value="ALL">{isMobile ? 'Jenis' : `Semua Jenis (${activeDocs.length})`}</option>
+                {availableDocTypes.map(t => {
+                  const count = typeCountMap[t.code.toUpperCase()] || 0;
+                  return (
+                    <option key={t.id || t.code} value={t.code}>
+                      {isMobile ? t.code : `${t.code} - ${t.name} (${count})`}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+
+            {/* 4. Sort By & Reset (col-span-2) */}
+            <div className="lg:col-span-2 flex items-center gap-1.5 min-w-0">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className={`w-full text-[11px] sm:text-xs border rounded-lg px-2 sm:px-2.5 py-2 font-medium truncate transition focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  sortBy !== 'DATE_DESC'
+                    ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-400 text-blue-700 dark:text-blue-300 font-bold'
+                    : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                }`}
+                title="Urutkan dokumen"
+              >
+                <option value="DATE_DESC">{isMobile ? 'Terbaru' : 'Tgl Terbaru'}</option>
+                <option value="DATE_ASC">{isMobile ? 'Terlama' : 'Tgl Terlama'}</option>
+                <option value="DOC_ASC">{isMobile ? 'No. (A-Z)' : 'No. Doc (A-Z)'}</option>
+                <option value="DOC_DESC">{isMobile ? 'No. (Z-A)' : 'No. Doc (Z-A)'}</option>
+                <option value="TITLE_ASC">{isMobile ? 'Judul (A-Z)' : 'Judul (A-Z)'}</option>
+                <option value="REV_DESC">{isMobile ? 'Revisi (Max)' : 'Revisi Tertinggi'}</option>
+              </select>
+
+              {hasActiveFilters && (
+                <button
+                  onClick={resetFilters}
+                  className="hidden sm:flex px-2 py-2 text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 border border-rose-200 dark:border-rose-900 rounded-lg transition items-center gap-1 flex-shrink-0 cursor-pointer"
+                  title="Reset semua filter ke standar"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span className="hidden xl:inline">Reset</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -678,22 +726,21 @@ export default function ActiveDocumentsView() {
                     <h3 className="text-sm font-bold text-slate-900 dark:text-white leading-snug line-clamp-2">
                       {doc.title}
                     </h3>
-                    <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-slate-500 dark:text-slate-400">
-                      <div>
-                        <span className="text-slate-400">Dept:</span> <strong className="text-slate-700 dark:text-slate-300">{doc.department}</strong>
-                      </div>
-                      <div>
-                        <span className="text-slate-400">Jenis:</span> <strong className="text-slate-700 dark:text-slate-300">{doc.type}</strong>
-                      </div>
-                      <div>
-                        <span className="text-slate-400">Pembuat:</span> <span className="text-slate-700 dark:text-slate-300 truncate">{doc.creator}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400">Berlaku:</span> <span className="text-slate-700 dark:text-slate-300">{formatActiveDate(doc.effectiveDate || doc.createdDate)}</span>
-                      </div>
-                    </div>
-                    <div className="mt-2 flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[10px] text-slate-400">Tinjauan ISO:</span>
+                    <div className="mt-2 flex flex-wrap items-center gap-y-1 gap-x-2 text-[11px] text-slate-500 dark:text-slate-400">
+                      <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-bold text-[10px] text-slate-700 dark:text-slate-300 shrink-0">
+                        {doc.department}
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-semibold text-[10px] text-slate-600 dark:text-slate-400 shrink-0">
+                        {doc.type}
+                      </span>
+                      <FileFormatBadge doc={doc} />
+                      <span className="text-slate-700 dark:text-slate-300 font-medium">
+                        {doc.creator}
+                      </span>
+                      <span className="text-slate-300 dark:text-slate-600">•</span>
+                      <span className="font-mono text-[10px] shrink-0">
+                        {formatActiveDate(doc.effectiveDate || doc.createdDate)}
+                      </span>
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${reviewInfo.badgeColor}`} title={`Jatuh Tempo: ${reviewInfo.dueDateStr}`}>
                         {reviewInfo.label}
                       </span>
@@ -751,16 +798,34 @@ export default function ActiveDocumentsView() {
         {/* Desktop Table (hidden md:block) */}
         <div className="hidden md:block overflow-x-auto min-h-[380px]">
           <table className="w-full min-w-[1280px] table-fixed text-left border-collapse text-sm">
-            <colgroup><col className="w-[30%]" /><col className="w-[8%]" /><col className="w-[10%]" /><col className="w-[12%]" /><col className="w-[7%]" /><col className="w-[10%]" /><col className="w-[10%]" /><col className="w-[13%]" /></colgroup>
+            <colgroup>
+              <col className="w-[28%]" />
+              <col className="w-[7%]" />
+              <col className="w-[7%]" />
+              <col className="w-[9%]" />
+              <col className="w-[12%]" />
+              <col className="w-[6%]" />
+              <col className="w-[9%]" />
+              <col className="w-[9%]" />
+              <col className="w-[13%]" />
+            </colgroup>
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                <th className="py-3 px-4">Dokumen</th><th className="py-3 px-3">Jenis</th><th className="py-3 px-3">Dept.</th><th className="py-3 px-3">Pembuat</th><th className="py-3 px-3 text-center">Rev.</th><th className="py-3 px-3">Tgl. berlaku</th><th className="py-3 px-3">Tinjauan berkala</th><th className="py-3 px-3 text-right">Tindakan</th>
+                <th className="py-3 px-4">Dokumen</th>
+                <th className="py-3 px-3">Jenis</th>
+                <th className="py-3 px-3 text-center">Format</th>
+                <th className="py-3 px-3">Dept.</th>
+                <th className="py-3 px-3">Pembuat</th>
+                <th className="py-3 px-3 text-center">Rev.</th>
+                <th className="py-3 px-3">Tgl. berlaku</th>
+                <th className="py-3 px-3">Tinjauan berkala</th>
+                <th className="py-3 px-3 text-right">Tindakan</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center">
+                  <td colSpan={9} className="py-12 text-center">
                     <div className="flex flex-col items-center justify-center max-w-sm mx-auto space-y-3 text-slate-500">
                       <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
                         <Filter className="w-6 h-6" />
@@ -797,6 +862,9 @@ export default function ActiveDocumentsView() {
                         </div>
                       </td>
                       <td className="py-4 px-3 text-xs font-semibold text-slate-700 dark:text-slate-300">{doc.type}</td>
+                      <td className="py-4 px-3 text-center">
+                        <FileFormatBadge doc={doc} />
+                      </td>
                       <td className="py-4 px-3 text-xs text-slate-700 dark:text-slate-300">{doc.department}</td>
                       <td className="py-4 px-3 text-xs text-slate-700 dark:text-slate-300"><span className="block truncate" title={doc.creator}>{doc.creator}</span></td>
                       <td className="py-4 px-3 text-center font-mono text-xs font-bold text-emerald-800 dark:text-emerald-300">

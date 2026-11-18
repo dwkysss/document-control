@@ -345,17 +345,96 @@ export async function exportControlledDocumentPDF(docData, systemSettings = {}, 
     doc.restoreGraphicsState();
   };
 
-  // Helper running header halaman 2+
+  // Helper running header halaman 2+ (desain resmi berornamen sudut sesuai cover)
   const drawRunningHeader = () => {
-    doc.setFontSize(7.5);
+    // a. Garis Pita Cyan di tepi atas kanan (mulai dari ~29.5% lebar halaman hingga tepi kanan)
+    const cyanBarH = width * (21 / 698); // ~18pt pada A4
+    const cyanBarX = width * 0.295;
+    const cyanBarW = width - cyanBarX;
+    doc.setFillColor(0, 175, 239);
+    doc.rect(cyanBarX, 0, cyanBarW, cyanBarH, 'F');
+
+    // b. Pita Diagonal Amber/Kuning di sudut kanan atas (memotong pita cyan)
+    doc.setFillColor(255, 192, 0);
+    const amberX1 = width * 0.827;
+    const amberX2 = width * 0.898;
+    const amberY1 = width * (34 / 698);
+    const amberY2 = width * (59 / 698);
+    const pts = [
+      [amberX1, 0],
+      [amberX2, 0],
+      [width, amberY1],
+      [width, amberY2]
+    ];
+    doc.triangle(pts[0][0], pts[0][1], pts[1][0], pts[1][1], pts[2][0], pts[2][1], 'F');
+    doc.triangle(pts[0][0], pts[0][1], pts[2][0], pts[2][1], pts[3][0], pts[3][1], 'F');
+
+    // c. Logo Perusahaan di Kiri Atas
+    const logoMarginL = width * 0.095;
+    if (logoDataUrl) {
+      try {
+        const imgProps = doc.getImageProperties(logoDataUrl);
+        const imgAspect = (imgProps.width || 1) / (imgProps.height || 1);
+        const maxLW = 85;
+        const maxLH = 28;
+        let lW = maxLW;
+        let lH = lW / imgAspect;
+        if (lH > maxLH) {
+          lH = maxLH;
+          lW = lH * imgAspect;
+        }
+        doc.addImage(logoDataUrl, imgProps.fileType || 'PNG', logoMarginL, 18, lW, lH);
+      } catch (e) {
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(16, 42, 78);
+        doc.text(company, logoMarginL, 28);
+      }
+    } else if (compCode === 'UMI') {
+      doc.setFillColor(79, 70, 229);
+      doc.roundedRect(logoMarginL, 18, 82, 20, 3, 3, 'F');
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(255, 255, 255);
+      doc.text('ULTIMO MODA', logoMarginL + 41, 18 + 13, { align: 'center' });
+    } else if (compCode === 'IMK') {
+      doc.setFillColor(5, 150, 105);
+      doc.roundedRect(logoMarginL, 18, 82, 20, 3, 3, 'F');
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(255, 255, 255);
+      doc.text('PT IMK', logoMarginL + 41, 18 + 13, { align: 'center' });
+    } else {
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(16, 42, 78);
+      doc.text(company, logoMarginL, 28);
+      doc.setFontSize(6.5);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(100, 116, 139);
+      doc.text('Infinite Creativity & Productivity', logoMarginL, 38);
+    }
+
+    // d. Judul Dokumen & Nomor Dokumen (Rata kanan ke batas 0.868*w)
+    const textRightX = width * 0.868;
+    const maxTextW = textRightX - (logoMarginL + 95);
+    const rawTitle = String(docData.title || '').toUpperCase();
+
+    doc.setFontSize(10.5);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(100, 116, 139);
-    doc.text(`${company} | ${docData.docNumber} (Rev: ${docData.revision || '00'})`, startX, 26);
-    doc.setFont('helvetica', 'normal');
-    doc.text((docData.title || '').toUpperCase().substring(0, 45), width - startX, 26, { align: 'right' });
-    doc.setDrawColor(226, 232, 240);
-    doc.setLineWidth(0.6);
-    doc.line(startX, 31, startX + boxWidth, 31);
+    doc.setTextColor(31, 58, 114);
+    const splitTitle = doc.splitTextToSize(rawTitle, maxTextW);
+    const titleY = width * (48 / 698); // ~41pt pada A4
+    doc.text(splitTitle[0] || rawTitle, textRightX, titleY, { align: 'right' });
+
+    const docNumText = docData.revision && !String(docData.docNumber || '').endsWith(docData.revision)
+      ? `${docData.docNumber || '-'} (Rev: ${docData.revision})`
+      : (docData.docNumber || '-');
+    doc.setFontSize(9.0);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(31, 58, 114);
+    const numY = width * (64 / 698); // ~55pt pada A4
+    doc.text(docNumText, textRightX, numY, { align: 'right' });
   };
 
   // =========================================================================
@@ -676,7 +755,7 @@ export async function exportControlledDocumentPDF(docData, systemSettings = {}, 
       });
 
       const sheetTitle = options?.excelSheetName || docData?.excelSheetName || 'Sheet1';
-      const startTableY = isCoverMode ? 52 : (startY + headerH + 26);
+      const startTableY = isCoverMode ? 62 : (startY + headerH + 26);
 
       // Label Header Excel Emerald (Kiri: Nama Sheet, Kanan: Jumlah Baris Terverifikasi)
       doc.setFontSize(8.5);
@@ -737,7 +816,7 @@ export async function exportControlledDocumentPDF(docData, systemSettings = {}, 
     }
   } else {
     // Naskah Dokumen Teks Standar
-    let contentY = isCoverMode ? 52 : (startY + headerH + 28);
+    let contentY = isCoverMode ? 62 : (startY + headerH + 28);
     doc.setFontSize(9.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(16, 42, 78);
@@ -828,10 +907,30 @@ export async function exportControlledDocumentPDF(docData, systemSettings = {}, 
   const totalPages = doc.internal.getNumberOfPages();
   for (let i = (isCoverMode ? 2 : 1); i <= totalPages; i++) {
     doc.setPage(i);
-    doc.setFontSize(7);
-    doc.setTextColor(148, 163, 184);
-    doc.text(`Dokumen Resmi ${company} - Terdaftar pada Document Control System | ISO 9001:2015`, startX, height - 18);
-    doc.text(`Halaman ${i} dari ${totalPages}`, width - startX, height - 18, { align: 'right' });
+    if (isCoverMode) {
+      const footerX = startX;
+      const footerW = width - startX * 2;
+      // Garis Pita Biru Horizontal
+      doc.setFillColor(68, 113, 196); // #4471C4
+      doc.rect(footerX, height - 38, footerW, 2.6, 'F');
+
+      // Teks Disclaimer Dua Baris di Kiri
+      doc.setFontSize(6.8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(30, 41, 59);
+      doc.text('DILARANG MENGGANDAKAN DOKUMEN INI TANPA SEIZIN', footerX, height - 25);
+      doc.text(company.toUpperCase(), footerX, height - 15);
+
+      // Nomor Halaman Rata Kanan
+      doc.setFontSize(8.5);
+      doc.setTextColor(165, 165, 165); // #A5A5A5
+      doc.text(String(i), footerX + footerW, height - 19, { align: 'right' });
+    } else {
+      doc.setFontSize(7);
+      doc.setTextColor(148, 163, 184);
+      doc.text(`Dokumen Resmi ${company} - Terdaftar pada Document Control System | ISO 9001:2015`, startX, height - 18);
+      doc.text(`Halaman ${i} dari ${totalPages}`, width - startX, height - 18, { align: 'right' });
+    }
   }
 
   if (options && options.returnBlob) {

@@ -24,7 +24,7 @@ export default function Modal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-2.5 sm:p-6">
+    <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-2 sm:p-6">
       {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
@@ -32,7 +32,7 @@ export default function Modal({
       />
 
       {/* Modal Dialog */}
-      <div className={`relative bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full ${maxWidth} overflow-hidden transform transition-all z-10 my-auto sm:my-8 max-h-[95dvh] flex flex-col`}>
+      <div className={`relative bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full ${maxWidth} overflow-hidden transform transition-all z-10 my-auto sm:my-8 max-h-[96dvh] sm:max-h-[95dvh] flex flex-col`}>
         {/* Header */}
         {customHeader ? (
           customHeader
@@ -68,7 +68,7 @@ export default function Modal({
         )}
 
         {/* Content Body */}
-        <div className="px-4 sm:px-6 py-4 sm:py-5 overflow-y-auto flex-1 [scrollbar-width:thin]">
+        <div className="px-3 sm:px-6 py-3 sm:py-5 overflow-y-auto flex-1 [scrollbar-width:thin]">
           {children}
         </div>
       </div>

@@ -72,14 +72,14 @@ export default function RejectedListView() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
-          <p className="text-xs font-medium text-slate-600 dark:text-slate-300">Pengajuan ditolak</p>
-          <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{rejectedDocs.length}</p>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-xl border border-slate-200/80 bg-white p-3 sm:p-4 dark:border-slate-800 dark:bg-slate-900 shadow-xs flex items-center justify-between">
+          <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Pengajuan ditolak</span>
+          <span className="text-lg sm:text-2xl font-bold font-mono text-slate-900 dark:text-white">{rejectedDocs.length}</span>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
-          <p className="text-xs font-medium text-slate-600 dark:text-slate-300">Memiliki catatan verifikator</p>
-          <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{withReasonCount}</p>
+        <div className="rounded-xl border border-slate-200/80 bg-white p-3 sm:p-4 dark:border-slate-800 dark:bg-slate-900 shadow-xs flex items-center justify-between">
+          <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Memiliki catatan verifikator</span>
+          <span className="text-lg sm:text-2xl font-bold font-mono text-slate-900 dark:text-white">{withReasonCount}</span>
         </div>
       </div>
 

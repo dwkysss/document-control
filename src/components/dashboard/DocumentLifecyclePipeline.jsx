@@ -76,10 +76,10 @@ export default function DocumentLifecyclePipeline({
   ];
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs">
+    <div className="bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-xs">
       {/* Industrial Pipeline Header */}
       <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 dark:border-slate-800">
-        <div>
+        <div className="flex items-center gap-2">
           <h2 className="text-sm font-bold text-slate-900 dark:text-white">
             Alur Siklus Hidup Dokumen
           </h2>
@@ -89,15 +89,16 @@ export default function DocumentLifecyclePipeline({
         </span>
       </div>
 
-      {/* Horizontal Pipeline Steps */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-3 pt-4">
+      {/* Every stage remains visible on mobile, without a clipped horizontal rail. */}
+      <div className="grid grid-cols-3 gap-2 pt-3 sm:gap-3 sm:pt-4 md:grid-cols-5">
         {stages.map((stage, idx) => {
           const Icon = stage.icon;
           return (
-            <div
+            <button
+              type="button"
               key={stage.id}
               onClick={() => navigateTo(stage.menuKey, stage.crumbs)}
-              className={`group relative rounded-xl p-3.5 border transition cursor-pointer flex flex-col justify-between ${
+              className={`group relative min-h-[110px] rounded-xl border p-2.5 transition cursor-pointer flex flex-col justify-between active:scale-[0.98] text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 sm:p-3.5 md:min-h-0 ${
                 stage.isHighlight
                   ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800/80 hover:border-emerald-500 shadow-xs'
                   : stage.hasPulse
@@ -126,30 +127,30 @@ export default function DocumentLifecyclePipeline({
                         : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
                     }`}
                   >
-                    <Icon className="w-3.5 h-3.5" />
+                    <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   </div>
                 </div>
 
-                <div className="mt-2.5">
-                  <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                <div className="mt-2">
+                  <h3 className="text-[11px] font-bold leading-tight text-slate-900 transition-colors group-hover:text-blue-600 dark:text-slate-100 dark:group-hover:text-blue-400 sm:text-xs">
                     {stage.title}
                   </h3>
-                  <p className="text-[11px] text-slate-600 dark:text-slate-400 truncate mt-0.5">
+                  <p className="mt-0.5 hidden truncate text-[11px] text-slate-600 dark:text-slate-400 sm:block">
                     {stage.subtitle}
                   </p>
                 </div>
               </div>
 
-              <div className="mt-3 pt-2 border-t border-slate-200/70 dark:border-slate-700/70 flex items-center justify-between">
-                <span className="text-lg font-extrabold font-mono text-slate-900 dark:text-white">
+              <div className="mt-2 border-t border-slate-200/70 pt-1.5 dark:border-slate-700/70 md:mt-3 md:pt-2 md:flex md:items-center md:justify-between">
+                <span className="font-mono text-base font-extrabold text-slate-900 dark:text-white md:text-lg">
                   {stage.count}
                 </span>
-                <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 flex items-center gap-0.5">
+                <span className="hidden text-[11px] font-semibold text-slate-600 dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 md:flex items-center gap-0.5">
                   <span>Lihat</span>
                   <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                 </span>
               </div>
-            </div>
+            </button>
           );
         })}
       </div>

@@ -251,7 +251,7 @@ app.post('/api/auth/login', async (req, res) => {
     const token = signSession({ user, expiresAt: Date.now() + SESSION_TTL_MS });
     res.cookie('dcs_session', token, {
       httpOnly: true,
-      sameSite: 'strict',
+      sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
       maxAge: SESSION_TTL_MS,
       path: '/',
@@ -468,7 +468,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 });
 
 app.post('/api/auth/logout', (req, res) => {
-  res.clearCookie('dcs_session', { httpOnly: true, sameSite: 'strict', secure: process.env.NODE_ENV === 'production', path: '/' });
+  res.clearCookie('dcs_session', { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/' });
   res.status(204).end();
 });
 

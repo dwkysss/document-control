@@ -67,7 +67,7 @@ export default function DashboardAnalytics({
         badgeColor: 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800',
         borderAccent: 'border-purple-300 dark:border-purple-800',
         bgBox: 'bg-purple-50/70 dark:bg-purple-950/30',
-        widthClass: 'w-[75%]',
+        widthClass: 'w-full sm:w-[75%]',
         desc: 'Komitmen manajemen puncak, sasaran mutu & manual ISO'
       },
       {
@@ -80,7 +80,7 @@ export default function DashboardAnalytics({
         badgeColor: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
         borderAccent: 'border-blue-300 dark:border-blue-700',
         bgBox: 'bg-blue-50/70 dark:bg-blue-950/30',
-        widthClass: 'w-[84%]',
+        widthClass: 'w-full sm:w-[84%]',
         desc: 'Proses lintas fungsi & matriks tanggung jawab'
       },
       {
@@ -93,7 +93,7 @@ export default function DashboardAnalytics({
         badgeColor: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-950 dark:text-cyan-300',
         borderAccent: 'border-cyan-300 dark:border-cyan-700',
         bgBox: 'bg-cyan-50/70 dark:bg-cyan-950/30',
-        widthClass: 'w-[92%]',
+        widthClass: 'w-full sm:w-[92%]',
         desc: 'Langkah teknis stasiun kerja & jalur cepat 3-tahap'
       },
       {
@@ -235,11 +235,11 @@ export default function DashboardAnalytics({
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
       {/* Chart 1: Donut Chart / ISO Quality Pyramid (5 Cols) */}
-      <div className="lg:col-span-5 bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+      <div className="lg:col-span-5 bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
         <div>
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center">
                 {hierarchyMode === 'pyramid' ? <Layers className="w-4 h-4" /> : <PieChart className="w-4 h-4" />}
@@ -256,7 +256,7 @@ export default function DashboardAnalytics({
                 <button
                   type="button"
                   onClick={() => setHierarchyMode('pyramid')}
-                  className={`px-2 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${hierarchyMode === 'pyramid'
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center gap-1 min-h-[30px] ${hierarchyMode === 'pyramid'
                     ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 font-bold shadow-2xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
@@ -268,7 +268,7 @@ export default function DashboardAnalytics({
                 <button
                   type="button"
                   onClick={() => setHierarchyMode('chart')}
-                  className={`px-2 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${hierarchyMode === 'chart'
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center gap-1 min-h-[30px] ${hierarchyMode === 'chart'
                     ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 font-bold shadow-2xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
@@ -281,7 +281,7 @@ export default function DashboardAnalytics({
 
               <button
                 onClick={() => navigateTo('rep-type', ['Dashboard', 'Report', 'Dokumen per Tipe'])}
-                className="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1 hover:underline ml-0.5 cursor-pointer"
+                className="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1 hover:underline ml-0.5 cursor-pointer min-h-[30px] items-center"
               >
                 <span>Detail</span>
                 <ArrowUpRight className="w-3.5 h-3.5" />
@@ -369,9 +369,9 @@ export default function DashboardAnalytics({
       </div>
 
       {/* Chart 2: Department Distribution (7 Cols) */}
-      <div className="lg:col-span-7 bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+      <div className="lg:col-span-7 bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
         <div>
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 flex items-center justify-center">
                 <Building2 className="w-4 h-4" />
@@ -388,7 +388,7 @@ export default function DashboardAnalytics({
                 <button
                   type="button"
                   onClick={() => setViewMode('chart')}
-                  className={`px-2 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${viewMode === 'chart'
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer min-h-[30px] ${viewMode === 'chart'
                     ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-2xs font-bold'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
@@ -398,7 +398,7 @@ export default function DashboardAnalytics({
                 <button
                   type="button"
                   onClick={() => setViewMode('table')}
-                  className={`px-2 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${viewMode === 'table'
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer min-h-[30px] ${viewMode === 'table'
                     ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-2xs font-bold'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
@@ -409,7 +409,7 @@ export default function DashboardAnalytics({
 
               <button
                 onClick={() => navigateTo('rep-dept', ['Dashboard', 'Report', 'Dokumen per Departemen'])}
-                className="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1 hover:underline cursor-pointer"
+                className="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1 hover:underline cursor-pointer min-h-[30px] items-center"
               >
                 <span>Laporan</span>
                 <ArrowUpRight className="w-3.5 h-3.5" />
@@ -419,7 +419,7 @@ export default function DashboardAnalytics({
 
           {/* Body: Chart or Table */}
           {viewMode === 'chart' ? (
-            <div className="h-64 pt-3">
+            <div className="h-60 sm:h-64 pt-3">
               {totalDocs === 0 ? (
                 <div className="h-full flex items-center justify-center text-center text-xs text-slate-500">
                   Belum ada dokumen yang terdaftar untuk ditampilkan.
@@ -429,8 +429,8 @@ export default function DashboardAnalytics({
               )}
             </div>
           ) : (
-            <div className="pt-2 max-h-64 overflow-y-auto">
-              <table className="w-full text-left text-xs">
+            <div className="pt-2 max-h-64 overflow-x-auto scrollbar-thin">
+              <table className="w-full min-w-[320px] text-left text-xs">
                 <thead>
                   <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 text-[10px] uppercase font-bold">
                     <th className="py-2.5">Kode</th>
