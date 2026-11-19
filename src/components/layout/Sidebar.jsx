@@ -259,10 +259,10 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
             );
           };
 
-          // Small text underneath title: shows active company name when activeCompanyCode !== 'ALL'
+          // Small text underneath title: shows active company name when activeCompanyCode !== 'ALL', or 'Admin' in ALL mode
           const companySubLabel = activeCompanyCode !== 'ALL'
             ? (activeCompanyObj?.name || (activeCompanyCode === 'DJI' ? 'PT DENTELLE JAYA INFINITEX' : activeCompanyCode === 'UMI' ? 'PT ULTIMO MODA INDOTEX' : activeCompanyCode === 'IMK' ? 'PT IMK' : `UNIT ${activeCompanyCode}`))
-            : (isHoldingAdmin ? 'HOLDING GROUP (MULTI-PT)' : null);
+            : 'Admin';
 
           return (
             <div className={`h-16 px-4 border-b flex items-center min-w-0 shrink-0 transition-colors ${
@@ -282,7 +282,7 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
                     {companySubLabel && (
                       <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 shadow-[0_0_6px_#34d399]" title="Sistem Aktif & Terkendali" />
-                        <p className={`text-[10px] font-medium tracking-wide uppercase truncate ${theme.subTitle}`} title={companySubLabel}>
+                        <p className={`text-[10px] font-medium tracking-wide truncate ${theme.subTitle}`} title={companySubLabel}>
                           {companySubLabel}
                         </p>
                       </div>
@@ -634,52 +634,42 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
           )}
         </div>
 
-        {/* Footer Area with Sidebar Theme Toggle */}
+        {/* Footer Area with Sidebar Theme Toggle (Sejajar Copyright) */}
         <div className={`border-t transition-colors ${theme.footer}`}>
           {!isCollapsed ? (
-            <div className="p-3 space-y-2">
-              {/* Toggle Switch Row */}
-              <div className="flex items-center justify-between gap-2 px-1">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <div className={`w-2 h-2 rounded-full ${isLight ? 'bg-amber-500 shadow-[0_0_6px_#f59e0b]' : 'bg-blue-400 shadow-[0_0_6px_#60a5fa]'}`} />
-                  <span className={`text-[11px] font-semibold truncate ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
-                    Sidebar {isLight ? 'Putih' : 'Gelap'}
-                  </span>
-                </div>
-
-                {/* Toggle Button */}
-                <button
-                  type="button"
-                  onClick={toggleSidebarTheme}
-                  className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                    isLight ? 'bg-blue-600' : 'bg-slate-700'
-                  }`}
-                  title={isLight ? 'Beralih ke Sidebar Gelap (Hitam)' : 'Beralih ke Sidebar Putih'}
-                  aria-label="Ganti mode warna sidebar"
-                >
-                  <span
-                    className={`pointer-events-none flex items-center justify-center h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out text-[9px] ${
-                      isLight ? 'translate-x-5 text-amber-500' : 'translate-x-0 text-slate-700'
-                    }`}
-                  >
-                    {isLight ? (
-                      <Sun className="w-2.5 h-2.5" />
-                    ) : (
-                      <Moon className="w-2.5 h-2.5" />
-                    )}
-                  </span>
-                </button>
-              </div>
-
+            <div className="px-3 py-2.5 flex items-center justify-between gap-2">
               {/* Copyright & Info */}
-              <div className={`text-center text-[10px] pt-1.5 border-t ${isLight ? 'border-slate-200 text-slate-500' : 'border-[#172740] text-slate-500'}`}>
-                <div className={`font-medium ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>
+              <div className="min-w-0 flex-1 text-left">
+                <div className={`text-[10px] font-medium truncate ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>
                   © 2026 {activeCompanyCode === 'ALL' ? 'Document Control Center' : (activeCompanyObj?.name || `PT ${activeCompanyCode}`)}
                 </div>
-                <div className={`text-[9px] ${isLight ? 'text-slate-400' : 'text-slate-600'}`}>
+                <div className={`text-[9px] truncate ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>
                   Document Control System v2.4
                 </div>
               </div>
+
+              {/* Minimal Toggle Switch (Hanya Toggle, Sejajar Copyright) */}
+              <button
+                type="button"
+                onClick={toggleSidebarTheme}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  isLight ? 'bg-blue-600' : 'bg-slate-700'
+                }`}
+                title={isLight ? 'Beralih ke Sidebar Gelap' : 'Beralih ke Sidebar Putih'}
+                aria-label="Toggle warna sidebar"
+              >
+                <span
+                  className={`pointer-events-none flex items-center justify-center h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out text-[9px] ${
+                    isLight ? 'translate-x-4.5 text-amber-500' : 'translate-x-0.5 text-slate-700'
+                  }`}
+                >
+                  {isLight ? (
+                    <Sun className="w-2.5 h-2.5" />
+                  ) : (
+                    <Moon className="w-2.5 h-2.5" />
+                  )}
+                </span>
+              </button>
             </div>
           ) : (
             /* Collapsed View: Compact Icon Toggle Button */
@@ -687,15 +677,15 @@ export default function Sidebar({ isCollapsed, isMobileOpen, onCloseMobile }) {
               <button
                 type="button"
                 onClick={toggleSidebarTheme}
-                className={`w-9 h-9 rounded-lg flex items-center justify-center transition cursor-pointer ${
+                className={`w-8 h-8 rounded-lg flex items-center justify-center transition cursor-pointer ${
                   isLight
                     ? 'bg-slate-100 text-amber-600 hover:bg-slate-200'
                     : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white'
                 }`}
-                title={isLight ? 'Mode Putih (Klik untuk Gelap)' : 'Mode Gelap (Klik untuk Putih)'}
+                title={isLight ? 'Beralih ke Sidebar Gelap' : 'Beralih ke Sidebar Putih'}
                 aria-label="Toggle warna sidebar"
               >
-                {isLight ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                {isLight ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
               </button>
             </div>
           )}

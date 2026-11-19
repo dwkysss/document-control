@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Users,
   Plus,
@@ -18,7 +18,9 @@ import {
   Filter,
   RotateCcw,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  ChevronRight,
+  ChevronLeft
 } from 'lucide-react';
 import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
@@ -186,6 +188,47 @@ export default function EmployeeMasterView() {
       return sortOrder === 'asc' ? cmp : -cmp;
     });
   }, [filteredEmployees, sortOrder]);
+
+  // Ref & State untuk deteksi scroll horizontal tabel (Dynamic Scroll Indicators)
+  const tableContainerRef = useRef(null);
+  const [scrollState, setScrollState] = useState({ canScrollLeft: false, canScrollRight: false });
+
+  const updateScrollIndicators = useCallback(() => {
+    const el = tableContainerRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    const maxScroll = scrollWidth - clientWidth;
+    setScrollState({
+      canScrollLeft: scrollLeft > 6,
+      canScrollRight: maxScroll > 6 && scrollLeft < maxScroll - 6,
+    });
+  }, []);
+
+  useEffect(() => {
+    const el = tableContainerRef.current;
+    if (!el) return;
+
+    updateScrollIndicators();
+    el.addEventListener('scroll', updateScrollIndicators, { passive: true });
+    window.addEventListener('resize', updateScrollIndicators);
+
+    return () => {
+      el.removeEventListener('scroll', updateScrollIndicators);
+      window.removeEventListener('resize', updateScrollIndicators);
+    };
+  }, [updateScrollIndicators, sortedEmployees]);
+
+  const handleScrollRight = () => {
+    const el = tableContainerRef.current;
+    if (!el) return;
+    el.scrollBy({ left: 280, behavior: 'smooth' });
+  };
+
+  const handleScrollLeft = () => {
+    const el = tableContainerRef.current;
+    if (!el) return;
+    el.scrollBy({ left: -280, behavior: 'smooth' });
+  };
 
   const handleApproveResetPassword = async (emp) => {
     if (confirm(`Setujui perubahan kata sandi untuk ${emp.name} (${emp.nip})? Pegawai akan dapat langsung masuk dengan kata sandi barunya.`)) {
@@ -762,46 +805,91 @@ export default function EmployeeMasterView() {
         </div>
 
         {/* Table Content (hidden md:block) */}
-        <div className="hidden md:block overflow-x-auto [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent] dark:[scrollbar-color:#334155_transparent]">
-          <table className="w-full min-w-[1020px] table-fixed text-left border-collapse text-sm">
-            <colgroup>
-              <col className="w-[210px]" />
-              <col className="w-[60px]" />
-              <col className="w-[85px]" />
-              <col className="w-[140px]" />
-              <col className="w-[170px]" />
-              <col className="w-[135px]" />
-              <col className="w-[100px]" />
-              <col className="w-[120px]" />
-            </colgroup>
-            <thead className="sticky top-0 z-20 bg-slate-50 dark:bg-slate-800 shadow-2xs">
-              <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                <th className="sticky left-0 z-30 bg-slate-50 dark:bg-slate-800 py-3 px-4 border-r border-slate-200/70 dark:border-slate-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)] select-none">
-                  <button
-                    type="button"
-                    onClick={toggleSortOrder}
-                    className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 transition cursor-pointer group"
-                    title={sortOrder === 'asc' ? 'Urutan saat ini menaik (▲). Klik untuk membalikkan' : 'Urutan saat ini menurun (▼). Klik untuk membalikkan'}
+        <div className="hidden md:block relative">
+          {/* Indikator Gradien Kiri (Muncul saat user scroll ke kanan melewati kolom Pegawai) */}
+          <div
+            className={`pointer-events-none absolute left-[210px] top-0 bottom-0 w-8 bg-gradient-to-r from-slate-900/10 dark:from-black/40 to-transparent z-15 transition-opacity duration-200 ${
+              scrollState.canScrollLeft ? 'opacity-100' : 'opacity-0'
+            }`}
+            aria-hidden="true"
+          />
+
+          {/* Tombol Panah Kiri di Header Tabel (Muncul saat user geser ke kanan) */}
+          {scrollState.canScrollLeft && (
+            <button
+              type="button"
+              onClick={handleScrollLeft}
+              className="absolute left-[196px] top-2.5 w-7 h-7 rounded-full bg-slate-800/90 hover:bg-slate-900 text-white shadow-md border-2 border-white dark:border-slate-800 flex items-center justify-center transition-all cursor-pointer z-35 hover:scale-110 active:scale-95 group"
+              title="Geser kembali ke kolom sebelumnya"
+              aria-label="Geser kembali ke kolom sebelumnya"
+            >
+              <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+            </button>
+          )}
+
+          <div
+            ref={tableContainerRef}
+            className="overflow-x-auto min-h-[380px] table-scrollbar"
+          >
+            <table className="w-full min-w-[1020px] table-fixed text-left border-collapse text-sm">
+              <colgroup>
+                <col className="w-[210px]" />
+                <col className="w-[60px]" />
+                <col className="w-[85px]" />
+                <col className="w-[140px]" />
+                <col className="w-[170px]" />
+                <col className="w-[135px]" />
+                <col className="w-[100px]" />
+                <col className="w-[120px]" />
+              </colgroup>
+              <thead className="sticky top-0 z-20 bg-slate-50 dark:bg-slate-800 shadow-2xs">
+                <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                  <th className="sticky left-0 z-30 bg-slate-50 dark:bg-slate-800 py-3 px-4 border-r border-slate-200/70 dark:border-slate-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)] select-none">
+                    <button
+                      type="button"
+                      onClick={toggleSortOrder}
+                      className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 transition cursor-pointer group"
+                      title={sortOrder === 'asc' ? 'Urutan saat ini menaik (▲). Klik untuk membalikkan' : 'Urutan saat ini menurun (▼). Klik untuk membalikkan'}
+                    >
+                      <span>Pegawai (Nama & NIP)</span>
+                      <span className="p-0.5 rounded transition">
+                        {sortOrder === 'asc' ? (
+                          <ArrowUp className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform" />
+                        ) : (
+                          <ArrowDown className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform" />
+                        )}
+                      </span>
+                    </button>
+                  </th>
+                  <th className="py-3 px-3">PT</th>
+                  <th className="py-3 px-3">Dept.</th>
+                  <th className="py-3 px-3">Jabatan</th>
+                  <th className="py-3 px-3">Email</th>
+                  <th className="py-3 px-3">Role akses</th>
+                  <th className="py-3 px-3">Status</th>
+                  <th
+                    className={`py-3 px-3 text-right sticky right-0 bg-slate-50 dark:bg-slate-800 z-20 border-l transition-shadow duration-200 ${
+                      scrollState.canScrollRight
+                        ? 'shadow-[-10px_0_16px_-4px_rgba(0,0,0,0.12)] dark:shadow-[-10px_0_16px_-4px_rgba(0,0,0,0.55)] border-slate-200/90 dark:border-slate-700/90'
+                        : 'shadow-none border-slate-200/50 dark:border-slate-800'
+                    }`}
                   >
-                    <span>Pegawai (Nama & NIP)</span>
-                    <span className="p-0.5 rounded transition">
-                      {sortOrder === 'asc' ? (
-                        <ArrowUp className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform" />
-                      ) : (
-                        <ArrowDown className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform" />
-                      )}
-                    </span>
-                  </button>
-                </th>
-                <th className="py-3 px-3">PT</th>
-                <th className="py-3 px-3">Dept.</th>
-                <th className="py-3 px-3">Jabatan</th>
-                <th className="py-3 px-3">Email</th>
-                <th className="py-3 px-3">Role akses</th>
-                <th className="py-3 px-3">Status</th>
-                <th className="py-3 px-3 text-right">Aksi</th>
-              </tr>
-            </thead>
+                    {/* Ikon Tombol Panah Pemisah: Terletak persis di antara kolom yang terpotong dengan kolom Aksi */}
+                    {scrollState.canScrollRight && (
+                      <button
+                        type="button"
+                        onClick={handleScrollRight}
+                        className="absolute -left-3.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-md border-2 border-white dark:border-slate-800 flex items-center justify-center transition-all cursor-pointer z-30 hover:scale-110 active:scale-95 group animate-pulse"
+                        title="Ada kolom tersembunyi. Klik untuk geser tabel ke kanan"
+                        aria-label="Geser melihat kolom tersembunyi"
+                      >
+                        <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                      </button>
+                    )}
+                    <span>Aksi</span>
+                  </th>
+                </tr>
+              </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {sortedEmployees.length === 0 ? (
                 <tr>
@@ -940,7 +1028,17 @@ export default function EmployeeMasterView() {
                           </span>
                         )}
                       </td>
-                      <td className="py-3.5 px-3 text-right whitespace-nowrap">
+                      <td
+                        className={`py-3.5 px-3 text-right whitespace-nowrap sticky right-0 transition-colors border-l z-10 ${
+                          isPending
+                            ? 'bg-[#fffbeb] group-hover:bg-[#fef3c7] dark:bg-[#2e2008]'
+                            : 'bg-white group-hover:bg-slate-50 dark:bg-slate-900 dark:group-hover:bg-slate-800'
+                        } ${
+                          scrollState.canScrollRight
+                            ? 'shadow-[-10px_0_16px_-4px_rgba(0,0,0,0.10)] dark:shadow-[-10px_0_16px_-4px_rgba(0,0,0,0.5)] border-slate-200/90 dark:border-slate-800'
+                            : 'border-slate-200/50 dark:border-slate-800/60 shadow-none'
+                        }`}
+                      >
                         {isPending ? (
                           canApproveUser ? (
                             <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
@@ -1042,6 +1140,7 @@ export default function EmployeeMasterView() {
           </table>
         </div>
       </div>
+    </div>
 
       {/* Approval Modal (Otorisasi Role oleh Admin / MR) */}
       {approvalModalEmployee && (
