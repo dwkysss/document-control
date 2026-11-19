@@ -174,6 +174,21 @@ export default function ActiveDocumentsView() {
   const [openActionDocId, setOpenActionDocId] = useState(null);
   const actionDropdownRef = React.useRef(null);
 
+  // Accordion state untuk tampilan Mobile
+  const [expandedMobileDocIds, setExpandedMobileDocIds] = useState(new Set());
+
+  const toggleExpandMobileDoc = (id) => {
+    setExpandedMobileDocIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
   useEffect(() => {
     function handleClickOutside(event) {
       if (actionDropdownRef.current && !actionDropdownRef.current.contains(event.target)) {
@@ -719,7 +734,7 @@ export default function ActiveDocumentsView() {
 
       {/* Content: Mobile Card List + Desktop Table */}
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-card border border-slate-200 dark:border-slate-800 overflow-hidden">
-        {/* Mobile Card List View (md:hidden) */}
+        {/* Mobile Accordion List View (md:hidden) */}
         <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
           {filtered.length === 0 ? (
             <div className="p-8 text-center text-slate-500">
@@ -730,7 +745,7 @@ export default function ActiveDocumentsView() {
                 <button
                   type="button"
                   onClick={resetFilters}
-                  className="mt-3 inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-blue-600 bg-blue-50 dark:bg-blue-950/40 rounded-lg"
+                  className="mt-3 inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-blue-600 bg-blue-50 dark:bg-blue-950/40 rounded-lg cursor-pointer"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                   Reset Filter
@@ -739,90 +754,171 @@ export default function ActiveDocumentsView() {
             </div>
           ) : (
             paginatedDocs.map((doc) => {
+              const isExpanded = expandedMobileDocIds.has(doc.id);
               const reviewInfo = getPeriodicReviewInfo(doc, reviewIntervalMonths, documentTypes, systemSettings);
+
               return (
-                <div key={doc.id} className="p-4 space-y-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
-                  {/* Card Header: Company + No Doc + Rev */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
-                      <span className="font-mono text-xs font-bold text-slate-900 dark:text-white truncate" title={doc.docNumber}>
-                        {doc.docNumber}
-                      </span>
+                <div
+                  key={doc.id}
+                  className={`transition-colors duration-150 ${
+                    isExpanded ? 'bg-amber-50/25 dark:bg-amber-950/15' : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/40'
+                  }`}
+                >
+                  {/* Row Header (Clickable Accordion Trigger) */}
+                  <div
+                    onClick={() => toggleExpandMobileDoc(doc.id)}
+                    className="p-3.5 flex items-center gap-3 cursor-pointer select-none active:bg-slate-100/60 dark:active:bg-slate-800/60"
+                    role="button"
+                    aria-expanded={isExpanded}
+                  >
+                    {/* Circular Indicator Button: Amber/Orange like reference image */}
+                    <div
+                      className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 shadow-xs transition-all duration-200 ${
+                        isExpanded
+                          ? 'bg-amber-500 text-white shadow-amber-500/30 scale-105'
+                          : 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-950/70 dark:text-amber-300'
+                      }`}
+                    >
+                      <ChevronDown
+                        className={`w-4 h-4 transition-transform duration-200 ${
+                          isExpanded ? 'rotate-180' : ''
+                        }`}
+                      />
                     </div>
-                    <span className="font-mono text-xs font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/60 dark:text-emerald-300 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800 shrink-0">
-                      Rev {doc.revision}
-                    </span>
-                  </div>
 
-                  {/* Card Body: Title & Metadata */}
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white leading-snug line-clamp-2">
-                      {doc.title}
-                    </h3>
-                    <div className="mt-2 flex flex-wrap items-center gap-y-1 gap-x-2 text-[11px] text-slate-500 dark:text-slate-400">
-                      <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-bold text-[10px] text-slate-700 dark:text-slate-300 shrink-0">
-                        {doc.department}
-                      </span>
-                      <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-semibold text-[10px] text-slate-600 dark:text-slate-400 shrink-0">
-                        {doc.type}
-                      </span>
+                    {/* Summary Info (Nomor Dokumen & Judul) */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
+                        <span className="font-mono text-xs font-bold text-blue-700 dark:text-blue-400 truncate">
+                          {doc.docNumber}
+                        </span>
+                        <span className="font-mono text-[10px] font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/60 dark:text-emerald-300 px-1.5 py-0.2 rounded border border-emerald-200 dark:border-emerald-800 shrink-0">
+                          Rev {doc.revision}
+                        </span>
+                      </div>
+                      <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate mt-0.5" title={doc.title}>
+                        {doc.title}
+                      </p>
+                    </div>
+
+                    {/* Format Badge (Right side indicator) */}
+                    <div className="shrink-0 flex items-center">
                       <FileFormatBadge doc={doc} />
-                      <span className="text-slate-700 dark:text-slate-300 font-medium">
-                        {doc.creator}
-                      </span>
-                      <span className="text-slate-300 dark:text-slate-600">•</span>
-                      <span className="font-mono text-[10px] shrink-0">
-                        {formatActiveDate(doc.effectiveDate || doc.createdDate)}
-                      </span>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${reviewInfo.badgeColor}`} title={`Jatuh Tempo: ${reviewInfo.dueDateStr}`}>
-                        {reviewInfo.label}
-                      </span>
                     </div>
                   </div>
 
-                  {/* Card Action Buttons (Min height 40px) */}
-                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setViewingDocument(doc)}
-                      className="flex-1 min-h-[40px] py-2 px-3 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-98"
-                    >
-                      <Eye className="w-4 h-4" />
-                      <span>Pratinjau</span>
-                    </button>
+                  {/* Accordion Content Details (Muncul saat diklik persis sesuai referensi) */}
+                  {isExpanded && (
+                    <div className="px-3.5 pb-3.5 pt-1 space-y-2 text-xs border-t border-amber-100/70 dark:border-amber-950/40">
+                      <div className="bg-white/80 dark:bg-slate-900/80 rounded-lg p-3 border border-slate-200/80 dark:border-slate-800 space-y-2 shadow-2xs">
+                        <div className="grid grid-cols-[105px_1fr] items-baseline gap-2">
+                          <span className="text-slate-500 dark:text-slate-400 font-medium">Judul Lengkap:</span>
+                          <span className="text-slate-900 dark:text-white font-semibold leading-snug break-words">
+                            {doc.title}
+                          </span>
+                        </div>
 
-                    <button
-                      type="button"
-                      onClick={() => setSelectedLabelDoc(doc)}
-                      className="min-h-[40px] px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-98"
-                      title="Cetak Label Arsip"
-                    >
-                      <Tag className="w-4 h-4" />
-                    </button>
+                        <div className="grid grid-cols-[105px_1fr] items-center gap-2">
+                          <span className="text-slate-500 dark:text-slate-400 font-medium">Jenis Dokumen:</span>
+                          <span className="text-slate-800 dark:text-slate-200 font-medium">
+                            {doc.type || '-'}
+                          </span>
+                        </div>
 
-                    {(canReviewContent || canVerifyFormat || canApproveDocument || isAdmin) && (
-                      <button
-                        type="button"
-                        onClick={() => handleOpenReviewModal(doc)}
-                        className="min-h-[40px] px-3 py-2 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-98"
-                        title="Tinjau Berkala"
-                      >
-                        <ClipboardCheck className="w-4 h-4" />
-                      </button>
-                    )}
+                        <div className="grid grid-cols-[105px_1fr] items-center gap-2">
+                          <span className="text-slate-500 dark:text-slate-400 font-medium">Departemen:</span>
+                          <span className="text-slate-800 dark:text-slate-200 font-medium">
+                            {doc.department || '-'}
+                          </span>
+                        </div>
 
-                    {canRequestRevision && (
-                      <button
-                        type="button"
-                        onClick={() => handleRevisionClick(doc)}
-                        className="min-h-[40px] px-3 py-2 bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-98"
-                        title="Ajukan Revisi"
-                      >
-                        <RefreshCw className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
+                        <div className="grid grid-cols-[105px_1fr] items-center gap-2">
+                          <span className="text-slate-500 dark:text-slate-400 font-medium">Pembuat:</span>
+                          <span className="text-slate-800 dark:text-slate-200 font-medium">
+                            {doc.creator || '-'}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-[105px_1fr] items-center gap-2">
+                          <span className="text-slate-500 dark:text-slate-400 font-medium">Tgl. Efektif:</span>
+                          <span className="font-mono text-[11px] text-slate-800 dark:text-slate-200">
+                            {formatActiveDate(doc.effectiveDate || doc.createdDate)}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-[105px_1fr] items-center gap-2">
+                          <span className="text-slate-500 dark:text-slate-400 font-medium">Status Review:</span>
+                          <div>
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold border inline-block ${reviewInfo.badgeColor}`}
+                              title={`Jatuh Tempo: ${reviewInfo.dueDateStr}`}
+                            >
+                              {reviewInfo.label}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Action Buttons (Tindakan) */}
+                        <div className="pt-2 mt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setViewingDocument(doc);
+                            }}
+                            className="flex-1 min-h-[36px] py-1.5 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition active:scale-98 cursor-pointer"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Pratinjau</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedLabelDoc(doc);
+                            }}
+                            className="min-h-[36px] px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 border border-slate-200 dark:border-slate-700 transition active:scale-98 cursor-pointer"
+                            title="Cetak Label Arsip"
+                          >
+                            <Tag className="w-3.5 h-3.5" />
+                            <span>Label</span>
+                          </button>
+
+                          {(canReviewContent || canVerifyFormat || canApproveDocument || isAdmin) && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenReviewModal(doc);
+                              }}
+                              className="min-h-[36px] px-3 py-1.5 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 border border-teal-200 dark:border-teal-800 transition active:scale-98 cursor-pointer"
+                              title="Tinjau Berkala"
+                            >
+                              <ClipboardCheck className="w-3.5 h-3.5" />
+                              <span>Review</span>
+                            </button>
+                          )}
+
+                          {canRequestRevision && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRevisionClick(doc);
+                              }}
+                              className="min-h-[36px] px-3 py-1.5 bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 border border-purple-200 dark:border-purple-800 transition active:scale-98 cursor-pointer"
+                              title="Ajukan Revisi"
+                            >
+                              <RefreshCw className="w-3.5 h-3.5" />
+                              <span>Revisi</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })
