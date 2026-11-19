@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { CheckCircle2, Eye, Search, Filter, RefreshCw } from 'lucide-react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { CheckCircle2, Eye, Search, Filter, RefreshCw, ChevronRight, ChevronLeft } from 'lucide-react';
 import Badge, { CompanyBadge, FileFormatBadge } from '../common/Badge';
 import { useDocumentControl } from '../../context/DocumentControlContext';
 
@@ -43,6 +43,45 @@ export default function ApprovedListView() {
     setActiveMenu('rev-new');
     setBreadcrumbs(['Dashboard', 'Document Revision', 'Pengajuan Revisi']);
   };
+
+  // Ref & State untuk deteksi scroll horizontal tabel (Dynamic Scroll Indicators)
+  const tableContainerRef = useRef(null);
+  const [scrollState, setScrollState] = useState({ canScrollLeft: false, canScrollRight: false });
+
+  const updateScrollIndicators = useCallback(() => {
+    const el = tableContainerRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    const maxScroll = scrollWidth - clientWidth;
+    setScrollState({
+      canScrollLeft: scrollLeft > 6,
+      canScrollRight: maxScroll > 6 && scrollLeft < maxScroll - 6,
+    });
+  }, []);
+
+  const handleScrollRight = useCallback(() => {
+    if (tableContainerRef.current) {
+      tableContainerRef.current.scrollBy({ left: 280, behavior: 'smooth' });
+    }
+  }, []);
+
+  const handleScrollLeft = useCallback(() => {
+    if (tableContainerRef.current) {
+      tableContainerRef.current.scrollBy({ left: -280, behavior: 'smooth' });
+    }
+  }, []);
+
+  useEffect(() => {
+    const el = tableContainerRef.current;
+    if (!el) return;
+    updateScrollIndicators();
+    el.addEventListener('scroll', updateScrollIndicators, { passive: true });
+    window.addEventListener('resize', updateScrollIndicators);
+    return () => {
+      el.removeEventListener('scroll', updateScrollIndicators);
+      window.removeEventListener('resize', updateScrollIndicators);
+    };
+  }, [updateScrollIndicators, filteredDocs]);
 
   return (
     <div className="space-y-4 sm:space-y-5">
@@ -217,71 +256,123 @@ export default function ApprovedListView() {
             </div>
 
             {/* Desktop Table View (hidden md:block) */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 text-[11px] font-bold">
-                    <th className="py-3 px-4 text-center whitespace-nowrap w-12">No.</th>
-                    <th className="py-3 px-4 whitespace-nowrap">No. Dokumen</th>
-                    <th className="py-3 px-4 min-w-[200px]">Judul Dokumen</th>
-                    <th className="py-3 px-4 text-center whitespace-nowrap">Format</th>
-                    <th className="py-3 px-4 whitespace-nowrap">Departemen</th>
-                    <th className="py-3 px-4 whitespace-nowrap min-w-[130px]">Pembuat</th>
-                    <th className="py-3 px-4 text-center whitespace-nowrap">Revisi</th>
-                    <th className="py-3 px-4 text-center whitespace-nowrap">Status</th>
-                    <th className="py-3 px-4 text-center whitespace-nowrap min-w-[110px]">Tgl. Efektif</th>
-                    <th className="py-3 px-4 text-center whitespace-nowrap">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {filteredDocs.map((doc, idx) => (
-                    <tr key={doc.id} className="transition-colors hover:bg-blue-50/50 dark:hover:bg-slate-800/70">
-                      <td className="py-3.5 px-4 text-center text-slate-400 whitespace-nowrap">{idx + 1}</td>
-                      <td className="py-3.5 px-4 font-bold font-mono text-slate-900 dark:text-white whitespace-nowrap">
-                        <div className="flex items-center gap-1.5">
-                          <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
-                          <span>{doc.docNumber}</span>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 font-medium text-slate-800 dark:text-slate-200 max-w-[240px] truncate" title={doc.title}>
-                        {doc.title}
-                      </td>
-                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                        <FileFormatBadge doc={doc} />
-                      </td>
-                      <td className="py-3.5 px-4 font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap">{doc.department}</td>
-                      <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">{doc.creator}</td>
-                      <td className="py-3.5 px-4 text-center font-mono font-bold whitespace-nowrap">{doc.revision}</td>
-                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                        <Badge status={doc.status} size="sm" />
-                      </td>
-                      <td className="py-3.5 px-4 text-center text-slate-700 dark:text-slate-300 font-mono text-[11px] whitespace-nowrap">
-                        {formatDate(doc.effectiveDate || doc.createdDate)}
-                      </td>
-                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                        <div className="flex items-center justify-center gap-1.5">
+            <div className="hidden md:block relative">
+              {/* Indikator Gradien Kiri (Muncul saat user scroll ke kanan) */}
+              <div
+                className={`pointer-events-none absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-slate-900/10 dark:from-black/40 to-transparent z-15 transition-opacity duration-200 ${
+                  scrollState.canScrollLeft ? 'opacity-100' : 'opacity-0'
+                }`}
+                aria-hidden="true"
+              />
+
+              {/* Tombol Panah Kiri di Header Tabel (Muncul saat user geser ke kanan) */}
+              {scrollState.canScrollLeft && (
+                <button
+                  type="button"
+                  onClick={handleScrollLeft}
+                  className="absolute left-1.5 top-2.5 w-7 h-7 rounded-full bg-slate-800/90 hover:bg-slate-900 text-white shadow-md border-2 border-white dark:border-slate-800 flex items-center justify-center transition-all cursor-pointer z-30 hover:scale-110 active:scale-95 group"
+                  title="Geser kembali ke kolom awal (Dokumen)"
+                  aria-label="Geser kembali ke kolom awal"
+                >
+                  <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+                </button>
+              )}
+
+              <div
+                ref={tableContainerRef}
+                className="overflow-x-auto min-h-[380px] table-scrollbar"
+              >
+                <table className="w-full min-w-[1100px] text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 text-[11px] font-bold">
+                      <th className="py-3 px-4 text-center whitespace-nowrap w-12">No.</th>
+                      <th className="py-3 px-4 whitespace-nowrap">No. Dokumen</th>
+                      <th className="py-3 px-4 min-w-[200px]">Judul Dokumen</th>
+                      <th className="py-3 px-4 text-center whitespace-nowrap">Format</th>
+                      <th className="py-3 px-4 whitespace-nowrap">Departemen</th>
+                      <th className="py-3 px-4 whitespace-nowrap min-w-[130px]">Pembuat</th>
+                      <th className="py-3 px-4 text-center whitespace-nowrap">Revisi</th>
+                      <th className="py-3 px-4 text-center whitespace-nowrap">Status</th>
+                      <th className="py-3 px-4 text-center whitespace-nowrap min-w-[110px]">Tgl. Efektif</th>
+                      <th
+                        className={`py-3 px-4 text-center whitespace-nowrap sticky right-0 bg-slate-50 dark:bg-slate-800 z-20 border-l transition-shadow duration-200 ${
+                          scrollState.canScrollRight
+                            ? 'shadow-[-10px_0_16px_-4px_rgba(0,0,0,0.12)] dark:shadow-[-10px_0_16px_-4px_rgba(0,0,0,0.55)] border-slate-200/90 dark:border-slate-700/90'
+                            : 'shadow-none border-slate-200/50 dark:border-slate-800'
+                        }`}
+                      >
+                        {/* Ikon Tombol Panah Pemisah: Terletak persis di antara kolom yang terpotong dengan kolom Aksi */}
+                        {scrollState.canScrollRight && (
                           <button
-                            onClick={() => setViewingDocument(doc)}
-                            className="px-2.5 py-1 text-xs font-semibold text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-md transition flex items-center gap-1 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
-                            title="Buka Dokumen Terkendali"
+                            type="button"
+                            onClick={handleScrollRight}
+                            className="absolute -left-3.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-md border-2 border-white dark:border-slate-800 flex items-center justify-center transition-all cursor-pointer z-30 hover:scale-110 active:scale-95 group animate-pulse"
+                            title="Ada kolom tersembunyi. Klik untuk geser tabel ke kanan"
+                            aria-label="Geser melihat kolom tersembunyi"
                           >
-                            <Eye className="w-3.5 h-3.5" />
-                            Pratinjau
+                            <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
                           </button>
-                          <button
-                            onClick={() => handleInitiateRevision(doc)}
-                            className="px-2.5 py-1 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md transition flex items-center gap-1 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:text-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600"
-                            title="Ajukan Revisi Dokumen"
-                          >
-                            <RefreshCw className="w-3.5 h-3.5" />
-                            Revisi
-                          </button>
-                        </div>
-                      </td>
+                        )}
+                        <span>Aksi</span>
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {filteredDocs.map((doc, idx) => (
+                      <tr key={doc.id} className="group transition-colors hover:bg-blue-50/50 dark:hover:bg-slate-800/70">
+                        <td className="py-3.5 px-4 text-center text-slate-400 whitespace-nowrap">{idx + 1}</td>
+                        <td className="py-3.5 px-4 font-bold font-mono text-slate-900 dark:text-white whitespace-nowrap">
+                          <div className="flex items-center gap-1.5">
+                            <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
+                            <span>{doc.docNumber}</span>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 font-medium text-slate-800 dark:text-slate-200 max-w-[240px] truncate" title={doc.title}>
+                          {doc.title}
+                        </td>
+                        <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                          <FileFormatBadge doc={doc} />
+                        </td>
+                        <td className="py-3.5 px-4 font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap">{doc.department}</td>
+                        <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">{doc.creator}</td>
+                        <td className="py-3.5 px-4 text-center font-mono font-bold whitespace-nowrap">{doc.revision}</td>
+                        <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                          <Badge status={doc.status} size="sm" />
+                        </td>
+                        <td className="py-3.5 px-4 text-center text-slate-700 dark:text-slate-300 font-mono text-[11px] whitespace-nowrap">
+                          {formatDate(doc.effectiveDate || doc.createdDate)}
+                        </td>
+                        <td
+                          className={`py-3.5 px-4 text-center whitespace-nowrap sticky right-0 bg-white group-hover:bg-blue-50/50 dark:bg-slate-900 dark:group-hover:bg-slate-800/90 transition-colors border-l z-10 ${
+                            scrollState.canScrollRight
+                              ? 'shadow-[-10px_0_16px_-4px_rgba(0,0,0,0.12)] dark:shadow-[-10px_0_16px_-4px_rgba(0,0,0,0.55)] border-slate-200/80 dark:border-slate-800'
+                              : 'shadow-none border-slate-100 dark:border-slate-850'
+                          }`}
+                        >
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              onClick={() => setViewingDocument(doc)}
+                              className="px-2.5 py-1 text-xs font-semibold text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-md transition flex items-center gap-1 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+                              title="Buka Dokumen Terkendali"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              Pratinjau
+                            </button>
+                            <button
+                              onClick={() => handleInitiateRevision(doc)}
+                              className="px-2.5 py-1 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md transition flex items-center gap-1 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:text-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600"
+                              title="Ajukan Revisi Dokumen"
+                            >
+                              <RefreshCw className="w-3.5 h-3.5" />
+                              Revisi
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </>
         )}
