@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Archive, Eye, AlertTriangle, Search, Trash2, RotateCcw, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import Badge, { CompanyBadge, FileFormatBadge } from '../common/Badge';
 import Modal from '../common/Modal';
@@ -63,6 +63,45 @@ export default function ObsoleteDocumentsView() {
     }
     return pages;
   }, [currentPage, totalPages]);
+
+  // Ref & State untuk deteksi scroll horizontal tabel (Dynamic Scroll Indicators)
+  const tableContainerRef = useRef(null);
+  const [scrollState, setScrollState] = useState({ canScrollLeft: false, canScrollRight: false });
+
+  const updateScrollIndicators = useCallback(() => {
+    const el = tableContainerRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    const maxScroll = scrollWidth - clientWidth;
+    setScrollState({
+      canScrollLeft: scrollLeft > 6,
+      canScrollRight: maxScroll > 6 && scrollLeft < maxScroll - 6,
+    });
+  }, []);
+
+  const handleScrollRight = useCallback(() => {
+    if (tableContainerRef.current) {
+      tableContainerRef.current.scrollBy({ left: 280, behavior: 'smooth' });
+    }
+  }, []);
+
+  const handleScrollLeft = useCallback(() => {
+    if (tableContainerRef.current) {
+      tableContainerRef.current.scrollBy({ left: -280, behavior: 'smooth' });
+    }
+  }, []);
+
+  useEffect(() => {
+    const el = tableContainerRef.current;
+    if (!el) return;
+    updateScrollIndicators();
+    el.addEventListener('scroll', updateScrollIndicators, { passive: true });
+    window.addEventListener('resize', updateScrollIndicators);
+    return () => {
+      el.removeEventListener('scroll', updateScrollIndicators);
+      window.removeEventListener('resize', updateScrollIndicators);
+    };
+  }, [updateScrollIndicators, paginatedDocs]);
 
   const hasActiveFilters = Boolean(searchTerm.trim()) || filterDept !== 'ALL' || filterType !== 'ALL';
 
@@ -246,115 +285,167 @@ export default function ObsoleteDocumentsView() {
         </div>
 
         {/* Clean Table (Desktop View: hidden md:block) */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full min-w-[1080px] table-fixed text-left border-collapse text-sm">
-            <colgroup>
-              <col className="w-[30%]" />
-              <col className="w-[8%]" />
-              <col className="w-[7%]" />
-              <col className="w-[12%]" />
-              <col className="w-[7%]" />
-              <col className="w-[18%]" />
-              <col className="w-[8%]" />
-              <col className="w-[10%]" />
-            </colgroup>
-            <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                <th className="py-3 px-4">Dokumen arsip</th>
-                <th className="py-3 px-3">Dept.</th>
-                <th className="py-3 px-3 text-center">Format</th>
-                <th className="py-3 px-3">Pembuat</th>
-                <th className="py-3 px-3 text-center">Rev.</th>
-                <th className="py-3 px-3">Digantikan oleh</th>
-                <th className="py-3 px-3">Status</th>
-                <th className="py-3 px-3 text-right">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="py-14 text-center text-slate-500">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <Archive className="w-8 h-8 text-slate-300 dark:text-slate-600" />
-                      <p className="font-bold text-slate-700 dark:text-slate-300 text-sm">
-                        {obsoleteDocs.length === 0
-                          ? 'Belum Ada Arsip Dokumen Obsolete'
-                          : 'Tidak ada dokumen obsolete yang sesuai dengan filter'}
-                      </p>
-                      <p className="text-xs text-slate-400 max-w-sm">
-                        {obsoleteDocs.length === 0
-                          ? 'Dokumen yang telah diperbarui ke revisi baru atau ditarik dari operasional akan tersimpan otomatis di sini.'
-                          : 'Coba ubah kata kunci pencarian atau reset filter departemen/jenis dokumen.'}
-                      </p>
-                      {hasActiveFilters && (
-                        <button
-                          type="button"
-                          onClick={resetFilters}
-                          className="mt-2 px-3 py-1.5 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 rounded-lg transition cursor-pointer"
-                        >
-                          Reset Semua Filter
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                paginatedDocs.map((doc) => (
-                  <tr key={doc.id} className="hover:bg-rose-50/20 dark:hover:bg-slate-800/40 transition">
-                    <td className="py-4 px-4">
-                      <div className="flex min-w-0 items-start gap-2.5">
-                        <span className="mt-0.5 text-slate-500"><Archive className="h-4 w-4" aria-hidden="true" /></span>
-                        <div className="min-w-0"><div className="truncate font-mono text-xs font-bold text-slate-600 line-through dark:text-slate-400" title={doc.docNumber}>{doc.docNumber}</div><div className="mt-1 truncate text-xs font-medium text-slate-700 dark:text-slate-300" title={doc.title}>{doc.title}</div></div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-3 text-xs font-semibold text-slate-700 dark:text-slate-300">{doc.department}</td>
-                    <td className="py-4 px-3 text-center">
-                      <FileFormatBadge doc={doc} />
-                    </td>
-                    <td className="py-4 px-3 text-xs text-slate-700 dark:text-slate-300"><span className="block truncate" title={doc.creator}>{doc.creator}</span></td>
-                    <td className="py-4 px-3 text-center font-mono text-xs font-bold text-rose-800 dark:text-rose-300">
-                      {doc.revision}
-                    </td>
-                    <td className="py-4 px-3 text-xs">
-                      {doc.supersededBy ? (
-                        <span className="font-bold text-blue-600 dark:text-blue-400">
-                          <span className="block truncate" title={doc.supersededBy}>{doc.supersededBy}</span>
-                        </span>
-                      ) : (
-                        <span className="text-slate-400 italic">Revisi Baru</span>
-                      )}
-                    </td>
-                    <td className="py-4 px-3">
-                      <Badge status={doc.status} size="sm" />
-                    </td>
-                    <td className="py-4 px-3">
-                      <div className="flex flex-wrap items-center justify-end gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => setViewingDocument(doc)}
-                          className="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2 py-1.5 text-xs font-semibold text-rose-800 transition hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 cursor-pointer dark:bg-rose-950/40 dark:text-rose-200 dark:hover:bg-rose-900"
-                          title="Pratinjau Dokumen Obsolete (Watermarked)"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>Lihat Arsip</span>
-                        </button>
+        <div className="hidden md:block relative">
+          {/* Indikator Gradien Kiri (Muncul saat user scroll ke kanan) */}
+          <div
+            className={`pointer-events-none absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-slate-900/10 dark:from-black/40 to-transparent z-15 transition-opacity duration-200 ${
+              scrollState.canScrollLeft ? 'opacity-100' : 'opacity-0'
+            }`}
+            aria-hidden="true"
+          />
 
-                        {isAdmin && (
+          {/* Tombol Panah Kiri di Header Tabel (Muncul saat user geser ke kanan) */}
+          {scrollState.canScrollLeft && (
+            <button
+              type="button"
+              onClick={handleScrollLeft}
+              className="absolute left-1.5 top-2.5 w-7 h-7 rounded-full bg-slate-800/90 hover:bg-slate-900 text-white shadow-md border-2 border-white dark:border-slate-800 flex items-center justify-center transition-all cursor-pointer z-30 hover:scale-110 active:scale-95 group"
+              title="Geser kembali ke kolom awal (Dokumen)"
+              aria-label="Geser kembali ke kolom awal"
+            >
+              <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+            </button>
+          )}
+
+          <div
+            ref={tableContainerRef}
+            className="overflow-x-auto min-h-[380px] table-scrollbar"
+          >
+            <table className="w-full min-w-[1080px] table-fixed text-left border-collapse text-sm">
+              <colgroup>
+                <col className="w-[28%]" />
+                <col className="w-[8%]" />
+                <col className="w-[7%]" />
+                <col className="w-[12%]" />
+                <col className="w-[6%]" />
+                <col className="w-[17%]" />
+                <col className="w-[8%]" />
+                <col className="w-[14%]" />
+              </colgroup>
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                  <th className="py-3 px-4">Dokumen arsip</th>
+                  <th className="py-3 px-3">Dept.</th>
+                  <th className="py-3 px-3 text-center">Format</th>
+                  <th className="py-3 px-3">Pembuat</th>
+                  <th className="py-3 px-3 text-center">Rev.</th>
+                  <th className="py-3 px-3">Digantikan oleh</th>
+                  <th className="py-3 px-3">Status</th>
+                  <th
+                    className={`py-3 px-3 text-right sticky right-0 bg-slate-50 dark:bg-slate-800 z-20 border-l transition-shadow duration-200 ${
+                      scrollState.canScrollRight
+                        ? 'shadow-[-10px_0_16px_-4px_rgba(0,0,0,0.12)] dark:shadow-[-10px_0_16px_-4px_rgba(0,0,0,0.55)] border-slate-200/90 dark:border-slate-700/90'
+                        : 'shadow-none border-slate-200/50 dark:border-slate-800'
+                    }`}
+                  >
+                    {/* Ikon Tombol Panah Pemisah: Terletak persis di antara kolom yang terpotong dengan kolom Aksi */}
+                    {scrollState.canScrollRight && (
+                      <button
+                        type="button"
+                        onClick={handleScrollRight}
+                        className="absolute -left-3.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-md border-2 border-white dark:border-slate-800 flex items-center justify-center transition-all cursor-pointer z-30 hover:scale-110 active:scale-95 group animate-pulse"
+                        title="Ada kolom tersembunyi. Klik untuk geser tabel ke kanan"
+                        aria-label="Geser melihat kolom tersembunyi"
+                      >
+                        <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                      </button>
+                    )}
+                    <span>Aksi</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-14 text-center text-slate-500">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <Archive className="w-8 h-8 text-slate-300 dark:text-slate-600" />
+                        <p className="font-bold text-slate-700 dark:text-slate-300 text-sm">
+                          {obsoleteDocs.length === 0
+                            ? 'Belum Ada Arsip Dokumen Obsolete'
+                            : 'Tidak ada dokumen obsolete yang sesuai dengan filter'}
+                        </p>
+                        <p className="text-xs text-slate-400 max-w-sm">
+                          {obsoleteDocs.length === 0
+                            ? 'Dokumen yang telah diperbarui ke revisi baru atau ditarik dari operasional akan tersimpan otomatis di sini.'
+                            : 'Coba ubah kata kunci pencarian atau reset filter departemen/jenis dokumen.'}
+                        </p>
+                        {hasActiveFilters && (
                           <button
-                            onClick={() => setDocToDelete(doc)}
-                            className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-md transition cursor-pointer"
-                            title="Hapus Dokumen Obsolete dari Sistem"
+                            type="button"
+                            onClick={resetFilters}
+                            className="mt-2 px-3 py-1.5 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 rounded-lg transition cursor-pointer"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            Reset Semua Filter
                           </button>
                         )}
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  paginatedDocs.map((doc) => (
+                    <tr key={doc.id} className="group hover:bg-rose-50/20 dark:hover:bg-slate-800/40 transition">
+                      <td className="py-4 px-4">
+                        <div className="flex min-w-0 items-start gap-2.5">
+                          <span className="mt-0.5 text-slate-500"><Archive className="h-4 w-4" aria-hidden="true" /></span>
+                          <div className="min-w-0"><div className="truncate font-mono text-xs font-bold text-slate-600 line-through dark:text-slate-400" title={doc.docNumber}>{doc.docNumber}</div><div className="mt-1 truncate text-xs font-medium text-slate-700 dark:text-slate-300" title={doc.title}>{doc.title}</div></div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-3 text-xs font-semibold text-slate-700 dark:text-slate-300">{doc.department}</td>
+                      <td className="py-4 px-3 text-center">
+                        <FileFormatBadge doc={doc} />
+                      </td>
+                      <td className="py-4 px-3 text-xs text-slate-700 dark:text-slate-300"><span className="block truncate" title={doc.creator}>{doc.creator}</span></td>
+                      <td className="py-4 px-3 text-center font-mono text-xs font-bold text-rose-800 dark:text-rose-300">
+                        {doc.revision}
+                      </td>
+                      <td className="py-4 px-3 text-xs">
+                        {doc.supersededBy ? (
+                          <span className="font-bold text-blue-600 dark:text-blue-400">
+                            <span className="block truncate" title={doc.supersededBy}>{doc.supersededBy}</span>
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 italic">Revisi Baru</span>
+                        )}
+                      </td>
+                      <td className="py-4 px-3">
+                        <Badge status={doc.status} size="sm" />
+                      </td>
+                      <td
+                        className={`py-4 px-3 sticky right-0 bg-white group-hover:bg-rose-50/20 dark:bg-slate-900 dark:group-hover:bg-slate-800/90 transition-colors border-l z-10 ${
+                          scrollState.canScrollRight
+                            ? 'shadow-[-10px_0_16px_-4px_rgba(0,0,0,0.12)] dark:shadow-[-10px_0_16px_-4px_rgba(0,0,0,0.55)] border-slate-200/80 dark:border-slate-800'
+                            : 'shadow-none border-slate-100 dark:border-slate-850'
+                        }`}
+                      >
+                        <div className="flex flex-wrap items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setViewingDocument(doc)}
+                            className="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2 py-1.5 text-xs font-semibold text-rose-800 transition hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 cursor-pointer dark:bg-rose-950/40 dark:text-rose-200 dark:hover:bg-rose-900"
+                            title="Pratinjau Dokumen Obsolete (Watermarked)"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Lihat Arsip</span>
+                          </button>
+
+                          {isAdmin && (
+                            <button
+                              onClick={() => setDocToDelete(doc)}
+                              className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-md transition cursor-pointer"
+                              title="Hapus Dokumen Obsolete dari Sistem"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Footer Pagination Lengkap */}

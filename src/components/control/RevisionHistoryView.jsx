@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import {
   GitBranch,
   FileText,
@@ -127,6 +127,45 @@ export default function RevisionHistoryView() {
     }
     return pages;
   }, [currentPage, totalPages]);
+
+  // Ref & State untuk deteksi scroll horizontal tabel (Dynamic Scroll Indicators)
+  const tableContainerRef = useRef(null);
+  const [scrollState, setScrollState] = useState({ canScrollLeft: false, canScrollRight: false });
+
+  const updateScrollIndicators = useCallback(() => {
+    const el = tableContainerRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    const maxScroll = scrollWidth - clientWidth;
+    setScrollState({
+      canScrollLeft: scrollLeft > 6,
+      canScrollRight: maxScroll > 6 && scrollLeft < maxScroll - 6,
+    });
+  }, []);
+
+  const handleScrollRight = useCallback(() => {
+    if (tableContainerRef.current) {
+      tableContainerRef.current.scrollBy({ left: 280, behavior: 'smooth' });
+    }
+  }, []);
+
+  const handleScrollLeft = useCallback(() => {
+    if (tableContainerRef.current) {
+      tableContainerRef.current.scrollBy({ left: -280, behavior: 'smooth' });
+    }
+  }, []);
+
+  useEffect(() => {
+    const el = tableContainerRef.current;
+    if (!el) return;
+    updateScrollIndicators();
+    el.addEventListener('scroll', updateScrollIndicators, { passive: true });
+    window.addEventListener('resize', updateScrollIndicators);
+    return () => {
+      el.removeEventListener('scroll', updateScrollIndicators);
+      window.removeEventListener('resize', updateScrollIndicators);
+    };
+  }, [updateScrollIndicators, paginatedDocs]);
 
   const resetFilters = () => {
     setSearchTerm('');
@@ -394,30 +433,75 @@ export default function RevisionHistoryView() {
         </div>
 
         {/* Dense, Clean Table (Desktop View: hidden md:block) */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full min-w-[1240px] table-fixed text-left border-collapse text-sm">
-            <colgroup>
-              <col className="w-[26%]" />
-              <col className="w-[8%]" />
-              <col className="w-[7%]" />
-              <col className="w-[11%]" />
-              <col className="w-[11%]" />
-              <col className="w-[11%]" />
-              <col className="w-[16%]" />
-              <col className="w-[10%]" />
-            </colgroup>
-            <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                <th className="py-3 px-4">Dokumen</th>
-                <th className="py-3 px-3">Dept.</th>
-                <th className="py-3 px-3 text-center">Format</th>
-                <th className="py-3 px-3">Versi</th>
-                <th className="py-3 px-3">Tgl. berlaku</th>
-                <th className="py-3 px-3">Pembuat</th>
-                <th className="py-3 px-3">Catatan revisi</th>
-                <th className="py-3 px-3 text-right">Aksi</th>
-              </tr>
-            </thead>
+        <div className="hidden md:block relative">
+          {/* Indikator Gradien Kiri (Muncul saat user scroll ke kanan) */}
+          <div
+            className={`pointer-events-none absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-slate-900/10 dark:from-black/40 to-transparent z-15 transition-opacity duration-200 ${
+              scrollState.canScrollLeft ? 'opacity-100' : 'opacity-0'
+            }`}
+            aria-hidden="true"
+          />
+
+          {/* Tombol Panah Kiri di Header Tabel (Muncul saat user geser ke kanan) */}
+          {scrollState.canScrollLeft && (
+            <button
+              type="button"
+              onClick={handleScrollLeft}
+              className="absolute left-1.5 top-2.5 w-7 h-7 rounded-full bg-slate-800/90 hover:bg-slate-900 text-white shadow-md border-2 border-white dark:border-slate-800 flex items-center justify-center transition-all cursor-pointer z-30 hover:scale-110 active:scale-95 group"
+              title="Geser kembali ke kolom awal (Dokumen)"
+              aria-label="Geser kembali ke kolom awal"
+            >
+              <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+            </button>
+          )}
+
+          <div
+            ref={tableContainerRef}
+            className="overflow-x-auto min-h-[380px] table-scrollbar"
+          >
+            <table className="w-full min-w-[1240px] table-fixed text-left border-collapse text-sm">
+              <colgroup>
+                <col className="w-[26%]" />
+                <col className="w-[8%]" />
+                <col className="w-[7%]" />
+                <col className="w-[10%]" />
+                <col className="w-[11%]" />
+                <col className="w-[11%]" />
+                <col className="w-[15%]" />
+                <col className="w-[12%]" />
+              </colgroup>
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                  <th className="py-3 px-4">Dokumen</th>
+                  <th className="py-3 px-3">Dept.</th>
+                  <th className="py-3 px-3 text-center">Format</th>
+                  <th className="py-3 px-3">Versi</th>
+                  <th className="py-3 px-3">Tgl. berlaku</th>
+                  <th className="py-3 px-3">Pembuat</th>
+                  <th className="py-3 px-3">Catatan revisi</th>
+                  <th
+                    className={`py-3 px-3 text-right sticky right-0 bg-slate-50 dark:bg-slate-800 z-20 border-l transition-shadow duration-200 ${
+                      scrollState.canScrollRight
+                        ? 'shadow-[-10px_0_16px_-4px_rgba(0,0,0,0.12)] dark:shadow-[-10px_0_16px_-4px_rgba(0,0,0,0.55)] border-slate-200/90 dark:border-slate-700/90'
+                        : 'shadow-none border-slate-200/50 dark:border-slate-800'
+                    }`}
+                  >
+                    {/* Ikon Tombol Panah Pemisah: Terletak persis di antara kolom yang terpotong dengan kolom Aksi */}
+                    {scrollState.canScrollRight && (
+                      <button
+                        type="button"
+                        onClick={handleScrollRight}
+                        className="absolute -left-3.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-md border-2 border-white dark:border-slate-800 flex items-center justify-center transition-all cursor-pointer z-30 hover:scale-110 active:scale-95 group animate-pulse"
+                        title="Ada kolom tersembunyi. Klik untuk geser tabel ke kanan"
+                        aria-label="Geser melihat kolom tersembunyi"
+                      >
+                        <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                      </button>
+                    )}
+                    <span>Aksi</span>
+                  </th>
+                </tr>
+              </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filteredDocs.length === 0 ? (
                 <tr>
@@ -449,7 +533,7 @@ export default function RevisionHistoryView() {
                   const isMulti = seriesCount > 1;
 
                   return (
-                    <tr key={doc.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition">
+                    <tr key={doc.id} className="group hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition">
                       <td className="py-4 px-4">
                         <div className="flex min-w-0 items-start gap-2.5">
                           <span className="mt-0.5 text-slate-500"><GitBranch className="h-4 w-4" aria-hidden="true" /></span>
@@ -494,7 +578,13 @@ export default function RevisionHistoryView() {
                       </td>
 
                       {/* 10. Aksi */}
-                      <td className="py-4 px-3">
+                      <td
+                        className={`py-4 px-3 sticky right-0 bg-white group-hover:bg-slate-50 dark:bg-slate-900 dark:group-hover:bg-slate-800 transition-colors border-l z-10 ${
+                          scrollState.canScrollRight
+                            ? 'shadow-[-10px_0_16px_-4px_rgba(0,0,0,0.12)] dark:shadow-[-10px_0_16px_-4px_rgba(0,0,0,0.55)] border-slate-200/80 dark:border-slate-800'
+                            : 'shadow-none border-slate-100 dark:border-slate-850'
+                        }`}
+                      >
                         <div className="flex flex-wrap items-center justify-end gap-1.5">
                           <button
                             type="button"
@@ -536,6 +626,7 @@ export default function RevisionHistoryView() {
             </tbody>
           </table>
         </div>
+      </div>
 
         {/* Footer Pagination Lengkap */}
         <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
