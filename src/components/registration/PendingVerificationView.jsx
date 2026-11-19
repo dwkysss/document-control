@@ -12,7 +12,8 @@ import {
   RotateCcw,
   Search,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  ChevronDown
 } from 'lucide-react';
 import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
@@ -40,6 +41,21 @@ export default function PendingVerificationView() {
   const [activeTab, setActiveTab] = useState('ALL'); // 'ALL' | 'REVIEW' | 'VERIFIKASI' | 'APPROVAL'
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDept, setFilterDept] = useState('ALL');
+
+  // Accordion state untuk tampilan Mobile
+  const [expandedMobileDocIds, setExpandedMobileDocIds] = useState(new Set());
+
+  const toggleExpandMobileDoc = (id) => {
+    setExpandedMobileDocIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
 
   // State Tahap 1: Review Atasan
   const [selectedReviewDoc, setSelectedReviewDoc] = useState(null);
@@ -373,7 +389,7 @@ export default function PendingVerificationView() {
           </div>
         </div>
 
-        {/* Mobile Card List View (md:hidden) */}
+        {/* Mobile Accordion List View (md:hidden) */}
         <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
           {filteredDocs.length === 0 ? (
             <div className="px-4 py-12 text-center">
@@ -400,6 +416,7 @@ export default function PendingVerificationView() {
             </div>
           ) : (
             filteredDocs.map((doc) => {
+              const isExpanded = expandedMobileDocIds.has(doc.id);
               const isStage1 = doc.status === 'REVIEW';
               const isStage2 = doc.status === 'VERIFIKASI';
               const isStage3 = doc.status === 'APPROVAL';
@@ -407,175 +424,261 @@ export default function PendingVerificationView() {
               const docLevel = docTypeObj?.level || 2;
               const isFastTrack = docLevel === 3 || docLevel === 4;
 
+              const stageBadgeText = isStage1
+                ? (docLevel === 1 ? 'Tahap 3: Telaah MR' : 'Tahap 1: Review Atasan')
+                : isStage2
+                ? (docLevel === 1 ? 'Tahap 2: Verifikasi DCO' : isFastTrack ? 'Tahap 2: Verifikasi (Fast)' : 'Tahap 2: Verifikasi DCO')
+                : (docLevel === 1 ? 'Tahap 4: Pengesahan GM' : 'Tahap 3: Pengesahan MR');
+
+              const stageBadgeColor = isStage1
+                ? 'bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800'
+                : isStage2
+                ? (isFastTrack
+                    ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                    : 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800')
+                : 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800';
+
               return (
-                <div key={doc.id} className="p-4 space-y-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
-                  {/* Header: No Dok + Type + Dept */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <button
-                        type="button"
-                        onClick={() => setViewingDocument(doc)}
-                        className="font-mono text-xs font-bold text-blue-700 hover:underline dark:text-blue-400 text-left truncate cursor-pointer"
-                      >
-                        {doc.docNumber}
-                      </button>
-                      <span className="shrink-0 rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                        {doc.type || 'SOP'}
-                      </span>
-                    </div>
-                    <span className="shrink-0 rounded-md border border-slate-200 bg-slate-50 dark:bg-slate-800 dark:border-slate-700 px-2 py-0.5 text-xs font-bold text-slate-700 dark:text-slate-300">
-                      {doc.department}
-                    </span>
-                  </div>
-
-                  {/* Body: Title + Meta + Stage */}
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white leading-snug line-clamp-2">
-                      {doc.title}
-                    </h3>
-                    <div className="mt-1 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
-                      <span>Pembuat: <strong className="text-slate-700 dark:text-slate-300">{doc.creator}</strong></span>
-                      <span>{doc.createdDate}</span>
-                    </div>
-                    <div className="mt-2">
-                      {isStage1 && (
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-                          {docLevel === 1 ? 'Tahap 3: Telaah Mutu (MR)' : 'Tahap 1: Review Atasan'}
-                        </span>
-                      )}
-                      {isStage2 && (
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold border ${
-                          isFastTrack
-                            ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-                            : 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
-                        }`}>
-                          {docLevel === 1
-                            ? 'Tahap 2: Verifikasi Format DCO'
-                            : isFastTrack
-                            ? 'Tahap 2: Verifikasi & Rilis (Fast-Track)'
-                            : 'Tahap 2: Verifikasi DCO'}
-                        </span>
-                      )}
-                      {isStage3 && (
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                          {docLevel === 1 ? 'Tahap 4: Pengesahan GM / Direksi' : 'Tahap 3: Pengesahan MR'}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Actions Footer */}
-                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setViewingDocument(doc)}
-                      className="min-h-[40px] px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer"
+                <div
+                  key={doc.id}
+                  className={`transition-colors duration-150 ${
+                    isExpanded ? 'bg-amber-50/25 dark:bg-amber-950/15' : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/40'
+                  }`}
+                >
+                  {/* Row Header (Clickable Accordion Trigger) */}
+                  <div
+                    onClick={() => toggleExpandMobileDoc(doc.id)}
+                    className="p-3.5 flex items-center gap-3 cursor-pointer select-none active:bg-slate-100/60 dark:active:bg-slate-800/60"
+                    role="button"
+                    aria-expanded={isExpanded}
+                  >
+                    {/* Circular Indicator Button: Amber/Orange */}
+                    <div
+                      className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 shadow-xs transition-all duration-200 ${
+                        isExpanded
+                          ? 'bg-amber-500 text-white shadow-amber-500/30 scale-105'
+                          : 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-950/70 dark:text-amber-300'
+                      }`}
                     >
-                      <Eye className="w-4 h-4" />
-                      <span>Lihat</span>
-                    </button>
+                      <ChevronDown
+                        className={`w-4 h-4 transition-transform duration-200 ${
+                          isExpanded ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </div>
 
-                    {/* Stage 1 Actions */}
-                    {isStage1 && canReviewContent && isAssignedReviewer(doc) && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenReviewModal(doc)}
-                          className="flex-1 min-h-[40px] px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs active:scale-98 cursor-pointer"
-                        >
-                          <UserCheck className="w-4 h-4" />
-                          <span>{docLevel === 1 ? 'Telaah MR' : 'Review'}</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenRevisionModal(doc, 'REVIEW')}
-                          className="min-h-[40px] px-3 py-2 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 rounded-lg text-xs font-semibold flex items-center justify-center transition active:scale-98 cursor-pointer"
-                          title="Minta Revisi"
-                        >
-                          <RotateCcw className="w-4 h-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenRejectModal(doc, 'REVIEW')}
-                          className="min-h-[40px] px-3 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 rounded-lg text-xs font-semibold flex items-center justify-center transition active:scale-98 cursor-pointer"
-                          title="Tolak Berkas"
-                        >
-                          <XCircle className="w-4 h-4" />
-                        </button>
-                      </>
-                    )}
+                    {/* Summary Info */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-mono text-xs font-bold text-blue-700 dark:text-blue-400 truncate">
+                          {doc.docNumber}
+                        </span>
+                        <span className="shrink-0 rounded border border-slate-200 bg-slate-100 px-1.5 py-0.2 text-[9px] font-bold uppercase text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                          {doc.type || 'SOP'}
+                        </span>
+                        <span className="shrink-0 rounded border border-slate-200 bg-slate-50 dark:bg-slate-800 dark:border-slate-700 px-1.5 py-0.2 text-[9px] font-bold text-slate-700 dark:text-slate-300">
+                          {doc.department}
+                        </span>
+                      </div>
+                      <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate mt-0.5" title={doc.title}>
+                        {doc.title}
+                      </p>
+                    </div>
 
-                    {/* Stage 2 Actions */}
-                    {isStage2 && canVerifyFormat && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenVerifyModal(doc)}
-                          className={`flex-1 min-h-[40px] px-3 py-2 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs active:scale-98 cursor-pointer ${
-                            isFastTrack ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-600 hover:bg-amber-700'
-                          }`}
-                        >
-                          <ShieldCheck className="w-4 h-4" />
-                          <span>{isFastTrack ? 'Verifikasi & Rilis' : 'Verifikasi'}</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenRevisionModal(doc, 'FORMAT')}
-                          className="min-h-[40px] px-3 py-2 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 rounded-lg text-xs font-semibold flex items-center justify-center transition active:scale-98 cursor-pointer"
-                          title="Minta Revisi Format"
-                        >
-                          <RotateCcw className="w-4 h-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenRejectModal(doc, 'FORMAT')}
-                          className="min-h-[40px] px-3 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 rounded-lg text-xs font-semibold flex items-center justify-center transition active:scale-98 cursor-pointer"
-                          title="Tolak Format"
-                        >
-                          <XCircle className="w-4 h-4" />
-                        </button>
-                      </>
-                    )}
-
-                    {/* Stage 3 Actions */}
-                    {isStage3 && canApproveDocument && isAssignedApprover(doc) && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenApproveModal(doc)}
-                          className="flex-1 min-h-[40px] px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs active:scale-98 cursor-pointer"
-                        >
-                          <CheckCircle2 className="w-4 h-4" />
-                          <span>{docLevel === 1 ? 'Sahkan GM' : 'Sahkan'}</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenRevisionModal(doc, 'APPROVAL')}
-                          className="min-h-[40px] px-3 py-2 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 rounded-lg text-xs font-semibold flex items-center justify-center transition active:scale-98 cursor-pointer"
-                          title="Minta Revisi"
-                        >
-                          <RotateCcw className="w-4 h-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenRejectModal(doc, 'APPROVAL')}
-                          className="min-h-[40px] px-3 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 rounded-lg text-xs font-semibold flex items-center justify-center transition active:scale-98 cursor-pointer"
-                          title="Tolak Berkas"
-                        >
-                          <XCircle className="w-4 h-4" />
-                        </button>
-                      </>
-                    )}
-
-                    {/* Wait state */}
-                    {((isStage1 && (!canReviewContent || !isAssignedReviewer(doc))) ||
-                      (isStage2 && !canVerifyFormat) ||
-                      (isStage3 && (!canApproveDocument || !isAssignedApprover(doc)))) && (
-                      <span className="flex-1 text-center text-[11px] text-slate-500 py-2 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
-                        {isStage1 ? (docLevel === 1 ? 'Menunggu Telaah MR' : 'Menunggu Atasan') : (isStage2 ? 'Menunggu DCO' : (docLevel === 1 ? 'Menunggu GM' : 'Menunggu MR'))}
+                    {/* Stage Badge on right */}
+                    <div className="shrink-0">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${stageBadgeColor}`}>
+                        {isStage1 ? 'Review' : isStage2 ? 'Verifikasi' : 'Pengesahan'}
                       </span>
-                    )}
+                    </div>
                   </div>
+
+                  {/* Accordion Content Details */}
+                  {isExpanded && (
+                    <div className="px-3.5 pb-3.5 pt-1 space-y-2 text-xs border-t border-amber-100/70 dark:border-amber-950/40">
+                      <div className="bg-white/80 dark:bg-slate-900/80 rounded-lg p-3 border border-slate-200/80 dark:border-slate-800 space-y-2 shadow-2xs">
+                        <div className="grid grid-cols-[105px_1fr] items-baseline gap-2">
+                          <span className="text-slate-500 dark:text-slate-400 font-medium">Judul Lengkap:</span>
+                          <span className="text-slate-900 dark:text-white font-semibold leading-snug break-words">
+                            {doc.title}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-[105px_1fr] items-center gap-2">
+                          <span className="text-slate-500 dark:text-slate-400 font-medium">Jenis & Dept:</span>
+                          <span className="text-slate-800 dark:text-slate-200 font-medium">
+                            {doc.type || 'SOP'} • {doc.department}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-[105px_1fr] items-center gap-2">
+                          <span className="text-slate-500 dark:text-slate-400 font-medium">Pembuat:</span>
+                          <span className="text-slate-800 dark:text-slate-200 font-medium">
+                            {doc.creator || '-'}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-[105px_1fr] items-center gap-2">
+                          <span className="text-slate-500 dark:text-slate-400 font-medium">Tgl. Dibuat:</span>
+                          <span className="font-mono text-[11px] text-slate-800 dark:text-slate-200">
+                            {doc.createdDate}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-[105px_1fr] items-center gap-2">
+                          <span className="text-slate-500 dark:text-slate-400 font-medium">Tahap Saat Ini:</span>
+                          <div>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${stageBadgeColor}`}>
+                              {stageBadgeText}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="pt-2 mt-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setViewingDocument(doc);
+                            }}
+                            className="min-h-[36px] px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 border border-slate-200 dark:border-slate-700 transition active:scale-98 cursor-pointer"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Lihat</span>
+                          </button>
+
+                          {/* Stage 1 Actions */}
+                          {isStage1 && canReviewContent && isAssignedReviewer(doc) && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenReviewModal(doc);
+                                }}
+                                className="flex-1 min-h-[36px] px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs active:scale-98 cursor-pointer"
+                              >
+                                <UserCheck className="w-3.5 h-3.5" />
+                                <span>{docLevel === 1 ? 'Telaah MR' : 'Review'}</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenRevisionModal(doc, 'REVIEW');
+                                }}
+                                className="min-h-[36px] px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 rounded-lg text-xs font-semibold flex items-center justify-center transition active:scale-98 cursor-pointer"
+                                title="Minta Revisi"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenRejectModal(doc, 'REVIEW');
+                                }}
+                                className="min-h-[36px] px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 rounded-lg text-xs font-semibold flex items-center justify-center transition active:scale-98 cursor-pointer"
+                                title="Tolak Berkas"
+                              >
+                                <XCircle className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          )}
+
+                          {/* Stage 2 Actions */}
+                          {isStage2 && canVerifyFormat && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenVerifyModal(doc);
+                                }}
+                                className={`flex-1 min-h-[36px] px-3 py-1.5 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs active:scale-98 cursor-pointer ${
+                                  isFastTrack ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-600 hover:bg-amber-700'
+                                }`}
+                              >
+                                <ShieldCheck className="w-3.5 h-3.5" />
+                                <span>{isFastTrack ? 'Verifikasi & Rilis' : 'Verifikasi'}</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenRevisionModal(doc, 'FORMAT');
+                                }}
+                                className="min-h-[36px] px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 rounded-lg text-xs font-semibold flex items-center justify-center transition active:scale-98 cursor-pointer"
+                                title="Minta Revisi Format"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenRejectModal(doc, 'FORMAT');
+                                }}
+                                className="min-h-[36px] px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 rounded-lg text-xs font-semibold flex items-center justify-center transition active:scale-98 cursor-pointer"
+                                title="Tolak Format"
+                              >
+                                <XCircle className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          )}
+
+                          {/* Stage 3 Actions */}
+                          {isStage3 && canApproveDocument && isAssignedApprover(doc) && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenApproveModal(doc);
+                                }}
+                                className="flex-1 min-h-[36px] px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs active:scale-98 cursor-pointer"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <span>{docLevel === 1 ? 'Sahkan GM' : 'Sahkan'}</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenRevisionModal(doc, 'APPROVAL');
+                                }}
+                                className="min-h-[36px] px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 rounded-lg text-xs font-semibold flex items-center justify-center transition active:scale-98 cursor-pointer"
+                                title="Minta Revisi"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenRejectModal(doc, 'APPROVAL');
+                                }}
+                                className="min-h-[36px] px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 rounded-lg text-xs font-semibold flex items-center justify-center transition active:scale-98 cursor-pointer"
+                                title="Tolak Berkas"
+                              >
+                                <XCircle className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          )}
+
+                          {/* Wait state */}
+                          {((isStage1 && (!canReviewContent || !isAssignedReviewer(doc))) ||
+                            (isStage2 && !canVerifyFormat) ||
+                            (isStage3 && (!canApproveDocument || !isAssignedApprover(doc)))) && (
+                            <span className="flex-1 text-center text-[11px] text-slate-500 py-2 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                              {isStage1 ? (docLevel === 1 ? 'Menunggu Telaah MR' : 'Menunggu Atasan') : (isStage2 ? 'Menunggu DCO' : (docLevel === 1 ? 'Menunggu GM' : 'Menunggu MR'))}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })

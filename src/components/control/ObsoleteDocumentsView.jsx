@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { Archive, Eye, AlertTriangle, Search, Trash2, RotateCcw, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { Archive, Eye, AlertTriangle, Search, Trash2, RotateCcw, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ChevronDown } from 'lucide-react';
 import Badge, { CompanyBadge, FileFormatBadge } from '../common/Badge';
 import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
@@ -10,6 +10,21 @@ export default function ObsoleteDocumentsView() {
   const [filterDept, setFilterDept] = useState('ALL');
   const [filterType, setFilterType] = useState('ALL');
   const [docToDelete, setDocToDelete] = useState(null);
+
+  // Accordion state untuk tampilan Mobile
+  const [expandedMobileDocIds, setExpandedMobileDocIds] = useState(new Set());
+
+  const toggleExpandMobileDoc = (id) => {
+    setExpandedMobileDocIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -189,7 +204,7 @@ export default function ObsoleteDocumentsView() {
           </div>
         </div>
 
-        {/* Mobile Card List View (md:hidden) */}
+        {/* Mobile Accordion List View (md:hidden) */}
         <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
           {filtered.length === 0 ? (
             <div className="p-8 text-center text-slate-500">
@@ -215,72 +230,129 @@ export default function ObsoleteDocumentsView() {
               )}
             </div>
           ) : (
-            paginatedDocs.map((doc) => (
-              <div key={doc.id} className="p-4 space-y-2.5 hover:bg-rose-50/20 dark:hover:bg-slate-800/40 transition">
-                {/* Header: Number & Badges */}
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
-                    <span className="font-mono text-xs font-bold text-slate-500 line-through truncate" title={doc.docNumber}>
-                      {doc.docNumber}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <FileFormatBadge doc={doc} />
-                    <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
-                      Rev {doc.revision}
-                    </span>
-                    <Badge status={doc.status} size="sm" />
-                  </div>
-                </div>
+            paginatedDocs.map((doc) => {
+              const isExpanded = expandedMobileDocIds.has(doc.id);
 
-                {/* Title */}
-                <h3 className="text-xs font-semibold text-slate-800 dark:text-slate-200 leading-snug line-clamp-2">
-                  {doc.title}
-                </h3>
-
-                {/* Metadata Row */}
-                <div className="flex flex-wrap items-center gap-y-1 gap-x-2 text-[11px] text-slate-500 dark:text-slate-400">
-                  <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-bold text-[10px] text-slate-700 dark:text-slate-300 shrink-0">
-                    {doc.department}
-                  </span>
-                  <span className="text-slate-700 dark:text-slate-300 font-medium">
-                    {doc.creator}
-                  </span>
-                  {doc.supersededBy && (
-                    <>
-                      <span className="text-slate-300 dark:text-slate-600">•</span>
-                      <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 truncate" title={`Digantikan: ${doc.supersededBy}`}>
-                        Digantikan: {doc.supersededBy}
-                      </span>
-                    </>
-                  )}
-                </div>
-
-                {/* Actions */}
-                <div className="pt-1.5 flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setViewingDocument(doc)}
-                    className="flex-1 h-8 px-3 text-xs font-semibold text-rose-800 dark:text-rose-200 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 rounded-lg border border-rose-200/80 dark:border-rose-800/80 transition flex items-center justify-center gap-1.5 active:scale-98"
+              return (
+                <div
+                  key={doc.id}
+                  className={`transition-colors duration-150 ${
+                    isExpanded ? 'bg-rose-50/30 dark:bg-rose-950/20' : 'hover:bg-rose-50/15 dark:hover:bg-slate-800/40'
+                  }`}
+                >
+                  {/* Row Header (Clickable Accordion Trigger) */}
+                  <div
+                    onClick={() => toggleExpandMobileDoc(doc.id)}
+                    className="p-3.5 flex items-center gap-3 cursor-pointer select-none active:bg-slate-100/60 dark:active:bg-slate-800/60"
+                    role="button"
+                    aria-expanded={isExpanded}
                   >
-                    <Eye className="w-3.5 h-3.5" />
-                    <span>Lihat Arsip</span>
-                  </button>
-
-                  {isAdmin && (
-                    <button
-                      type="button"
-                      onClick={() => setDocToDelete(doc)}
-                      className="h-8 px-3 text-xs font-semibold text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-lg border border-slate-200 dark:border-slate-700 transition flex items-center justify-center active:scale-98"
-                      title="Hapus Dokumen Obsolete"
+                    {/* Circular Indicator Button: Amber/Orange */}
+                    <div
+                      className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 shadow-xs transition-all duration-200 ${
+                        isExpanded
+                          ? 'bg-amber-500 text-white shadow-amber-500/30 scale-105'
+                          : 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-950/70 dark:text-amber-300'
+                      }`}
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                      <ChevronDown
+                        className={`w-4 h-4 transition-transform duration-200 ${
+                          isExpanded ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </div>
+
+                    {/* Summary Info */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
+                        <span className="font-mono text-xs font-bold text-slate-500 line-through truncate" title={doc.docNumber}>
+                          {doc.docNumber}
+                        </span>
+                        <span className="font-mono text-[10px] font-bold px-1.5 py-0.2 rounded bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800 shrink-0">
+                          Rev {doc.revision}
+                        </span>
+                        <Badge status={doc.status} size="sm" />
+                      </div>
+                      <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate mt-0.5" title={doc.title}>
+                        {doc.title}
+                      </p>
+                    </div>
+
+                    {/* Format Badge on right */}
+                    <div className="shrink-0 flex items-center">
+                      <FileFormatBadge doc={doc} />
+                    </div>
+                  </div>
+
+                  {/* Accordion Content Details */}
+                  {isExpanded && (
+                    <div className="px-3.5 pb-3.5 pt-1 space-y-2 text-xs border-t border-rose-100/80 dark:border-rose-950/40">
+                      <div className="bg-white/80 dark:bg-slate-900/80 rounded-lg p-3 border border-slate-200/80 dark:border-slate-800 space-y-2 shadow-2xs">
+                        <div className="grid grid-cols-[105px_1fr] items-baseline gap-2">
+                          <span className="text-slate-500 dark:text-slate-400 font-medium">Judul Lengkap:</span>
+                          <span className="text-slate-900 dark:text-white font-semibold leading-snug break-words">
+                            {doc.title}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-[105px_1fr] items-center gap-2">
+                          <span className="text-slate-500 dark:text-slate-400 font-medium">Departemen:</span>
+                          <span className="text-slate-800 dark:text-slate-200 font-medium">
+                            {doc.department || '-'}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-[105px_1fr] items-center gap-2">
+                          <span className="text-slate-500 dark:text-slate-400 font-medium">Pembuat:</span>
+                          <span className="text-slate-800 dark:text-slate-200 font-medium">
+                            {doc.creator || '-'}
+                          </span>
+                        </div>
+
+                        {doc.supersededBy && (
+                          <div className="grid grid-cols-[105px_1fr] items-center gap-2">
+                            <span className="text-slate-500 dark:text-slate-400 font-medium">Digantikan:</span>
+                            <span className="text-blue-600 dark:text-blue-400 font-bold font-mono text-[11px]">
+                              {doc.supersededBy}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Actions */}
+                        <div className="pt-2 mt-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setViewingDocument(doc);
+                            }}
+                            className="flex-1 h-8 px-3 text-xs font-semibold text-rose-800 dark:text-rose-200 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 rounded-lg border border-rose-200/80 dark:border-rose-800/80 transition flex items-center justify-center gap-1.5 active:scale-98 cursor-pointer"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Lihat Arsip</span>
+                          </button>
+
+                          {isAdmin && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDocToDelete(doc);
+                              }}
+                              className="h-8 px-3 text-xs font-semibold text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-lg border border-slate-200 dark:border-slate-700 transition flex items-center justify-center active:scale-98 cursor-pointer"
+                              title="Hapus Dokumen Obsolete"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
 

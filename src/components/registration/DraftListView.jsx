@@ -13,7 +13,8 @@ import {
   AlertCircle,
   X,
   Clock,
-  Save
+  Save,
+  ChevronDown
 } from 'lucide-react';
 import Badge, { CompanyBadge } from '../common/Badge';
 import Modal from '../common/Modal';
@@ -38,6 +39,21 @@ export default function DraftListView() {
 
   const [activeTab, setActiveTab] = useState('ALL'); // 'ALL' | 'DRAFT' | 'REVISION'
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Accordion state untuk tampilan Mobile
+  const [expandedMobileDocIds, setExpandedMobileDocIds] = useState(new Set());
+
+  const toggleExpandMobileDoc = (id) => {
+    setExpandedMobileDocIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
   const [selectedDept, setSelectedDept] = useState('ALL');
 
   // Modal State untuk Edit & Upload Berkas Revisi
@@ -342,126 +358,172 @@ export default function DraftListView() {
           )
         ) : (
           <>
-            {/* Mobile Card List View (md:hidden) */}
+            {/* Mobile Accordion List View (md:hidden) */}
             <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
               {filteredDrafts.map((doc, idx) => {
+                const isExpanded = expandedMobileDocIds.has(doc.id);
                 const isNeedsRevision = doc.status === 'PERLU REVISI' || doc.status === 'REVISI';
+
                 return (
                   <div
                     key={doc.id}
-                    className={`p-4 space-y-3 transition ${
-                      isNeedsRevision
-                        ? 'bg-amber-50/40 dark:bg-amber-950/10'
-                        : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                    className={`transition-colors duration-150 ${
+                      isExpanded
+                        ? isNeedsRevision ? 'bg-amber-50/50 dark:bg-amber-950/20' : 'bg-slate-50/70 dark:bg-slate-800/40'
+                        : isNeedsRevision ? 'bg-amber-50/30 dark:bg-amber-950/10' : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
                     }`}
                   >
-                    {/* Header: Company + Number + Status */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
-                        <span className="font-bold font-mono text-xs text-slate-900 dark:text-white truncate">
-                          {doc.docNumber}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <Badge status={doc.status} size="sm" />
-                        <span className="font-mono text-[10px] font-bold text-slate-700 bg-slate-100 dark:bg-slate-800 dark:text-slate-300 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
-                          Rev {doc.revision}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Body: Title + Meta */}
-                    <div>
-                      <h3 className="text-sm font-bold text-slate-900 dark:text-white leading-snug line-clamp-2">
-                        {doc.title}
-                      </h3>
-
-                      {/* Revision Notes if returned */}
-                      {doc.revisionNotes && (
-                        <div className="mt-2 text-[11px] text-amber-900 dark:text-amber-300 bg-amber-50/90 dark:bg-amber-950/50 p-2.5 rounded-lg border border-amber-200 dark:border-amber-800 leading-snug">
-                          <span className="font-bold flex items-center gap-1 text-amber-800 dark:text-amber-400">
-                            <RotateCcw className="w-3.5 h-3.5 shrink-0" />
-                            Catatan Revisi ({doc.revisionRequestedBy || 'Verifikator'}):
-                          </span>
-                          <span className="mt-0.5 block italic text-slate-700 dark:text-slate-300 pl-4">
-                            "{doc.revisionNotes}"
-                          </span>
-                        </div>
-                      )}
-
-                      <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
-                        <span className="px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold text-[9.5px]">
-                          {doc.type}
-                        </span>
-                        <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-[9.5px]">
-                          {doc.department}
-                        </span>
-                        <span>{doc.createdDate}</span>
-                      </div>
-
-                      {/* File attachment preview */}
-                      {doc.fileName && (
-                        <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100/90 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 text-[11px] text-slate-700 dark:text-slate-300 max-w-full">
-                          <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
-                          <span className="truncate max-w-[200px] font-mono">{doc.fileName}</span>
-                          {doc.fileSize && <span className="text-[10px] text-slate-400 font-mono">• {doc.fileSize}</span>}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Actions Footer */}
-                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          submitForVerification({
-                            ...doc,
-                            isResubmission: doc.status === 'PERLU REVISI' || doc.status === 'REVISI' || Boolean(doc.revisionNotes)
-                          });
-                        }}
-                        className="flex-1 min-h-[40px] py-2 px-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer"
-                      >
-                        <Send className="w-3.5 h-3.5" />
-                        <span>{isNeedsRevision ? 'Ajukan Ulang' : 'Ajukan'}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEditModal(doc)}
-                        className={`min-h-[40px] px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer border ${
-                          isNeedsRevision
-                            ? 'text-amber-800 bg-amber-50 hover:bg-amber-100 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800'
-                            : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-transparent'
+                    {/* Row Header (Clickable Accordion Trigger) */}
+                    <div
+                      onClick={() => toggleExpandMobileDoc(doc.id)}
+                      className="p-3.5 flex items-center gap-3 cursor-pointer select-none active:bg-slate-100/60 dark:active:bg-slate-800/60"
+                      role="button"
+                      aria-expanded={isExpanded}
+                    >
+                      {/* Circular Indicator Button: Amber/Orange */}
+                      <div
+                        className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 shadow-xs transition-all duration-200 ${
+                          isExpanded
+                            ? 'bg-amber-500 text-white shadow-amber-500/30 scale-105'
+                            : 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-950/70 dark:text-amber-300'
                         }`}
-                        title="Edit / Ganti Berkas"
                       >
-                        <FileEdit className="w-4 h-4" />
-                        <span>Edit</span>
-                      </button>
+                        <ChevronDown
+                          className={`w-4 h-4 transition-transform duration-200 ${
+                            isExpanded ? 'rotate-180' : ''
+                          }`}
+                        />
+                      </div>
 
-                      <button
-                        type="button"
-                        onClick={() => setViewingDocument(doc)}
-                        className="min-h-[40px] px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-semibold flex items-center justify-center transition active:scale-98 cursor-pointer"
-                        title="Pratinjau Draft"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (window.confirm(`Hapus draf ${doc.docNumber} (${doc.title})?`)) {
-                            deleteDocument(doc.id);
-                          }
-                        }}
-                        className="min-h-[40px] px-3 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 rounded-lg text-xs font-semibold flex items-center justify-center transition active:scale-98 cursor-pointer"
-                        title="Hapus Draft"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {/* Summary Info */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
+                          <span className="font-bold font-mono text-xs text-slate-900 dark:text-white truncate">
+                            {doc.docNumber}
+                          </span>
+                          <span className="font-mono text-[10px] font-bold text-slate-700 bg-slate-100 dark:bg-slate-800 dark:text-slate-300 px-1.5 py-0.2 rounded border border-slate-200 dark:border-slate-700 shrink-0">
+                            Rev {doc.revision}
+                          </span>
+                          <Badge status={doc.status} size="sm" />
+                        </div>
+                        <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate mt-0.5" title={doc.title}>
+                          {doc.title}
+                        </p>
+                      </div>
                     </div>
+
+                    {/* Accordion Content Details */}
+                    {isExpanded && (
+                      <div className="px-3.5 pb-3.5 pt-1 space-y-2 text-xs border-t border-slate-100 dark:border-slate-800">
+                        <div className="bg-white/80 dark:bg-slate-900/80 rounded-lg p-3 border border-slate-200/80 dark:border-slate-800 space-y-2 shadow-2xs">
+                          <div className="grid grid-cols-[105px_1fr] items-baseline gap-2">
+                            <span className="text-slate-500 dark:text-slate-400 font-medium">Judul Lengkap:</span>
+                            <span className="text-slate-900 dark:text-white font-semibold leading-snug break-words">
+                              {doc.title}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-[105px_1fr] items-center gap-2">
+                            <span className="text-slate-500 dark:text-slate-400 font-medium">Jenis & Dept:</span>
+                            <span className="text-slate-800 dark:text-slate-200 font-medium">
+                              {doc.type} • {doc.department}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-[105px_1fr] items-center gap-2">
+                            <span className="text-slate-500 dark:text-slate-400 font-medium">Tgl. Dibuat:</span>
+                            <span className="font-mono text-[11px] text-slate-800 dark:text-slate-200">
+                              {doc.createdDate}
+                            </span>
+                          </div>
+
+                          {/* Revision Notes if returned */}
+                          {doc.revisionNotes && (
+                            <div className="mt-2 text-[11px] text-amber-900 dark:text-amber-300 bg-amber-50/90 dark:bg-amber-950/50 p-2.5 rounded-lg border border-amber-200 dark:border-amber-800 leading-snug">
+                              <span className="font-bold flex items-center gap-1 text-amber-800 dark:text-amber-400">
+                                <RotateCcw className="w-3.5 h-3.5 shrink-0" />
+                                Catatan Revisi ({doc.revisionRequestedBy || 'Verifikator'}):
+                              </span>
+                              <span className="mt-0.5 block italic text-slate-700 dark:text-slate-300 pl-4">
+                                "{doc.revisionNotes}"
+                              </span>
+                            </div>
+                          )}
+
+                          {/* File attachment preview */}
+                          {doc.fileName && (
+                            <div className="mt-1 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100/90 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 text-[11px] text-slate-700 dark:text-slate-300 max-w-full">
+                              <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                              <span className="truncate max-w-[200px] font-mono">{doc.fileName}</span>
+                              {doc.fileSize && <span className="text-[10px] text-slate-400 font-mono">• {doc.fileSize}</span>}
+                            </div>
+                          )}
+
+                          {/* Actions */}
+                          <div className="pt-2 mt-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                submitForVerification({
+                                  ...doc,
+                                  isResubmission: doc.status === 'PERLU REVISI' || doc.status === 'REVISI' || Boolean(doc.revisionNotes)
+                                });
+                              }}
+                              className="flex-1 min-h-[36px] py-1.5 px-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer shadow-xs"
+                            >
+                              <Send className="w-3.5 h-3.5" />
+                              <span>{isNeedsRevision ? 'Ajukan Ulang' : 'Ajukan'}</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenEditModal(doc);
+                              }}
+                              className={`min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer border ${
+                                isNeedsRevision
+                                  ? 'text-amber-800 bg-amber-50 hover:bg-amber-100 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800'
+                                  : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700'
+                              }`}
+                              title="Edit / Ganti Berkas"
+                            >
+                              <FileEdit className="w-3.5 h-3.5" />
+                              <span>Edit</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setViewingDocument(doc);
+                              }}
+                              className="min-h-[36px] px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-semibold flex items-center justify-center border border-slate-200 dark:border-slate-700 transition active:scale-98 cursor-pointer"
+                              title="Pratinjau Draft"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              <span>Lihat</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (window.confirm(`Hapus draf ${doc.docNumber} (${doc.title})?`)) {
+                                  deleteDocument(doc.id);
+                                }
+                              }}
+                              className="min-h-[36px] px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 rounded-lg text-xs font-semibold flex items-center justify-center border border-rose-200 dark:border-rose-800 transition active:scale-98 cursor-pointer"
+                              title="Hapus Draft"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}

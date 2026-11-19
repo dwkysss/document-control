@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { XCircle, Eye, RefreshCw, AlertCircle, Search, Trash2, AlertTriangle, ChevronRight, ChevronLeft } from 'lucide-react';
+import { XCircle, Eye, RefreshCw, AlertCircle, Search, Trash2, AlertTriangle, ChevronRight, ChevronLeft, ChevronDown } from 'lucide-react';
 import Badge, { CompanyBadge } from '../common/Badge';
 import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
@@ -19,6 +19,21 @@ export default function RejectedListView() {
   } = useDocumentControl();
   const [searchTerm, setSearchTerm] = useState('');
   const [docToDelete, setDocToDelete] = useState(null);
+
+  // Accordion state untuk tampilan Mobile
+  const [expandedMobileDocIds, setExpandedMobileDocIds] = useState(new Set());
+
+  const toggleExpandMobileDoc = (id) => {
+    setExpandedMobileDocIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
 
   const rejectedDocs = documents.filter(d =>
     d.status === 'DITOLAK' &&
@@ -134,7 +149,7 @@ export default function RejectedListView() {
             <input type="search" placeholder="Cari nomor, judul, atau alasan" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full rounded-md border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-white" />
           </label>
         </div>
-        {/* Mobile Card List View (md:hidden) */}
+        {/* Mobile Accordion List View (md:hidden) */}
         <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
           {filteredDocs.length === 0 ? (
             <div className="px-4 py-12 text-center">
@@ -158,77 +173,139 @@ export default function RejectedListView() {
               )}
             </div>
           ) : (
-            filteredDocs.map((doc) => (
-              <div key={doc.id} className="p-4 space-y-3 hover:bg-rose-50/20 dark:hover:bg-slate-800/40 transition">
-                {/* Header: Company + Number + Status */}
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
-                    <span className="font-bold font-mono text-xs text-slate-900 dark:text-white truncate">
-                      {doc.docNumber}
-                    </span>
-                  </div>
-                  <Badge status={doc.status} size="sm" />
-                </div>
+            filteredDocs.map((doc) => {
+              const isExpanded = expandedMobileDocIds.has(doc.id);
 
-                {/* Body: Title + Dept + Creator */}
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white leading-snug line-clamp-2">
-                    {doc.title}
-                  </h3>
-                  <div className="mt-1 flex items-center justify-between text-[11px] text-slate-500">
-                    <span>Dept: <strong className="text-slate-700 dark:text-slate-300">{doc.department}</strong></span>
-                    <span>Pembuat: {doc.creator}</span>
-                  </div>
-
-                  {/* Rejection Note Plate */}
-                  <div className="mt-2 text-xs bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 rounded-lg p-2.5 text-rose-800 dark:text-rose-300">
-                    <div className="font-bold flex items-center gap-1 text-[11px] text-rose-700 dark:text-rose-400">
-                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                      Alasan Penolakan:
-                    </div>
-                    <p className="mt-1 text-slate-800 dark:text-slate-200 leading-snug">
-                      "{doc.rejectionReason || 'Format klausul belum memenuhi standar.'}"
-                    </p>
-                    <div className="mt-1 text-[10px] text-slate-400">
-                      Oleh: {doc.rejectedBy || 'Verifikator'} • {doc.rejectedDate ? doc.rejectedDate.slice(0, 10) : doc.createdDate}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Actions Footer */}
-                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleResubmitAsDraft(doc)}
-                    className="flex-1 min-h-[40px] py-2 px-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer"
+              return (
+                <div
+                  key={doc.id}
+                  className={`transition-colors duration-150 ${
+                    isExpanded ? 'bg-rose-50/30 dark:bg-rose-950/20' : 'hover:bg-rose-50/15 dark:hover:bg-slate-800/40'
+                  }`}
+                >
+                  {/* Row Header (Clickable Accordion Trigger) */}
+                  <div
+                    onClick={() => toggleExpandMobileDoc(doc.id)}
+                    className="p-3.5 flex items-center gap-3 cursor-pointer select-none active:bg-slate-100/60 dark:active:bg-slate-800/60"
+                    role="button"
+                    aria-expanded={isExpanded}
                   >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    <span>Perbaiki Sebagai Draft</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setViewingDocument(doc)}
-                    className="min-h-[40px] px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold flex items-center justify-center transition active:scale-98 cursor-pointer"
-                    title="Pratinjau Dokumen"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
-
-                  {(isAdmin || (currentUser && (currentUser.name === doc.creator || (currentUser.nip || currentUser.nik) === (doc.creatorNip || doc.creatorNik)))) && (
-                    <button
-                      type="button"
-                      onClick={() => setDocToDelete(doc)}
-                      className="min-h-[40px] px-3 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 rounded-lg text-xs font-semibold flex items-center justify-center transition active:scale-98 cursor-pointer"
-                      title="Hapus Dokumen Ditolak"
+                    {/* Circular Indicator Button: Amber/Orange */}
+                    <div
+                      className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 shadow-xs transition-all duration-200 ${
+                        isExpanded
+                          ? 'bg-amber-500 text-white shadow-amber-500/30 scale-105'
+                          : 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-950/70 dark:text-amber-300'
+                      }`}
                     >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                      <ChevronDown
+                        className={`w-4 h-4 transition-transform duration-200 ${
+                          isExpanded ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </div>
+
+                    {/* Summary Info */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
+                        <span className="font-mono text-xs font-bold text-rose-700 dark:text-rose-400 truncate">
+                          {doc.docNumber}
+                        </span>
+                        <Badge status={doc.status} size="sm" />
+                      </div>
+                      <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate mt-0.5" title={doc.title}>
+                        {doc.title}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Accordion Content Details */}
+                  {isExpanded && (
+                    <div className="px-3.5 pb-3.5 pt-1 space-y-2 text-xs border-t border-rose-100/80 dark:border-rose-950/40">
+                      <div className="bg-white/80 dark:bg-slate-900/80 rounded-lg p-3 border border-slate-200/80 dark:border-slate-800 space-y-2 shadow-2xs">
+                        <div className="grid grid-cols-[105px_1fr] items-baseline gap-2">
+                          <span className="text-slate-500 dark:text-slate-400 font-medium">Judul Lengkap:</span>
+                          <span className="text-slate-900 dark:text-white font-semibold leading-snug break-words">
+                            {doc.title}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-[105px_1fr] items-center gap-2">
+                          <span className="text-slate-500 dark:text-slate-400 font-medium">Departemen:</span>
+                          <span className="text-slate-800 dark:text-slate-200 font-medium">
+                            {doc.department || '-'}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-[105px_1fr] items-center gap-2">
+                          <span className="text-slate-500 dark:text-slate-400 font-medium">Pembuat:</span>
+                          <span className="text-slate-800 dark:text-slate-200 font-medium">
+                            {doc.creator || '-'}
+                          </span>
+                        </div>
+
+                        {/* Rejection Note Plate */}
+                        <div className="mt-2 text-xs bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 rounded-lg p-2.5 text-rose-800 dark:text-rose-300">
+                          <div className="font-bold flex items-center gap-1 text-[11px] text-rose-700 dark:text-rose-400">
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                            Alasan Penolakan:
+                          </div>
+                          <p className="mt-1 text-slate-800 dark:text-slate-200 leading-snug">
+                            "{doc.rejectionReason || 'Format klausul belum memenuhi standar.'}"
+                          </p>
+                          <div className="mt-1 text-[10px] text-slate-400">
+                            Oleh: {doc.rejectedBy || 'Verifikator'} • {doc.rejectedDate ? doc.rejectedDate.slice(0, 10) : doc.createdDate}
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="pt-2 mt-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleResubmitAsDraft(doc);
+                            }}
+                            className="flex-1 min-h-[36px] py-1.5 px-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-98 cursor-pointer shadow-xs"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            <span>Perbaiki Sebagai Draft</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setViewingDocument(doc);
+                            }}
+                            className="min-h-[36px] px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 border border-slate-200 dark:border-slate-700 transition active:scale-98 cursor-pointer"
+                            title="Pratinjau Dokumen"
+                          >
+                            <Eye className="w-4 h-4" />
+                            <span>Lihat</span>
+                          </button>
+
+                          {(isAdmin || (currentUser && (currentUser.name === doc.creator || (currentUser.nip || currentUser.nik) === (doc.creatorNip || doc.creatorNik)))) && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDocToDelete(doc);
+                              }}
+                              className="min-h-[36px] px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 rounded-lg text-xs font-semibold flex items-center justify-center border border-rose-200 dark:border-rose-800 transition active:scale-98 cursor-pointer"
+                              title="Hapus Dokumen Ditolak"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
 

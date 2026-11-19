@@ -15,7 +15,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
+  ChevronDown
 } from 'lucide-react';
 import Badge, { CompanyBadge, FileFormatBadge } from '../common/Badge';
 import Modal from '../common/Modal';
@@ -35,6 +36,21 @@ export default function RevisionHistoryView() {
   const [selectedType, setSelectedType] = useState('ALL');
   const [activeTab, setActiveTab] = useState('ALL'); // 'ALL' | 'MULTI' | 'INITIAL'
   const [selectedSeriesBaseKey, setSelectedSeriesBaseKey] = useState(null);
+
+  // Accordion state untuk tampilan Mobile
+  const [expandedMobileDocIds, setExpandedMobileDocIds] = useState(new Set());
+
+  const toggleExpandMobileDoc = (id) => {
+    setExpandedMobileDocIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
 
   // Fungsi mendapatkan base code dokumen tanpa versi revisi (e.g. DJI-IK-PRODUKSI-08)
   const getBaseKey = (doc) => {
@@ -322,7 +338,7 @@ export default function RevisionHistoryView() {
           </div>
         </div>
 
-        {/* Mobile Card List View (md:hidden) */}
+        {/* Mobile Accordion List View (md:hidden) */}
         <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
           {filteredDocs.length === 0 ? (
             <div className="p-8 text-center text-slate-500">
@@ -348,84 +364,132 @@ export default function RevisionHistoryView() {
               const baseKey = getBaseKey(doc);
               const seriesCount = versionCountMap[baseKey] || 1;
               const isMulti = seriesCount > 1;
+              const isExpanded = expandedMobileDocIds.has(doc.id);
 
               return (
-                <div key={doc.id} className="p-4 space-y-2.5 hover:bg-purple-50/20 dark:hover:bg-slate-800/40 transition">
-                  {/* Header: Company + Number + Format + Rev + Status */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
-                      <button
-                        type="button"
-                        onClick={() => setViewingDocument(doc)}
-                        className="font-mono text-xs font-bold text-blue-700 dark:text-blue-300 hover:underline truncate text-left cursor-pointer"
-                        title={doc.docNumber}
-                      >
-                        {doc.docNumber}
-                      </button>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <FileFormatBadge doc={doc} />
-                      <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                        Rev {doc.revision || '00'}
-                      </span>
-                      <Badge status={doc.status} size="sm" />
-                    </div>
-                  </div>
-
-                  {/* Title */}
-                  <h3 className="text-xs font-semibold text-slate-900 dark:text-white leading-snug line-clamp-2">
-                    {doc.title}
-                  </h3>
-
-                  {/* Metadata Row */}
-                  <div className="flex flex-wrap items-center gap-y-1 gap-x-2 text-[11px] text-slate-500 dark:text-slate-400">
-                    <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-bold text-[10px] text-slate-700 dark:text-slate-300 shrink-0">
-                      {doc.department}
-                    </span>
-                    <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-semibold text-[10px] text-slate-600 dark:text-slate-400 shrink-0">
-                      {doc.type || 'SOP'}
-                    </span>
-                    <span className="text-slate-700 dark:text-slate-300 font-medium">
-                      {doc.creator}
-                    </span>
-                    <span className="text-slate-300 dark:text-slate-600">•</span>
-                    <span className="font-mono text-[10px] shrink-0">
-                      {formatRevisionDate(doc.effectiveDate || doc.createdDate)}
-                    </span>
-                  </div>
-
-                  {/* Catatan Perubahan (jika ada) */}
-                  {(doc.notes || doc.changeReason) && (
-                    <div className="text-[11px] bg-slate-50 dark:bg-slate-800/60 rounded-md p-2 text-slate-600 dark:text-slate-300 italic line-clamp-2 border border-slate-200/60 dark:border-slate-700/60">
-                      "{doc.notes || doc.changeReason}"
-                    </div>
-                  )}
-
-                  {/* Action Buttons: 50:50 Grid */}
-                  <div className="pt-1.5 grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setViewingDocument(doc)}
-                      className="h-8 px-3 text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 rounded-lg border border-blue-200/80 dark:border-blue-800/80 transition flex items-center justify-center gap-1.5 active:scale-98 cursor-pointer"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      <span>Pratinjau</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setSelectedSeriesBaseKey(baseKey)}
-                      className={`h-8 px-3 text-xs font-semibold rounded-lg border transition flex items-center justify-center gap-1.5 active:scale-98 cursor-pointer ${
-                        isMulti
-                          ? 'text-purple-700 dark:text-purple-300 bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 border-purple-200/80 dark:border-purple-800/80 font-bold'
-                          : 'text-slate-700 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+                <div
+                  key={doc.id}
+                  className={`transition-colors duration-150 ${
+                    isExpanded ? 'bg-purple-50/25 dark:bg-purple-950/15' : 'hover:bg-purple-50/10 dark:hover:bg-slate-800/40'
+                  }`}
+                >
+                  {/* Row Header (Clickable Accordion Trigger) */}
+                  <div
+                    onClick={() => toggleExpandMobileDoc(doc.id)}
+                    className="p-3.5 flex items-center gap-3 cursor-pointer select-none active:bg-slate-100/60 dark:active:bg-slate-800/60"
+                    role="button"
+                    aria-expanded={isExpanded}
+                  >
+                    {/* Circular Indicator Button: Amber/Orange */}
+                    <div
+                      className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 shadow-xs transition-all duration-200 ${
+                        isExpanded
+                          ? 'bg-amber-500 text-white shadow-amber-500/30 scale-105'
+                          : 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-950/70 dark:text-amber-300'
                       }`}
                     >
-                      <GitBranch className="w-3.5 h-3.5 text-purple-600" />
-                      <span>Silsilah ({seriesCount})</span>
-                    </button>
+                      <ChevronDown
+                        className={`w-4 h-4 transition-transform duration-200 ${
+                          isExpanded ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </div>
+
+                    {/* Summary Info */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
+                        <span className="font-mono text-xs font-bold text-blue-700 dark:text-blue-300 truncate" title={doc.docNumber}>
+                          {doc.docNumber}
+                        </span>
+                        <span className="font-mono text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shrink-0">
+                          Rev {doc.revision || '00'}
+                        </span>
+                        <Badge status={doc.status} size="sm" />
+                      </div>
+                      <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate mt-0.5" title={doc.title}>
+                        {doc.title}
+                      </p>
+                    </div>
+
+                    {/* Format Badge on right */}
+                    <div className="shrink-0 flex items-center">
+                      <FileFormatBadge doc={doc} />
+                    </div>
                   </div>
+
+                  {/* Accordion Content Details */}
+                  {isExpanded && (
+                    <div className="px-3.5 pb-3.5 pt-1 space-y-2 text-xs border-t border-purple-100/80 dark:border-purple-950/40">
+                      <div className="bg-white/80 dark:bg-slate-900/80 rounded-lg p-3 border border-slate-200/80 dark:border-slate-800 space-y-2 shadow-2xs">
+                        <div className="grid grid-cols-[105px_1fr] items-baseline gap-2">
+                          <span className="text-slate-500 dark:text-slate-400 font-medium">Judul Lengkap:</span>
+                          <span className="text-slate-900 dark:text-white font-semibold leading-snug break-words">
+                            {doc.title}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-[105px_1fr] items-center gap-2">
+                          <span className="text-slate-500 dark:text-slate-400 font-medium">Jenis & Dept:</span>
+                          <span className="text-slate-800 dark:text-slate-200 font-medium">
+                            {doc.type || 'SOP'} • {doc.department}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-[105px_1fr] items-center gap-2">
+                          <span className="text-slate-500 dark:text-slate-400 font-medium">Pembuat:</span>
+                          <span className="text-slate-800 dark:text-slate-200 font-medium">
+                            {doc.creator}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-[105px_1fr] items-center gap-2">
+                          <span className="text-slate-500 dark:text-slate-400 font-medium">Tgl. Efektif:</span>
+                          <span className="font-mono text-[11px] text-slate-800 dark:text-slate-200">
+                            {formatRevisionDate(doc.effectiveDate || doc.createdDate)}
+                          </span>
+                        </div>
+
+                        {/* Catatan Perubahan (jika ada) */}
+                        {(doc.notes || doc.changeReason) && (
+                          <div className="text-[11px] bg-slate-50 dark:bg-slate-800/60 rounded-md p-2 text-slate-600 dark:text-slate-300 italic line-clamp-2 border border-slate-200/60 dark:border-slate-700/60">
+                            "{doc.notes || doc.changeReason}"
+                          </div>
+                        )}
+
+                        {/* Action Buttons: 50:50 Grid */}
+                        <div className="pt-2 mt-2 border-t border-slate-100 dark:border-slate-800 grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setViewingDocument(doc);
+                            }}
+                            className="h-8 px-3 text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 rounded-lg border border-blue-200/80 dark:border-blue-800/80 transition flex items-center justify-center gap-1.5 active:scale-98 cursor-pointer"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Pratinjau</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedSeriesBaseKey(baseKey);
+                            }}
+                            className={`h-8 px-3 text-xs font-semibold rounded-lg border transition flex items-center justify-center gap-1.5 active:scale-98 cursor-pointer ${
+                              isMulti
+                                ? 'text-purple-700 dark:text-purple-300 bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 border-purple-200/80 dark:border-purple-800/80 font-bold'
+                                : 'text-slate-700 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+                            }`}
+                          >
+                            <GitBranch className="w-3.5 h-3.5 text-purple-600" />
+                            <span>Silsilah ({seriesCount})</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })
