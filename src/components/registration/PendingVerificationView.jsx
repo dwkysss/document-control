@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   CheckCircle2,
   XCircle,
@@ -10,7 +10,9 @@ import {
   ArrowRight,
   ShieldCheck,
   RotateCcw,
-  Search
+  Search,
+  ChevronRight,
+  ChevronLeft
 } from 'lucide-react';
 import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
@@ -88,6 +90,45 @@ export default function PendingVerificationView() {
     }
     return true;
   });
+
+  // Ref & State untuk deteksi scroll horizontal tabel (Dynamic Scroll Indicators)
+  const tableContainerRef = useRef(null);
+  const [scrollState, setScrollState] = useState({ canScrollLeft: false, canScrollRight: false });
+
+  const updateScrollIndicators = useCallback(() => {
+    const el = tableContainerRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    const maxScroll = scrollWidth - clientWidth;
+    setScrollState({
+      canScrollLeft: scrollLeft > 6,
+      canScrollRight: maxScroll > 6 && scrollLeft < maxScroll - 6,
+    });
+  }, []);
+
+  const handleScrollRight = useCallback(() => {
+    if (tableContainerRef.current) {
+      tableContainerRef.current.scrollBy({ left: 280, behavior: 'smooth' });
+    }
+  }, []);
+
+  const handleScrollLeft = useCallback(() => {
+    if (tableContainerRef.current) {
+      tableContainerRef.current.scrollBy({ left: -280, behavior: 'smooth' });
+    }
+  }, []);
+
+  useEffect(() => {
+    const el = tableContainerRef.current;
+    if (!el) return;
+    updateScrollIndicators();
+    el.addEventListener('scroll', updateScrollIndicators, { passive: true });
+    window.addEventListener('resize', updateScrollIndicators);
+    return () => {
+      el.removeEventListener('scroll', updateScrollIndicators);
+      window.removeEventListener('resize', updateScrollIndicators);
+    };
+  }, [updateScrollIndicators, filteredDocs]);
 
   // Handler Tahap 1: Review Isi & Alur Kerja oleh Atasan Departemen / Reviewer
   const handleOpenReviewModal = (doc) => {
@@ -542,24 +583,69 @@ export default function PendingVerificationView() {
         </div>
 
         {/* Clean Table (hidden md:block) */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full min-w-[1100px] table-fixed text-left border-collapse text-sm">
-            <colgroup>
-              <col className="w-[29%]" />
-              <col className="w-[9%]" />
-              <col className="w-[13%]" />
-              <col className="w-[22%]" />
-              <col className="w-[27%]" />
-            </colgroup>
-            <thead>
-              <tr className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold">
-                <th className="py-3 px-4">Dokumen</th>
-                <th className="py-3 px-3">Dept.</th>
-                <th className="py-3 px-3">Pembuat</th>
-                <th className="py-3 px-3">Tahap</th>
-                <th className="py-3 px-3 text-right">Tindakan</th>
-              </tr>
-            </thead>
+        <div className="hidden md:block relative">
+          {/* Indikator Gradien Kiri (Muncul saat user scroll ke kanan) */}
+          <div
+            className={`pointer-events-none absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-slate-900/10 dark:from-black/40 to-transparent z-15 transition-opacity duration-200 ${
+              scrollState.canScrollLeft ? 'opacity-100' : 'opacity-0'
+            }`}
+            aria-hidden="true"
+          />
+
+          {/* Tombol Panah Kiri di Header Tabel (Muncul saat user geser ke kanan) */}
+          {scrollState.canScrollLeft && (
+            <button
+              type="button"
+              onClick={handleScrollLeft}
+              className="absolute left-1.5 top-2.5 w-7 h-7 rounded-full bg-slate-800/90 hover:bg-slate-900 text-white shadow-md border-2 border-white dark:border-slate-800 flex items-center justify-center transition-all cursor-pointer z-30 hover:scale-110 active:scale-95 group"
+              title="Geser kembali ke kolom awal (Dokumen)"
+              aria-label="Geser kembali ke kolom awal"
+            >
+              <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+            </button>
+          )}
+
+          <div
+            ref={tableContainerRef}
+            className="overflow-x-auto min-h-[380px] table-scrollbar"
+          >
+            <table className="w-full min-w-[1100px] table-fixed text-left border-collapse text-sm">
+              <colgroup>
+                <col className="w-[28%]" />
+                <col className="w-[9%]" />
+                <col className="w-[14%]" />
+                <col className="w-[22%]" />
+                <col className="w-[27%]" />
+              </colgroup>
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold">
+                  <th className="py-3 px-4">Dokumen</th>
+                  <th className="py-3 px-3">Dept.</th>
+                  <th className="py-3 px-3">Pembuat</th>
+                  <th className="py-3 px-3">Tahap</th>
+                  <th
+                    className={`py-3 px-3 text-right sticky right-0 bg-slate-50 dark:bg-slate-800 z-20 border-l transition-shadow duration-200 ${
+                      scrollState.canScrollRight
+                        ? 'shadow-[-10px_0_16px_-4px_rgba(0,0,0,0.12)] dark:shadow-[-10px_0_16px_-4px_rgba(0,0,0,0.55)] border-slate-200/90 dark:border-slate-700/90'
+                        : 'shadow-none border-slate-200/50 dark:border-slate-800'
+                    }`}
+                  >
+                    {/* Ikon Tombol Panah Pemisah: Terletak persis di antara kolom yang terpotong dengan kolom Tindakan */}
+                    {scrollState.canScrollRight && (
+                      <button
+                        type="button"
+                        onClick={handleScrollRight}
+                        className="absolute -left-3.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-md border-2 border-white dark:border-slate-800 flex items-center justify-center transition-all cursor-pointer z-30 hover:scale-110 active:scale-95 group animate-pulse"
+                        title="Ada kolom tersembunyi. Klik untuk geser tabel ke kanan"
+                        aria-label="Geser melihat kolom tersembunyi"
+                      >
+                        <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                      </button>
+                    )}
+                    <span>Tindakan</span>
+                  </th>
+                </tr>
+              </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filteredDocs.length === 0 ? (
                 <tr>
@@ -594,7 +680,7 @@ export default function PendingVerificationView() {
                   const isFastTrack = docLevel === 3 || docLevel === 4;
 
                   return (
-                    <tr key={doc.id} className="transition-colors hover:bg-blue-50/40 dark:hover:bg-slate-800/70">
+                    <tr key={doc.id} className="group transition-colors hover:bg-blue-50/40 dark:hover:bg-slate-800/70">
                       <td className="py-4 px-4">
                         <div className="min-w-0">
                           <div className="flex min-w-0 items-center gap-2">
@@ -641,7 +727,13 @@ export default function PendingVerificationView() {
                       </td>
 
                       {/* 7. Tindakan / Aksi */}
-                      <td className="py-4 px-3">
+                      <td
+                        className={`py-4 px-3 sticky right-0 bg-white group-hover:bg-blue-50/40 dark:bg-slate-900 dark:group-hover:bg-slate-800/90 transition-colors border-l z-10 ${
+                          scrollState.canScrollRight
+                            ? 'shadow-[-10px_0_16px_-4px_rgba(0,0,0,0.12)] dark:shadow-[-10px_0_16px_-4px_rgba(0,0,0,0.55)] border-slate-200/80 dark:border-slate-800'
+                            : 'shadow-none border-slate-100 dark:border-slate-850'
+                        }`}
+                      >
                         <div className="flex min-w-max flex-nowrap items-center justify-end gap-1.5">
                           {/* Quick Preview Button */}
                           <button
@@ -755,6 +847,7 @@ export default function PendingVerificationView() {
           </table>
         </div>
       </div>
+    </div>
 
       {/* ================= MODAL TAHAP 1: REVIEW ATASAN / REVIEWER ================= */}
       {selectedReviewDoc && (
