@@ -20,7 +20,8 @@ import {
   ArrowUp,
   ArrowDown,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  ChevronDown
 } from 'lucide-react';
 import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
