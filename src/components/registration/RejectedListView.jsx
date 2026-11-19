@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { XCircle, Eye, RefreshCw, AlertCircle, Search, Trash2, AlertTriangle } from 'lucide-react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { XCircle, Eye, RefreshCw, AlertCircle, Search, Trash2, AlertTriangle, ChevronRight, ChevronLeft } from 'lucide-react';
 import Badge, { CompanyBadge } from '../common/Badge';
 import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
@@ -49,6 +49,45 @@ export default function RejectedListView() {
       setDocToDelete(null);
     }
   };
+
+  // Ref & State untuk deteksi scroll horizontal tabel (Dynamic Scroll Indicators)
+  const tableContainerRef = useRef(null);
+  const [scrollState, setScrollState] = useState({ canScrollLeft: false, canScrollRight: false });
+
+  const updateScrollIndicators = useCallback(() => {
+    const el = tableContainerRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    const maxScroll = scrollWidth - clientWidth;
+    setScrollState({
+      canScrollLeft: scrollLeft > 6,
+      canScrollRight: maxScroll > 6 && scrollLeft < maxScroll - 6,
+    });
+  }, []);
+
+  const handleScrollRight = useCallback(() => {
+    if (tableContainerRef.current) {
+      tableContainerRef.current.scrollBy({ left: 280, behavior: 'smooth' });
+    }
+  }, []);
+
+  const handleScrollLeft = useCallback(() => {
+    if (tableContainerRef.current) {
+      tableContainerRef.current.scrollBy({ left: -280, behavior: 'smooth' });
+    }
+  }, []);
+
+  useEffect(() => {
+    const el = tableContainerRef.current;
+    if (!el) return;
+    updateScrollIndicators();
+    el.addEventListener('scroll', updateScrollIndicators, { passive: true });
+    window.addEventListener('resize', updateScrollIndicators);
+    return () => {
+      el.removeEventListener('scroll', updateScrollIndicators);
+      window.removeEventListener('resize', updateScrollIndicators);
+    };
+  }, [updateScrollIndicators, filteredDocs]);
 
   return (
     <div className="space-y-5">
@@ -194,103 +233,155 @@ export default function RejectedListView() {
         </div>
 
         {/* Desktop Table (hidden md:block) */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 text-[11px] font-bold">
-                <th className="py-3 px-4 text-center whitespace-nowrap w-12">No.</th>
-                <th className="py-3 px-4 whitespace-nowrap">No. Dokumen</th>
-                <th className="py-3 px-4 min-w-[180px]">Judul Dokumen</th>
-                <th className="py-3 px-4 whitespace-nowrap">Departemen</th>
-                <th className="py-3 px-4 whitespace-nowrap min-w-[140px]">Pembuat</th>
-                <th className="py-3 px-4 min-w-[200px]">Alasan Penolakan</th>
-                <th className="py-3 px-4 text-center whitespace-nowrap">Status</th>
-                <th className="py-3 px-4 text-center whitespace-nowrap min-w-[110px]">Tgl. Ditolak</th>
-                <th className="py-3 px-4 text-center whitespace-nowrap">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {filteredDocs.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="px-6 py-12 text-center">
-                    <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                      {rejectedDocs.length === 0 ? <XCircle className="h-5 w-5" aria-hidden="true" /> : <Search className="h-5 w-5" aria-hidden="true" />}
-                    </div>
-                    <p className="text-sm font-bold text-slate-900 dark:text-white">
-                      {rejectedDocs.length === 0 ? 'Belum ada pengajuan yang ditolak' : 'Tidak ada dokumen yang cocok'}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-                      {rejectedDocs.length === 0 ? 'Pengajuan yang ditolak beserta catatan verifikator akan tercatat di sini.' : 'Coba kata kunci lain untuk mencari nomor, judul, atau alasan penolakan.'}
-                    </p>
-                    {rejectedDocs.length > 0 && searchTerm && (
-                      <button type="button" onClick={() => setSearchTerm('')} className="mt-3 rounded-md px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:text-blue-300 dark:hover:bg-slate-800 cursor-pointer">
-                        Hapus pencarian
+        <div className="hidden md:block relative">
+          {/* Indikator Gradien Kiri (Muncul saat user scroll ke kanan) */}
+          <div
+            className={`pointer-events-none absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-slate-900/10 dark:from-black/40 to-transparent z-15 transition-opacity duration-200 ${
+              scrollState.canScrollLeft ? 'opacity-100' : 'opacity-0'
+            }`}
+            aria-hidden="true"
+          />
+
+          {/* Tombol Panah Kiri di Header Tabel (Muncul saat user geser ke kanan) */}
+          {scrollState.canScrollLeft && (
+            <button
+              type="button"
+              onClick={handleScrollLeft}
+              className="absolute left-1.5 top-2.5 w-7 h-7 rounded-full bg-slate-800/90 hover:bg-slate-900 text-white shadow-md border-2 border-white dark:border-slate-800 flex items-center justify-center transition-all cursor-pointer z-30 hover:scale-110 active:scale-95 group"
+              title="Geser kembali ke kolom awal (Dokumen)"
+              aria-label="Geser kembali ke kolom awal"
+            >
+              <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+            </button>
+          )}
+
+          <div
+            ref={tableContainerRef}
+            className="overflow-x-auto min-h-[380px] table-scrollbar"
+          >
+            <table className="w-full min-w-[1100px] text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 text-[11px] font-bold">
+                  <th className="py-3 px-4 text-center whitespace-nowrap w-12">No.</th>
+                  <th className="py-3 px-4 whitespace-nowrap">No. Dokumen</th>
+                  <th className="py-3 px-4 min-w-[180px]">Judul Dokumen</th>
+                  <th className="py-3 px-4 whitespace-nowrap">Departemen</th>
+                  <th className="py-3 px-4 whitespace-nowrap min-w-[140px]">Pembuat</th>
+                  <th className="py-3 px-4 min-w-[200px]">Alasan Penolakan</th>
+                  <th className="py-3 px-4 text-center whitespace-nowrap">Status</th>
+                  <th className="py-3 px-4 text-center whitespace-nowrap min-w-[110px]">Tgl. Ditolak</th>
+                  <th
+                    className={`py-3 px-4 text-center whitespace-nowrap sticky right-0 bg-slate-50 dark:bg-slate-800 z-20 border-l transition-shadow duration-200 ${
+                      scrollState.canScrollRight
+                        ? 'shadow-[-10px_0_16px_-4px_rgba(0,0,0,0.12)] dark:shadow-[-10px_0_16px_-4px_rgba(0,0,0,0.55)] border-slate-200/90 dark:border-slate-700/90'
+                        : 'shadow-none border-slate-200/50 dark:border-slate-800'
+                    }`}
+                  >
+                    {/* Ikon Tombol Panah Pemisah: Terletak persis di antara kolom yang terpotong dengan kolom Aksi */}
+                    {scrollState.canScrollRight && (
+                      <button
+                        type="button"
+                        onClick={handleScrollRight}
+                        className="absolute -left-3.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-md border-2 border-white dark:border-slate-800 flex items-center justify-center transition-all cursor-pointer z-30 hover:scale-110 active:scale-95 group animate-pulse"
+                        title="Ada kolom tersembunyi. Klik untuk geser tabel ke kanan"
+                        aria-label="Geser melihat kolom tersembunyi"
+                      >
+                        <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
                       </button>
                     )}
-                  </td>
+                    <span>Aksi</span>
+                  </th>
                 </tr>
-              ) : (
-                filteredDocs.map((doc, idx) => (
-                  <tr key={doc.id} className="transition-colors hover:bg-rose-50/40 dark:hover:bg-slate-800/70">
-                    <td className="py-3.5 px-4 text-center text-slate-400 whitespace-nowrap">{idx + 1}</td>
-                    <td className="py-3.5 px-4 font-bold font-mono text-slate-900 dark:text-white whitespace-nowrap">
-                      <div className="flex items-center gap-1.5">
-                        <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
-                        <span>{doc.docNumber}</span>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {filteredDocs.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="px-6 py-12 text-center">
+                      <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                        {rejectedDocs.length === 0 ? <XCircle className="h-5 w-5" aria-hidden="true" /> : <Search className="h-5 w-5" aria-hidden="true" />}
                       </div>
-                    </td>
-                    <td className="py-3.5 px-4 font-medium text-slate-800 dark:text-slate-200 min-w-[180px]" title={doc.title}>
-                      {doc.title}
-                    </td>
-                    <td className="py-3.5 px-4 font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap">{doc.department}</td>
-                    <td className="py-3.5 px-4 text-slate-700 dark:text-slate-300 font-medium whitespace-nowrap">{doc.creator}</td>
-                    <td className="py-3.5 px-4 text-rose-700 dark:text-rose-400 font-medium">
-                      <div className="line-clamp-2" title={doc.rejectionReason}>
-                        {doc.rejectionReason || 'Format klausul belum memenuhi standar.'}
-                      </div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">Oleh: {doc.rejectedBy || 'Verifikator'}</div>
-                    </td>
-                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                      <Badge status={doc.status} size="sm" />
-                    </td>
-                    <td className="py-3.5 px-4 text-center text-slate-600 dark:text-slate-300 font-mono text-[11px] whitespace-nowrap">
-                      {doc.rejectedDate ? doc.rejectedDate.slice(0, 10) : doc.createdDate}
-                    </td>
-                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <button
-                          onClick={() => setViewingDocument(doc)}
-                          className="p-1.5 text-slate-600 hover:text-blue-700 hover:bg-blue-50 rounded cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:text-slate-300 dark:hover:bg-slate-700"
-                          title="Pratinjau Dokumen"
-                        >
-                          <Eye className="w-4 h-4" />
+                      <p className="text-sm font-bold text-slate-900 dark:text-white">
+                        {rejectedDocs.length === 0 ? 'Belum ada pengajuan yang ditolak' : 'Tidak ada dokumen yang cocok'}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                        {rejectedDocs.length === 0 ? 'Pengajuan yang ditolak beserta catatan verifikator akan tercatat di sini.' : 'Coba kata kunci lain untuk mencari nomor, judul, atau alasan penolakan.'}
+                      </p>
+                      {rejectedDocs.length > 0 && searchTerm && (
+                        <button type="button" onClick={() => setSearchTerm('')} className="mt-3 rounded-md px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:text-blue-300 dark:hover:bg-slate-800 cursor-pointer">
+                          Hapus pencarian
                         </button>
-                        <button
-                          onClick={() => handleResubmitAsDraft(doc)}
-                          className="px-2.5 py-1 text-xs font-bold text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-md transition flex items-center gap-1 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
-                          title="Perbaiki & Simpan Sebagai Draft"
-                        >
-                          <RefreshCw className="w-3.5 h-3.5" />
-                          Perbaiki
-                        </button>
-
-                        {/* Opsi Hapus untuk Creator atau Admin */}
-                        {(isAdmin || (currentUser && (currentUser.name === doc.creator || (currentUser.nip || currentUser.nik) === (doc.creatorNip || doc.creatorNik)))) && (
-                          <button
-                            onClick={() => setDocToDelete(doc)}
-                            className="p-1.5 text-rose-700 hover:text-rose-800 hover:bg-rose-50 rounded transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600"
-                            title="Hapus Pengajuan Ditolak"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
+                      )}
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  filteredDocs.map((doc, idx) => (
+                    <tr key={doc.id} className="group transition-colors hover:bg-rose-50/40 dark:hover:bg-slate-800/70">
+                      <td className="py-3.5 px-4 text-center text-slate-400 whitespace-nowrap">{idx + 1}</td>
+                      <td className="py-3.5 px-4 font-bold font-mono text-slate-900 dark:text-white whitespace-nowrap">
+                        <div className="flex items-center gap-1.5">
+                          <CompanyBadge companyCode={doc.companyCode || doc.docNumber?.split('-')[0]} />
+                          <span>{doc.docNumber}</span>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 font-medium text-slate-800 dark:text-slate-200 min-w-[180px]" title={doc.title}>
+                        {doc.title}
+                      </td>
+                      <td className="py-3.5 px-4 font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap">{doc.department}</td>
+                      <td className="py-3.5 px-4 text-slate-700 dark:text-slate-300 font-medium whitespace-nowrap">{doc.creator}</td>
+                      <td className="py-3.5 px-4 text-rose-700 dark:text-rose-400 font-medium">
+                        <div className="line-clamp-2" title={doc.rejectionReason}>
+                          {doc.rejectionReason || 'Format klausul belum memenuhi standar.'}
+                        </div>
+                        <div className="text-[10px] text-slate-400 mt-0.5">Oleh: {doc.rejectedBy || 'Verifikator'}</div>
+                      </td>
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        <Badge status={doc.status} size="sm" />
+                      </td>
+                      <td className="py-3.5 px-4 text-center text-slate-600 dark:text-slate-300 font-mono text-[11px] whitespace-nowrap">
+                        {doc.rejectedDate ? doc.rejectedDate.slice(0, 10) : doc.createdDate}
+                      </td>
+                      <td
+                        className={`py-3.5 px-4 text-center whitespace-nowrap sticky right-0 bg-white group-hover:bg-rose-50/40 dark:bg-slate-900 dark:group-hover:bg-slate-800/90 transition-colors border-l z-10 ${
+                          scrollState.canScrollRight
+                            ? 'shadow-[-10px_0_16px_-4px_rgba(0,0,0,0.12)] dark:shadow-[-10px_0_16px_-4px_rgba(0,0,0,0.55)] border-slate-200/80 dark:border-slate-800'
+                            : 'shadow-none border-slate-100 dark:border-slate-850'
+                        }`}
+                      >
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => setViewingDocument(doc)}
+                            className="p-1.5 text-slate-600 hover:text-blue-700 hover:bg-blue-50 rounded cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                            title="Pratinjau Dokumen"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleResubmitAsDraft(doc)}
+                            className="px-2.5 py-1 text-xs font-bold text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-md transition flex items-center gap-1 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+                            title="Perbaiki & Simpan Sebagai Draft"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            Perbaiki
+                          </button>
+
+                          {/* Opsi Hapus untuk Creator atau Admin */}
+                          {(isAdmin || (currentUser && (currentUser.name === doc.creator || (currentUser.nip || currentUser.nik) === (doc.creatorNip || doc.creatorNik)))) && (
+                            <button
+                              onClick={() => setDocToDelete(doc)}
+                              className="p-1.5 text-rose-700 hover:text-rose-800 hover:bg-rose-50 rounded transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600"
+                              title="Hapus Pengajuan Ditolak"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
