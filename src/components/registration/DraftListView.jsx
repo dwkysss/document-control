@@ -21,6 +21,17 @@ import Modal from '../common/Modal';
 import { useDocumentControl } from '../../context/DocumentControlContext';
 import { uploadDocumentFile } from '../../lib/supabaseClient';
 
+const formatDraftDate = (value) => {
+  if (!value) return '-';
+  try {
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return value;
+    return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(d);
+  } catch {
+    return value;
+  }
+};
+
 export default function DraftListView() {
   const {
     documents,
@@ -425,16 +436,23 @@ export default function DraftListView() {
                           </div>
 
                           <div className="grid grid-cols-[105px_1fr] items-center gap-2">
-                            <span className="text-slate-500 dark:text-slate-400 font-medium">Jenis & Dept:</span>
+                            <span className="text-slate-500 dark:text-slate-400 font-medium">Jenis Dokumen:</span>
                             <span className="text-slate-800 dark:text-slate-200 font-medium">
-                              {doc.type} • {doc.department}
+                              {doc.type || '-'}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-[105px_1fr] items-center gap-2">
+                            <span className="text-slate-500 dark:text-slate-400 font-medium">Departemen:</span>
+                            <span className="text-slate-800 dark:text-slate-200 font-medium">
+                              {doc.department || '-'}
                             </span>
                           </div>
 
                           <div className="grid grid-cols-[105px_1fr] items-center gap-2">
                             <span className="text-slate-500 dark:text-slate-400 font-medium">Tgl. Dibuat:</span>
                             <span className="font-mono text-[11px] text-slate-800 dark:text-slate-200">
-                              {doc.createdDate}
+                              {formatDraftDate(doc.createdDate)}
                             </span>
                           </div>
 

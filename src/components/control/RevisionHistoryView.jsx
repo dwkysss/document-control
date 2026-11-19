@@ -430,9 +430,16 @@ export default function RevisionHistoryView() {
                         </div>
 
                         <div className="grid grid-cols-[105px_1fr] items-center gap-2">
-                          <span className="text-slate-500 dark:text-slate-400 font-medium">Jenis & Dept:</span>
+                          <span className="text-slate-500 dark:text-slate-400 font-medium">Jenis Dokumen:</span>
                           <span className="text-slate-800 dark:text-slate-200 font-medium">
-                            {doc.type || 'SOP'} • {doc.department}
+                            {doc.type || 'SOP'}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-[105px_1fr] items-center gap-2">
+                          <span className="text-slate-500 dark:text-slate-400 font-medium">Departemen:</span>
+                          <span className="text-slate-800 dark:text-slate-200 font-medium">
+                            {doc.department || '-'}
                           </span>
                         </div>
 
