@@ -46,6 +46,7 @@ export function getDocumentTypeFullName(docData = {}) {
   const standardTypeMap = {
     'IK': 'INSTRUKSI KERJA (IK)',
     'SOP': 'STANDAR OPERASIONAL PROSEDUR (SOP)',
+    'FK': 'FORMULIR KERJA (FK)',
     'FORM': 'FORMULIR KONTROL MUTU (FORM)',
     'FRM': 'FORMULIR KONTROL MUTU (FRM)',
     'FM': 'FORMULIR KONTROL MUTU (FM)',

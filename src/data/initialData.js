@@ -43,7 +43,7 @@ export const initialDocumentTypes = [
   { id: 'type-1', code: 'IK', name: 'Instruksi Kerja (KIK)', description: 'Petunjuk teknis pengerjaan tugas spesifik secara mendetail', level: 3, prefix: 'IK' },
   { id: 'type-2', code: 'SOP', name: 'Standar Operasional Prosedur', description: 'Prosedur operasional lintas departemen berstandar ISO 9001', level: 2, prefix: 'SOP' },
   { id: 'type-3', code: 'MEM', name: 'Memo Internal', description: 'Surat edaran atau instruksi internal manajemen', level: 4, prefix: 'MEM' },
-  { id: 'type-4', code: 'FORM', name: 'Formulir Kontrol', description: 'Formulir standar pencatatan data dan formulir isian', level: 4, prefix: 'FORM' },
+  { id: 'type-4', code: 'FK', name: 'Formulir Kerja', description: 'Formulir kerja standar pencatatan data dan bukti rekaman operasional', level: 4, prefix: 'FK' },
   { id: 'type-5', code: 'POL', name: 'Kebijakan Perusahaan (Policy)', description: 'Pedoman kebijakan umum direksi dan tata kelola', level: 1, prefix: 'POL' },
   { id: 'type-6', code: 'WI', name: 'Work Instruction', description: 'Instruksi kerja mesin dan keselamatan operasional', level: 3, prefix: 'WI' },
   { id: 'type-7', code: 'EXT', name: 'Dokumen Eksternal (External Document)', description: 'Peraturan perundangan (UU/Permenaker), standar pelanggan, sertifikasi eksternal', level: 5, prefix: 'EXT' },
