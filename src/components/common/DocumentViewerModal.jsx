@@ -69,6 +69,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
   const [showQrVerifyInfo, setShowQrVerifyInfo] = useState(false);
   const [showLabelModal, setShowLabelModal] = useState(false);
   const [blobUrl, setBlobUrl] = useState(null);
+  const [blobSourceUrl, setBlobSourceUrl] = useState(null);
   const [stampedPdfUrl, setStampedPdfUrl] = useState(null);
   const [isStampingPreview, setIsStampingPreview] = useState(false);
   const [includeLetterhead, setIncludeLetterhead] = useState(true);
@@ -117,6 +118,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
   const activeFileUrl = activeFile?.fileUrl || doc?.fileUrl;
   const activeFileName = activeFile?.fileName || doc?.fileName;
   const activeFileType = activeFile?.fileType || doc?.fileType;
+  const safeBlobUrl = blobSourceUrl === activeFileUrl ? blobUrl : null;
 
   // File type detection
   const fileNameLower = (activeFileName || '').toLowerCase();
@@ -167,6 +169,12 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
     let isMounted = true;
     let createdUrl = null;
 
+    setBlobUrl(null);
+    setBlobSourceUrl(null);
+    setStampedPdfUrl(null);
+    setExcelData(null);
+    setDocxError(null);
+
     if (doc) {
       generateDocumentQRCode(doc).then(url => {
         if (isMounted) setQrCodeUrl(url);
@@ -186,11 +194,14 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
             const blob = new Blob([u8arr], { type: mime });
             createdUrl = URL.createObjectURL(blob);
             setBlobUrl(createdUrl);
+            setBlobSourceUrl(activeFileUrl);
           } catch (e) {
             setBlobUrl(activeFileUrl);
+            setBlobSourceUrl(activeFileUrl);
           }
         } else if (activeFileUrl.startsWith('blob:')) {
           setBlobUrl(activeFileUrl);
+          setBlobSourceUrl(activeFileUrl);
         } else if (activeFileUrl.startsWith('http') || activeFileUrl.startsWith('/') || !activeFileUrl.startsWith('data:')) {
           const fetchTarget = (activeFileUrl.startsWith('http') || activeFileUrl.startsWith('/') || activeFileUrl.startsWith('blob:'))
             ? activeFileUrl
@@ -206,6 +217,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
               const cleanBlob = new Blob([blob], { type: activeFileType || 'application/pdf' });
               createdUrl = URL.createObjectURL(cleanBlob);
               setBlobUrl(createdUrl);
+              setBlobSourceUrl(activeFileUrl);
             })
             .catch(async err => {
               console.warn('Could not fetch file for blob preview:', err);
@@ -218,6 +230,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
                       setIsPdfFallback(true);
                       createdUrl = URL.createObjectURL(fallbackBlob);
                       setBlobUrl(createdUrl);
+                      setBlobSourceUrl(activeFileUrl);
                       return;
                     }
                   } catch (e) {
@@ -225,15 +238,18 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
                   }
                 }
                 setBlobUrl(activeFileUrl);
+                setBlobSourceUrl(activeFileUrl);
               }
             });
         } else {
           setIsPdfFallback(false);
           setBlobUrl(activeFileUrl);
+          setBlobSourceUrl(activeFileUrl);
         }
       } else {
         setIsPdfFallback(false);
         setBlobUrl(null);
+        setBlobSourceUrl(null);
       }
     }
 
@@ -247,7 +263,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
   useEffect(() => {
     let isMounted = true;
 
-    if (!isWordFile || !docxContainer || (!blobUrl && !activeFileUrl)) {
+    if (!isWordFile || !docxContainer || !safeBlobUrl) {
       return;
     }
 
@@ -263,7 +279,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
 
     (async () => {
       try {
-        const targetUrl = blobUrl || activeFileUrl;
+        const targetUrl = safeBlobUrl;
         let dataToRender;
 
         if (targetUrl.startsWith('data:')) {
@@ -311,7 +327,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
     return () => {
       isMounted = false;
     };
-  }, [isWordFile, docxContainer, blobUrl, activeFileUrl, fileNameLower]);
+  }, [isWordFile, docxContainer, safeBlobUrl, fileNameLower]);
 
   // Render Excel document (.xlsx / .csv) secara langsung & tangguh
   useEffect(() => {
@@ -342,7 +358,11 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
         }
       };
 
-      const targetUrl = blobUrl || activeFileUrl;
+      if (activeFileUrl && !safeBlobUrl) {
+        return;
+      }
+
+      const targetUrl = safeBlobUrl;
       if (!targetUrl) {
         loadFallbackWorkbook();
         return;
@@ -390,14 +410,14 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
         }
       })();
     }
-  }, [isExcelFile, blobUrl, activeFileUrl, doc?.docNumber]);
+  }, [isExcelFile, safeBlobUrl, activeFileUrl, doc?.docNumber]);
 
   // Live Stamped PDF Preview: Menyematkan Kop Surat Resmi & QR Code secara langsung ke atas berkas PDF
   useEffect(() => {
     let isMounted = true;
     let newObjectUrl = null;
 
-    if (isOpen && isPdfFile && (blobUrl || activeFileUrl) && includeLetterhead) {
+    if (isOpen && isPdfFile && safeBlobUrl && includeLetterhead) {
       setIsStampingPreview(true);
 
       (async () => {
@@ -409,7 +429,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
           const blob = await stampOfficialLetterheadOnPDF(
             {
               ...doc,
-              fileUrl: blobUrl || activeFileUrl,
+              fileUrl: safeBlobUrl,
               logoUrl: targetLogoUrl,
               includeLetterhead: true,
             },
@@ -449,7 +469,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
   }, [
     isOpen,
     isPdfFile,
-    blobUrl,
+    safeBlobUrl,
     activeFileUrl,
     doc?.docNumber,
     doc?.revision,
@@ -466,12 +486,12 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
   const totalExcelCols = useMemo(() => {
     const dataRows = excelData?.rows || [];
     const maxDataCols = dataRows.reduce((max, r) => Math.max(max, r?.length || 0), 0);
-    return Math.max(maxDataCols, 6);
+    return Math.min(Math.max(maxDataCols, 6), 40);
   }, [excelData?.rows]);
 
   const totalExcelRows = useMemo(() => {
     const dataRows = excelData?.rows || [];
-    return Math.max(dataRows.length, 14);
+    return Math.min(Math.max(dataRows.length, 14), 500);
   }, [excelData?.rows]);
 
   const colNumbers = useMemo(() => {
@@ -500,7 +520,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
 
   const activePdfUrl = (includeLetterhead && stampedPdfUrl)
     ? stampedPdfUrl
-    : (blobUrl || activeFileUrl);
+    : (safeBlobUrl || activeFileUrl);
 
   const handlePrint = () => {
     window.print();
