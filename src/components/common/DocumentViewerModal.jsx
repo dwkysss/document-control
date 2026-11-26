@@ -90,20 +90,48 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
   const [activeExcelCell, setActiveExcelCell] = useState({ row: 0, col: 0 });
   const [excelSearchQuery, setExcelSearchQuery] = useState('');
 
+  // Multi-file attachments support
+  const attachmentFiles = useMemo(() => {
+    if (Array.isArray(doc?.attachments) && doc.attachments.length > 0) {
+      return doc.attachments;
+    }
+    if (doc?.fileUrl || doc?.fileName) {
+      return [{
+        fileName: doc.fileName,
+        fileSize: doc.fileSize,
+        fileUrl: doc.fileUrl,
+        fileType: doc.fileType,
+        isPrimary: true,
+      }];
+    }
+    return [];
+  }, [doc]);
+
+  const [selectedFileIdx, setSelectedFileIdx] = useState(0);
+
+  useEffect(() => {
+    setSelectedFileIdx(0);
+  }, [doc?.id]);
+
+  const activeFile = attachmentFiles[selectedFileIdx] || attachmentFiles[0] || doc;
+  const activeFileUrl = activeFile?.fileUrl || doc?.fileUrl;
+  const activeFileName = activeFile?.fileName || doc?.fileName;
+  const activeFileType = activeFile?.fileType || doc?.fileType;
+
   // File type detection
-  const fileNameLower = (doc?.fileName || '').toLowerCase();
-  const fileTypeLower = (doc?.fileType || '').toLowerCase();
+  const fileNameLower = (activeFileName || '').toLowerCase();
+  const fileTypeLower = (activeFileType || '').toLowerCase();
 
   const isImageFile = Boolean(
-    doc?.fileUrl && (
+    activeFileUrl && (
       fileTypeLower.startsWith('image/') ||
-      doc.fileUrl.startsWith('data:image/') ||
+      activeFileUrl.startsWith('data:image/') ||
       /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(fileNameLower)
     )
   );
 
   const isWordFile = Boolean(
-    doc?.fileUrl && (
+    activeFileUrl && (
       fileTypeLower.includes('word') ||
       fileTypeLower.includes('officedocument.wordprocessingml') ||
       /\.(docx?|doc)$/i.test(fileNameLower)
@@ -111,7 +139,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
   );
 
   const isExcelFile = Boolean(
-    doc?.fileUrl && (
+    activeFileUrl && (
       fileTypeLower.includes('sheet') ||
       fileTypeLower.includes('excel') ||
       /\.(xlsx?|csv)$/i.test(fileNameLower)
@@ -119,10 +147,10 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
   );
 
   const isPdfFile = Boolean(
-    doc?.fileUrl && (
+    activeFileUrl && (
       fileTypeLower === 'application/pdf' ||
       /\.pdf$/i.test(fileNameLower) ||
-      doc.fileUrl.startsWith('data:application/pdf') ||
+      activeFileUrl.startsWith('data:application/pdf') ||
       (!isWordFile && !isExcelFile && !isImageFile)
     )
   );
@@ -144,10 +172,10 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
         if (isMounted) setQrCodeUrl(url);
       });
 
-      if (doc.fileUrl) {
-        if (doc.fileUrl.startsWith('data:')) {
+      if (activeFileUrl) {
+        if (activeFileUrl.startsWith('data:')) {
           try {
-            const parts = doc.fileUrl.split(',');
+            const parts = activeFileUrl.split(',');
             const mime = parts[0].match(/:(.*?);/)?.[1] || 'application/pdf';
             const bstr = atob(parts[1]);
             let n = bstr.length;
@@ -159,14 +187,14 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
             createdUrl = URL.createObjectURL(blob);
             setBlobUrl(createdUrl);
           } catch (e) {
-            setBlobUrl(doc.fileUrl);
+            setBlobUrl(activeFileUrl);
           }
-        } else if (doc.fileUrl.startsWith('blob:')) {
-          setBlobUrl(doc.fileUrl);
-        } else if (doc.fileUrl.startsWith('http') || doc.fileUrl.startsWith('/') || !doc.fileUrl.startsWith('data:')) {
-          const fetchTarget = (doc.fileUrl.startsWith('http') || doc.fileUrl.startsWith('/') || doc.fileUrl.startsWith('blob:'))
-            ? doc.fileUrl
-            : `/${doc.fileUrl}`;
+        } else if (activeFileUrl.startsWith('blob:')) {
+          setBlobUrl(activeFileUrl);
+        } else if (activeFileUrl.startsWith('http') || activeFileUrl.startsWith('/') || !activeFileUrl.startsWith('data:')) {
+          const fetchTarget = (activeFileUrl.startsWith('http') || activeFileUrl.startsWith('/') || activeFileUrl.startsWith('blob:'))
+            ? activeFileUrl
+            : `/${activeFileUrl}`;
           fetch(fetchTarget, { credentials: 'include' })
             .then(res => {
               if (!res.ok) throw new Error(`HTTP error ${res.status}`);
@@ -175,7 +203,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
             .then(blob => {
               if (!isMounted) return;
               setIsPdfFallback(false);
-              const cleanBlob = new Blob([blob], { type: doc.fileType || 'application/pdf' });
+              const cleanBlob = new Blob([blob], { type: activeFileType || 'application/pdf' });
               createdUrl = URL.createObjectURL(cleanBlob);
               setBlobUrl(createdUrl);
             })
@@ -196,12 +224,12 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
                     console.warn('Failed to generate fallback PDF blob:', e);
                   }
                 }
-                setBlobUrl(doc.fileUrl);
+                setBlobUrl(activeFileUrl);
               }
             });
         } else {
           setIsPdfFallback(false);
-          setBlobUrl(doc.fileUrl);
+          setBlobUrl(activeFileUrl);
         }
       } else {
         setIsPdfFallback(false);
@@ -213,13 +241,13 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
       isMounted = false;
       if (createdUrl) URL.revokeObjectURL(createdUrl);
     };
-  }, [doc, doc?.fileUrl]);
+  }, [doc, activeFileUrl, activeFileType]);
 
   // Render Word document (.docx) secara langsung & tangguh
   useEffect(() => {
     let isMounted = true;
 
-    if (!isWordFile || !docxContainer || (!blobUrl && !doc?.fileUrl)) {
+    if (!isWordFile || !docxContainer || (!blobUrl && !activeFileUrl)) {
       return;
     }
 
@@ -235,7 +263,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
 
     (async () => {
       try {
-        const targetUrl = blobUrl || doc.fileUrl;
+        const targetUrl = blobUrl || activeFileUrl;
         let dataToRender;
 
         if (targetUrl.startsWith('data:')) {
@@ -283,7 +311,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
     return () => {
       isMounted = false;
     };
-  }, [isWordFile, docxContainer, blobUrl, doc?.fileUrl, fileNameLower]);
+  }, [isWordFile, docxContainer, blobUrl, activeFileUrl, fileNameLower]);
 
   // Render Excel document (.xlsx / .csv) secara langsung & tangguh
   useEffect(() => {
@@ -314,7 +342,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
         }
       };
 
-      const targetUrl = blobUrl || doc?.fileUrl;
+      const targetUrl = blobUrl || activeFileUrl;
       if (!targetUrl) {
         loadFallbackWorkbook();
         return;
@@ -362,14 +390,14 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
         }
       })();
     }
-  }, [isExcelFile, blobUrl, doc?.fileUrl, doc?.docNumber]);
+  }, [isExcelFile, blobUrl, activeFileUrl, doc?.docNumber]);
 
   // Live Stamped PDF Preview: Menyematkan Kop Surat Resmi & QR Code secara langsung ke atas berkas PDF
   useEffect(() => {
     let isMounted = true;
     let newObjectUrl = null;
 
-    if (isOpen && isPdfFile && (blobUrl || doc?.fileUrl) && includeLetterhead) {
+    if (isOpen && isPdfFile && (blobUrl || activeFileUrl) && includeLetterhead) {
       setIsStampingPreview(true);
 
       (async () => {
@@ -381,7 +409,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
           const blob = await stampOfficialLetterheadOnPDF(
             {
               ...doc,
-              fileUrl: blobUrl || doc.fileUrl,
+              fileUrl: blobUrl || activeFileUrl,
               logoUrl: targetLogoUrl,
               includeLetterhead: true,
             },
@@ -422,7 +450,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
     isOpen,
     isPdfFile,
     blobUrl,
-    doc?.fileUrl,
+    activeFileUrl,
     doc?.docNumber,
     doc?.revision,
     doc?.title,
@@ -472,7 +500,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
 
   const activePdfUrl = (includeLetterhead && stampedPdfUrl)
     ? stampedPdfUrl
-    : (blobUrl || doc?.fileUrl);
+    : (blobUrl || activeFileUrl);
 
   const handlePrint = () => {
     window.print();
@@ -521,7 +549,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
       // 3. Stempel Kop Surat pada PDF asli
       const fileName = await stampOfficialLetterheadOnPDF({
         ...doc,
-        fileUrl: blobUrl || doc.fileUrl,
+        fileUrl: blobUrl || activeFileUrl,
         logoUrl: targetLogoUrl,
         includeLetterhead: includeLetterhead,
         companyName: docCompanyName,
@@ -558,7 +586,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
     const cleanTitle = (doc.title || '').replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 30);
     const ext = isWordFile ? '.docx' : isExcelFile ? '.xlsx' : isPdfFile ? '.pdf' : '';
     const defaultName = `${doc.docNumber}_${cleanTitle}${ext}`;
-    const fileName = doc.fileName || defaultName;
+    const fileName = activeFileName || defaultName;
 
     // 1. Jika ini berkas Excel dan kita memiliki data workbook SheetJS yang siap
     if (isExcelFile && excelData?.workbook) {
@@ -572,10 +600,10 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
     }
 
     // 2. Jika ada fileUrl asli yang diunggah (data URL, blob URL, atau link)
-    if (doc.fileUrl) {
-      if (doc.fileUrl.startsWith('data:')) {
+    if (activeFileUrl) {
+      if (activeFileUrl.startsWith('data:')) {
         try {
-          const parts = doc.fileUrl.split(',');
+          const parts = activeFileUrl.split(',');
           const mime = parts[0].match(/:(.*?);/)?.[1] || (
             isExcelFile ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' :
             isWordFile ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' :
@@ -613,7 +641,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
 
       try {
         const link = document.createElement('a');
-        link.href = doc.fileUrl;
+        link.href = activeFileUrl;
         link.download = fileName;
         document.body.appendChild(link);
         link.click();
@@ -703,6 +731,49 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
               <X className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>
+
+          {/* Baris 1.5: Multi-file Attachment Switcher (muncul jika dokumen memiliki >1 berkas) */}
+          {attachmentFiles.length > 1 && (
+            <div className="px-3 sm:px-6 py-1.5 border-t border-slate-200/70 dark:border-slate-700/70 bg-slate-100/70 dark:bg-slate-800/60 flex items-center gap-1.5 overflow-x-auto">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 shrink-0 mr-1 flex items-center gap-1">
+                <Paperclip className="w-3 h-3" />
+                Berkas ({attachmentFiles.length}):
+              </span>
+              {attachmentFiles.map((f, idx) => {
+                const isSelected = idx === selectedFileIdx;
+                const fLower = (f?.fileName || '').toLowerCase();
+                const extTag = /\.pdf$/i.test(fLower) ? 'PDF' : /\.(docx?)$/i.test(fLower) ? 'DOCX' : /\.(xlsx?|csv)$/i.test(fLower) ? 'XLSX' : 'FILE';
+                return (
+                  <button
+                    key={`${f?.fileName || 'file'}-${idx}`}
+                    type="button"
+                    onClick={() => setSelectedFileIdx(idx)}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer shrink-0 border ${
+                      isSelected
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                        : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
+                    }`}
+                    title={f?.fileName}
+                  >
+                    <span className={`font-mono text-[9px] font-bold px-1 py-0.2 rounded ${
+                      isSelected
+                        ? 'bg-white/20 text-white'
+                        : extTag === 'PDF'
+                          ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300'
+                          : extTag === 'DOCX'
+                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
+                            : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                    }`}>
+                      {extTag}
+                    </span>
+                    <span className="truncate max-w-[160px] sm:max-w-[240px]">
+                      {f?.fileName || `Berkas ${idx + 1}`}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {/* Baris 2: Toolbar Aksi Dokumen */}
           <div className="px-3 sm:px-6 py-2 border-t border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-900/60 flex items-center justify-between gap-1.5 sm:gap-2">
@@ -971,7 +1042,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
       {/* ================= AREA UTAMA PRATINJAU DOKUMEN ================= */}
       <div className="space-y-4">
         {/* MODE 1: HALAMAN COVER DEPAN RESMI ISO 9001 (Template Grafis Geometris Modern) */}
-        {(!doc.fileUrl || isWordFile || isExcelFile) && documentLayoutMode === 'cover' && (
+        {(!activeFileUrl || isWordFile || isExcelFile) && documentLayoutMode === 'cover' && (
           <div className="bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 rounded-2xl mb-4 shadow-sm animate-fade-in relative overflow-hidden min-h-[580px] p-6 sm:p-10 flex flex-col justify-between">
             {/* 1. Ornamen Geometris Vektor Sudut Kanan Atas & Kiri Bawah (SVG) */}
             <svg
@@ -1080,7 +1151,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
         )}
 
         {/* MODE 2: KOP SURAT LANGSUNG DI ATAS DOKUMEN (Tampil saat layoutMode === 'header' dan includeLetterhead aktif) */}
-        {(!doc.fileUrl || isWordFile || isExcelFile) && documentLayoutMode === 'header' && includeLetterhead && (
+        {(!activeFileUrl || isWordFile || isExcelFile) && documentLayoutMode === 'header' && includeLetterhead && (
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 mb-3 shadow-2xs animate-fade-in">
             <div className="grid grid-cols-12 items-center">
               {/* Logo Box: Dinamis sesuai PT */}
@@ -1184,7 +1255,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
         )}
 
         {/* Viewport Konten Berkas Dokumen */}
-        {doc.fileUrl ? (
+        {activeFileUrl ? (
           <div className="space-y-3">
             {/* 1. PDF Viewer: Native Embedded Frame */}
             {isPdfFile && (
@@ -1223,7 +1294,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
                       <iframe
                         key={activePdfUrl}
                         src={`${activePdfUrl}#view=FitH&toolbar=1&navpanes=0`}
-                        title={doc.fileName || 'Pratinjau PDF Dokumen'}
+                        title={activeFileName || 'Pratinjau PDF Dokumen'}
                         className="w-full h-[65vh] sm:h-[720px] border-0 bg-white"
                       >
                         <div className="flex flex-col items-center justify-center p-8 text-center bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 h-full space-y-3">
@@ -1277,7 +1348,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
                         className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
                       >
                         <Download className="w-3.5 h-3.5" />
-                        Unduh Berkas Asli ({doc.fileName || '.doc'})
+                        Unduh Berkas Asli ({activeFileName || '.doc'})
                       </button>
                       <button
                         type="button"
@@ -1345,7 +1416,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
-                          {doc.fileName || `${doc.docNumber}_Spreadsheet.xlsx`}
+                          {activeFileName || `${doc.docNumber}_Spreadsheet.xlsx`}
                         </span>
                         <span className="text-[10px] px-2 py-0.2 rounded font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                           Spreadsheet Aktif

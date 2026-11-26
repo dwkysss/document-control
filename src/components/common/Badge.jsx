@@ -115,12 +115,29 @@ export function getDocumentFileFormat(doc) {
 
 export function FileFormatBadge({ doc, size = 'sm' }) {
   const format = getDocumentFileFormat(doc);
+  const extraCount = Array.isArray(doc?.attachments) && doc.attachments.length > 1
+    ? doc.attachments.length - 1
+    : 0;
+  const titleText = extraCount > 0
+    ? `Format Utama: ${format.label} (+${extraCount} berkas lampiran lainnya: ${doc.attachments.map(a => a.fileName).join(', ')})`
+    : `Format Berkas: ${format.label}`;
+
   return (
-    <span
-      className={`inline-flex items-center font-mono font-bold rounded tracking-wider border px-1.5 py-0.5 text-[10px] ${format.style}`}
-      title={`Format Berkas: ${format.label}`}
-    >
-      {format.label}
+    <span className="inline-flex items-center gap-1">
+      <span
+        className={`inline-flex items-center font-mono font-bold rounded tracking-wider border px-1.5 py-0.5 text-[10px] ${format.style}`}
+        title={titleText}
+      >
+        {format.label}
+      </span>
+      {extraCount > 0 && (
+        <span
+          className="inline-flex items-center font-mono font-bold rounded border px-1 py-0.5 text-[9.5px] bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
+          title={titleText}
+        >
+          +{extraCount}
+        </span>
+      )}
     </span>
   );
 }

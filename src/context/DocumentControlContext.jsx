@@ -936,6 +936,7 @@ export function DocumentControlProvider({ children }) {
       file_size: d.fileSize || null,
       file_url: d.fileUrl || null,
       file_type: d.fileType || null,
+      attachments: Array.isArray(d.attachments) ? d.attachments : [],
       superseded_by: d.supersededBy || null,
       obsolete_date: sanitizeDate(d.obsoleteDate),
       change_reason: d.changeReason || null,
@@ -982,6 +983,11 @@ export function DocumentControlProvider({ children }) {
       fileSize: d.file_size,
       fileUrl: d.file_url,
       fileType: d.file_type,
+      attachments: Array.isArray(d.attachments) && d.attachments.length > 0
+        ? d.attachments
+        : (d.file_url || d.file_name
+            ? [{ fileName: d.file_name, fileSize: d.file_size, fileUrl: d.file_url, fileType: d.file_type, isPrimary: true }]
+            : []),
       supersededBy: d.superseded_by,
       obsoleteDate: d.obsolete_date,
       changeReason: d.change_reason,
@@ -1444,6 +1450,7 @@ export function DocumentControlProvider({ children }) {
       fileSize: docData.fileSize || (docData.fileUrl ? '350 KB' : null),
       fileType: docData.fileType || null,
       fileUrl: docData.fileUrl || null,
+      attachments: Array.isArray(docData.attachments) ? docData.attachments : (docData.fileUrl ? [{ fileName: docData.fileName || `${docNumber}.pdf`, fileSize: docData.fileSize || '350 KB', fileType: docData.fileType || null, fileUrl: docData.fileUrl, isPrimary: true }] : []),
       revisionHistory: docData.revisionHistory || [
         { revision, date: createdDate, author: currentUser.name, note: 'Draft inisial' }
       ]
@@ -1704,6 +1711,7 @@ export function DocumentControlProvider({ children }) {
       fileSize: docData.fileSize || (docData.fileUrl ? '520 KB' : null),
       fileType: docData.fileType || null,
       fileUrl: docData.fileUrl || null,
+      attachments: Array.isArray(docData.attachments) ? docData.attachments : (docData.fileUrl ? [{ fileName: docData.fileName || `${docNumber}.pdf`, fileSize: docData.fileSize || '520 KB', fileType: docData.fileType || null, fileUrl: docData.fileUrl, isPrimary: true }] : []),
       rejectionReason: isResubmission ? null : (docData.rejectionReason || null),
       revisionNotes: isResubmission ? null : (docData.revisionNotes || null),
       revisionRequestedBy: isResubmission ? null : (docData.revisionRequestedBy || null),

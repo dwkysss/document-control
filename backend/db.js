@@ -38,6 +38,7 @@ async function initDatabase() {
       ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS password_hash TEXT;
       ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS pending_password_hash TEXT;
       ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS password_reset_requested_at TIMESTAMP WITH TIME ZONE;
+      ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS attachments JSONB DEFAULT '[]'::jsonb;
 
       CREATE TABLE IF NOT EXISTS public.notifications (
         id TEXT PRIMARY KEY,

@@ -333,7 +333,7 @@ export default function NewRegistrationView() {
   const docLevel = currentDocTypeObj.level || 2;
   const isFastTrack = docLevel === 3 || docLevel === 4;
   const [notes, setNotes] = useState('');
-  const [fileAttachment, setFileAttachment] = useState(null);
+  const [fileAttachments, setFileAttachments] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCustomApprover, setShowCustomApprover] = useState(false);
   const [copiedNumber, setCopiedNumber] = useState(false);
@@ -367,6 +367,30 @@ export default function NewRegistrationView() {
     year: 'numeric'
   }) + ' ' + new Date().toLocaleTimeString('id-ID');
 
+  const uploadSelectedAttachments = async () => {
+    if (!fileAttachments.length) {
+      return { fileName: null, fileSize: null, fileType: null, fileUrl: null, attachments: [] };
+    }
+    showToast(`Mengunggah ${fileAttachments.length} berkas ke server...`, 'info');
+    const uploaded = await Promise.all(
+      fileAttachments.map((file) => uploadDocumentFile(file, previewDocNumber))
+    );
+    const pdfIdx = uploaded.findIndex((f) => /\.pdf$/i.test(f?.fileName || ''));
+    const primaryIdx = pdfIdx >= 0 ? pdfIdx : 0;
+    const attachments = uploaded.map((f, idx) => ({
+      ...f,
+      isPrimary: idx === primaryIdx,
+    }));
+    const primary = attachments[primaryIdx] || {};
+    return {
+      fileName: primary.fileName || null,
+      fileSize: primary.fileSize || null,
+      fileType: primary.fileType || null,
+      fileUrl: primary.fileUrl || null,
+      attachments,
+    };
+  };
+
   const handleSaveDraft = async (e) => {
     e.preventDefault();
     if (!title.trim()) {
@@ -374,17 +398,7 @@ export default function NewRegistrationView() {
       return;
     }
     setIsSubmitting(true);
-    let fileInfo = {
-      fileName: null,
-      fileSize: null,
-      fileType: null,
-      fileUrl: null
-    };
-
-    if (fileAttachment) {
-      showToast('Mengunggah file ke cloud storage...', 'info');
-      fileInfo = await uploadDocumentFile(fileAttachment, previewDocNumber);
-    }
+    const fileInfo = await uploadSelectedAttachments();
 
     saveDraft({
       companyCode: selectedCompany,
@@ -415,7 +429,8 @@ export default function NewRegistrationView() {
       fileName: fileInfo.fileName,
       fileSize: fileInfo.fileSize,
       fileType: fileInfo.fileType,
-      fileUrl: fileInfo.fileUrl
+      fileUrl: fileInfo.fileUrl,
+      attachments: fileInfo.attachments
     });
     setIsSubmitting(false);
   };
@@ -427,17 +442,7 @@ export default function NewRegistrationView() {
       return;
     }
     setIsSubmitting(true);
-    let fileInfo = {
-      fileName: null,
-      fileSize: null,
-      fileType: null,
-      fileUrl: null
-    };
-
-    if (fileAttachment) {
-      showToast('Mengunggah file ke cloud storage...', 'info');
-      fileInfo = await uploadDocumentFile(fileAttachment, previewDocNumber);
-    }
+    const fileInfo = await uploadSelectedAttachments();
 
     submitForVerification({
       companyCode: selectedCompany,
@@ -468,7 +473,8 @@ export default function NewRegistrationView() {
       fileName: fileInfo.fileName,
       fileSize: fileInfo.fileSize,
       fileType: fileInfo.fileType,
-      fileUrl: fileInfo.fileUrl
+      fileUrl: fileInfo.fileUrl,
+      attachments: fileInfo.attachments
     });
   };
 
@@ -676,73 +682,106 @@ export default function NewRegistrationView() {
                   </span>
                 </div>
 
-                {fileAttachment ? (
-                  <div className="flex items-center justify-between p-3 rounded-xl border border-emerald-200 bg-emerald-50/70 dark:bg-emerald-950/30 dark:border-emerald-800">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0">
-                        <FileText className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
-                          {fileAttachment.name}
-                        </p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
-                            {(fileAttachment.size / 1024).toFixed(0)} KB
-                          </span>
-                          {/\.(xlsx?|csv)$/i.test(fileAttachment.name) && (
-                            <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 font-bold text-[9px]">
-                              EXCEL
-                            </span>
-                          )}
-                          {/\.(docx?)$/i.test(fileAttachment.name) && (
-                            <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 font-bold text-[9px]">
-                              WORD
-                            </span>
-                          )}
-                          {/\.pdf$/i.test(fileAttachment.name) && (
-                            <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200 font-bold text-[9px]">
-                              PDF
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+                <div className="space-y-2.5">
+                  {fileAttachments.length > 0 && (
+                    <div className="space-y-2">
+                      {fileAttachments.map((file, idx) => {
+                        const isPdf = /\.pdf$/i.test(file.name);
+                        const hasAnyPdf = fileAttachments.some((f) => /\.pdf$/i.test(f.name));
+                        const isPrimary = hasAnyPdf ? isPdf && fileAttachments.findIndex((f) => /\.pdf$/i.test(f.name)) === idx : idx === 0;
+                        return (
+                          <div
+                            key={`${file.name}-${file.size}-${idx}`}
+                            className="flex items-center justify-between p-2.5 rounded-xl border border-emerald-200 bg-emerald-50/70 dark:bg-emerald-950/30 dark:border-emerald-800"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0">
+                                <FileText className="w-4 h-4" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                                  {file.name}
+                                </p>
+                                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                  <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                                    {(file.size / 1024).toFixed(0)} KB
+                                  </span>
+                                  {/\.(xlsx?|csv)$/i.test(file.name) && (
+                                    <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 font-bold text-[9px]">
+                                      EXCEL
+                                    </span>
+                                  )}
+                                  {/\.(docx?)$/i.test(file.name) && (
+                                    <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 font-bold text-[9px]">
+                                      WORD
+                                    </span>
+                                  )}
+                                  {isPdf && (
+                                    <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200 font-bold text-[9px]">
+                                      PDF
+                                    </span>
+                                  )}
+                                  {isPrimary && fileAttachments.length > 1 && (
+                                    <span className="px-1.5 py-0.5 rounded bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900 font-bold text-[9px]">
+                                      Utama
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
 
-                    <button
-                      type="button"
-                      onClick={() => setFileAttachment(null)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-white dark:hover:bg-slate-800 transition cursor-pointer shrink-0"
-                      title="Batalkan berkas ini"
-                      aria-label="Hapus berkas lampiran"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
+                            <button
+                              type="button"
+                              onClick={() => setFileAttachments((prev) => prev.filter((_, i) => i !== idx))}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-white dark:hover:bg-slate-800 transition cursor-pointer shrink-0"
+                              title="Hapus berkas ini"
+                              aria-label={`Hapus ${file.name}`}
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
                   <div className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-4 bg-slate-50/60 dark:bg-slate-800/40 text-center hover:bg-blue-50/40 hover:border-blue-400 dark:hover:border-blue-500 transition cursor-pointer relative focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
                     <input
                       type="file"
+                      multiple
                       accept=".pdf,.doc,.docx,.xls,.xlsx,.csv"
-                      aria-label="Pilih atau seret berkas dokumen resmi"
+                      aria-label="Pilih atau seret satu atau lebih berkas dokumen resmi"
                       onChange={(e) => {
-                        if (e.target.files && e.target.files[0]) {
-                          setFileAttachment(e.target.files[0]);
+                        const picked = Array.from(e.target.files || []);
+                        if (picked.length) {
+                          setFileAttachments((prev) => {
+                            const existingKeys = new Set(prev.map((f) => `${f.name}:${f.size}`));
+                            const next = [...prev];
+                            for (const f of picked) {
+                              if (!existingKeys.has(`${f.name}:${f.size}`)) {
+                                next.push(f);
+                              }
+                            }
+                            return next;
+                          });
                         }
+                        e.target.value = '';
                       }}
                       className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                     />
                     <div className="flex flex-col items-center justify-center gap-1.5 pointer-events-none">
                       <UploadCloud className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                       <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
-                        Klik untuk memilih berkas atau seret file PDF / Word / Excel ke sini
+                        {fileAttachments.length > 0
+                          ? 'Klik atau seret file tambahan (PDF / Word / Excel) ke sini'
+                          : 'Klik untuk memilih berkas atau seret file PDF / Word / Excel ke sini'}
                       </p>
                       <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                        Format yang didukung: PDF, DOCX, XLSX, XLS, CSV (Maks. 25 MB)
+                        Bisa pilih lebih dari 1 file sekaligus (misal: PDF + DOCX/XLSX) • Maks. 25 MB/file
                       </p>
                     </div>
                   </div>
-                )}
+                </div>
               </div>
               </div>
 
@@ -878,7 +917,7 @@ export default function NewRegistrationView() {
                   onClick={() => {
                     setTitle('');
                     setNotes('');
-                    setFileAttachment(null);
+                    setFileAttachments([]);
                   }}
                   className="px-2.5 py-2 text-xs font-medium text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200 transition cursor-pointer"
                 >
@@ -1090,12 +1129,16 @@ export default function NewRegistrationView() {
                     File Lampiran
                   </span>
                   <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate block max-w-[190px]">
-                    {fileAttachment ? fileAttachment.name : 'Tidak ada berkas'}
+                    {fileAttachments.length === 0
+                      ? 'Tidak ada berkas'
+                      : fileAttachments.length === 1
+                        ? fileAttachments[0].name
+                        : `${fileAttachments.length} berkas dipilih`}
                   </span>
                 </div>
-                {fileAttachment ? (
+                {fileAttachments.length > 0 ? (
                   <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 font-bold text-[10px] shrink-0">
-                    Terlampir
+                    {fileAttachments.length} Terlampir
                   </span>
                 ) : (
                   <span className="px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-500 font-medium text-[10px] shrink-0">
