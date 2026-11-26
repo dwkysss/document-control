@@ -49,6 +49,25 @@ function getColumnLetter(colIndex) {
   return letter;
 }
 
+function extractSheetRowsSafe(sheet, maxRows = 500, maxCols = 40) {
+  if (!sheet || !sheet['!ref']) return [];
+  const fullRange = XLSX.utils.decode_range(sheet['!ref']);
+  const clampedRange = {
+    s: { r: fullRange.s.r, c: fullRange.s.c },
+    e: {
+      r: Math.min(fullRange.e.r, fullRange.s.r + maxRows - 1),
+      c: Math.min(fullRange.e.c, fullRange.s.c + maxCols - 1),
+    },
+  };
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', range: clampedRange });
+  // Trim trailing completely-empty rows caused by full-column formatting
+  let lastNonEmpty = rows.length - 1;
+  while (lastNonEmpty >= 0 && rows[lastNonEmpty].every((cell) => cell === '' || cell === null || cell === undefined)) {
+    lastNonEmpty--;
+  }
+  return lastNonEmpty >= 0 ? rows.slice(0, lastNonEmpty + 1) : [];
+}
+
 function formatDocumentDate(value) {
   if (!value || value === '-') return '-';
   const date = new Date(value);
@@ -392,7 +411,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
           }
           const firstSheet = workbook.SheetNames[0];
           const sheet = workbook.Sheets[firstSheet];
-          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+          const rows = extractSheetRowsSafe(sheet);
           setExcelData({
             workbook,
             sheetNames: workbook.SheetNames,
@@ -688,7 +707,7 @@ export default function DocumentViewerModal({ doc, isOpen, onClose }) {
     if (!excelData?.workbook) return;
     const sheet = excelData.workbook.Sheets[name];
     if (!sheet) return;
-    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+    const rows = extractSheetRowsSafe(sheet);
     setExcelData(prev => ({
       ...prev,
       activeSheet: name,
