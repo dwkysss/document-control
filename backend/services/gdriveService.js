@@ -227,7 +227,22 @@ async function backupDocumentFile(doc) {
 
   const passphrase = process.env.BACKUP_ENCRYPTION_KEY || process.env.AUTH_SECRET || 'DCS_ISO9001_Secure_Encryption_Key_2026';
 
-  // 1. Dapatkan lokasi file fisik di server dari berbagai kemungkinan direktori
+  // 1. Kumpulkan semua berkas (mendukung multi-file attachments: PDF + DOCX/XLSX)
+  const rawAttachments = Array.isArray(doc.attachments) && doc.attachments.length > 0
+    ? doc.attachments
+    : [{ fileUrl: doc.file_url, fileName: doc.file_name }];
+
+  const seenKeys = new Set();
+  const fileEntries = [];
+  for (const att of rawAttachments) {
+    const fUrl = att?.fileUrl || att?.file_url || null;
+    const fName = att?.fileName || att?.file_name || null;
+    const key = fUrl || fName;
+    if (!key || seenKeys.has(key)) continue;
+    seenKeys.add(key);
+    fileEntries.push({ fileUrl: fUrl, fileName: fName });
+  }
+
   const candidateDirs = [
     process.env.UPLOAD_DIR ? path.resolve(process.env.UPLOAD_DIR) : null,
     path.join(__dirname, '..', 'public', 'uploads'),
@@ -237,132 +252,152 @@ async function backupDocumentFile(doc) {
     path.join(process.cwd(), 'backend', 'public', 'uploads'),
   ].filter(Boolean);
 
-  let localFilePath = null;
-  const fileNameCandidates = [
-    doc.file_url ? path.basename(doc.file_url) : null,
-    doc.file_name ? path.basename(doc.file_name) : null,
-  ].filter(Boolean);
+  const resolveLocalFile = (entry) => {
+    const fileNameCandidates = [
+      entry.fileUrl ? path.basename(entry.fileUrl) : null,
+      entry.fileName ? path.basename(entry.fileName) : null,
+    ].filter(Boolean);
 
-  for (const dir of candidateDirs) {
-    for (const name of fileNameCandidates) {
-      const candidate = path.join(dir, name);
-      if (fs.existsSync(candidate)) {
-        localFilePath = candidate;
-        break;
+    for (const dir of candidateDirs) {
+      for (const name of fileNameCandidates) {
+        const candidate = path.join(dir, name);
+        if (fs.existsSync(candidate)) return candidate;
       }
     }
-    if (localFilePath) break;
-  }
+    return null;
+  };
 
-  if (!localFilePath || !fs.existsSync(localFilePath)) {
+  const resolvedFiles = fileEntries
+    .map((entry) => ({ ...entry, localFilePath: resolveLocalFile(entry) }))
+    .filter((entry) => Boolean(entry.localFilePath));
+
+  if (resolvedFiles.length === 0) {
     console.warn(`[GDrive Backup] Berkas fisik untuk dokumen ${doc.doc_number || doc.id} tidak ditemukan di disk.`);
     return { success: false, error: 'File fisik tidak ditemukan di server.' };
   }
 
   try {
-    // 2. Siapkan Berkas: Jika format PDF, kunci dengan sandi dokumen PDF (ISO 32000 AES-256)
-    const originalExt = (path.extname(localFilePath) || (doc.file_name ? path.extname(doc.file_name) : '.pdf')).toLowerCase();
-    const pdfPassword = process.env.PDF_BACKUP_PASSWORD || process.env.BACKUP_ENCRYPTION_KEY || 'DCS2026!';
-    
-    let fileBytesToUpload = fs.readFileSync(localFilePath);
-    let mimeType = 'application/octet-stream';
-    let isPasswordProtected = false;
-
-    if (originalExt === '.pdf') {
-      mimeType = 'application/pdf';
-      try {
-        const pdfLib = require('pdf-lib');
-        const { configure, lock } = require('pdf-lib-encrypt');
-        configure(pdfLib);
-        fileBytesToUpload = await lock(fileBytesToUpload, pdfPassword);
-        isPasswordProtected = true;
-      } catch (pdfErr) {
-        console.warn(`[GDrive Backup] Gagal menerapkan password ke PDF, mengunggah PDF biasa:`, pdfErr.message);
-      }
-    } else if (originalExt === '.docx') {
-      mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-    } else if (originalExt === '.xlsx') {
-      mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-    }
-
-    // 3. Otorisasi ke Google Drive
+    // 2. Otorisasi ke Google Drive & pastikan struktur folder: Root -> [Nama PT] -> [Departemen]
     const accessToken = await getGoogleAccessToken();
-
-    // 4. Struktur Folder: Root -> [Nama PT] -> [Departemen]
     const compName = doc.company_name || (doc.company_code === 'UMI' ? 'PT Ultimo Moda Indotex' : doc.company_code === 'IMK' ? 'PT IMK' : 'PT Dentelle Jaya Infinitex');
     const compFolderId = await ensureDriveFolder(compName, rootFolderId, accessToken);
     const deptName = doc.department || 'UMUM';
     const targetFolderId = await ensureDriveFolder(deptName, compFolderId, accessToken);
 
-    // 5. Nama file di Google Drive: LANGSUNG berekstensi .pdf (atau .docx / .xlsx)
+    const pdfPassword = process.env.PDF_BACKUP_PASSWORD || process.env.BACKUP_ENCRYPTION_KEY || 'DCS2026!';
     const safeDocNum = (doc.doc_number || 'DOC').replace(/[^a-zA-Z0-9_-]/g, '_');
     const safeTitle = (doc.title || 'DOKUMEN').replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 40);
-    const remoteFileName = `${safeDocNum}_${safeTitle}${originalExt}`;
 
-    // Cek apakah file sudah pernah diunggah sebelumnya (update jika sudah ada)
-    const checkQuery = `'${targetFolderId}' in parents and name = '${remoteFileName.replace(/'/g, "\\'")}' and trashed = false`;
-    const checkUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(checkQuery)}&fields=files(id,name)&supportsAllDrives=true&includeItemsFromAllDrives=true`;
-    const checkRes = await fetch(checkUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
-    let existingFileId = null;
+    const usedRemoteNames = new Set();
+    const uploadedFiles = [];
 
-    if (checkRes.ok) {
-      const checkData = await checkRes.json();
-      if (checkData.files && checkData.files.length > 0) {
-        existingFileId = checkData.files[0].id;
+    for (const entry of resolvedFiles) {
+      const { localFilePath } = entry;
+      const originalExt = (path.extname(localFilePath) || (entry.fileName ? path.extname(entry.fileName) : '.pdf')).toLowerCase();
+
+      let fileBytesToUpload = fs.readFileSync(localFilePath);
+      let mimeType = 'application/octet-stream';
+      let isPasswordProtected = false;
+
+      if (originalExt === '.pdf') {
+        mimeType = 'application/pdf';
+        try {
+          const pdfLib = require('pdf-lib');
+          const { configure, lock } = require('pdf-lib-encrypt');
+          configure(pdfLib);
+          fileBytesToUpload = await lock(fileBytesToUpload, pdfPassword);
+          isPasswordProtected = true;
+        } catch (pdfErr) {
+          console.warn(`[GDrive Backup] Gagal menerapkan password ke PDF, mengunggah PDF biasa:`, pdfErr.message);
+        }
+      } else if (originalExt === '.docx') {
+        mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      } else if (originalExt === '.xlsx') {
+        mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
       }
+
+      // Nama file di Google Drive (hindari bentrok jika ada 2 file berekstensi sama)
+      let remoteFileName = `${safeDocNum}_${safeTitle}${originalExt}`;
+      let suffix = 2;
+      while (usedRemoteNames.has(remoteFileName.toLowerCase())) {
+        remoteFileName = `${safeDocNum}_${safeTitle}_${suffix}${originalExt}`;
+        suffix++;
+      }
+      usedRemoteNames.add(remoteFileName.toLowerCase());
+
+      // Cek apakah file sudah pernah diunggah sebelumnya (update jika sudah ada)
+      const checkQuery = `'${targetFolderId}' in parents and name = '${remoteFileName.replace(/'/g, "\\'")}' and trashed = false`;
+      const checkUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(checkQuery)}&fields=files(id,name)&supportsAllDrives=true&includeItemsFromAllDrives=true`;
+      const checkRes = await fetch(checkUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
+      let existingFileId = null;
+
+      if (checkRes.ok) {
+        const checkData = await checkRes.json();
+        if (checkData.files && checkData.files.length > 0) {
+          existingFileId = checkData.files[0].id;
+        }
+      }
+
+      // Upload Multipart ke Google Drive
+      const boundary = `----DCSBoundary${Date.now()}${Math.random().toString(36).slice(2, 6)}`;
+      const metadata = {
+        name: remoteFileName,
+        description: `ISO 9001 Document | No: ${doc.doc_number || '-'} | Rev: ${doc.revision || '00'} | PT: ${compName} | Dept: ${deptName}${isPasswordProtected ? ' | Password Protected' : ''}`,
+        ...(!existingFileId ? { parents: [targetFolderId] } : {}),
+      };
+
+      const delimiter = `\r\n--${boundary}\r\n`;
+      const closeDelimiter = `\r\n--${boundary}--`;
+
+      const metadataPart = Buffer.from(
+        `${delimiter}Content-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}`
+      );
+      const mediaHeader = Buffer.from(
+        `${delimiter}Content-Type: ${mimeType}\r\nContent-Transfer-Encoding: binary\r\n\r\n`
+      );
+      const closePart = Buffer.from(closeDelimiter);
+      const multipartBody = Buffer.concat([metadataPart, mediaHeader, Buffer.from(fileBytesToUpload), closePart]);
+
+      const uploadUrl = existingFileId
+        ? `https://www.googleapis.com/upload/drive/v3/files/${existingFileId}?uploadType=multipart&supportsAllDrives=true`
+        : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true';
+
+      const uploadRes = await fetch(uploadUrl, {
+        method: existingFileId ? 'PATCH' : 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': `multipart/related; boundary=${boundary}`,
+          'Content-Length': String(multipartBody.length),
+        },
+        body: multipartBody,
+      });
+
+      if (!uploadRes.ok) {
+        const errorText = await uploadRes.text();
+        throw new Error(`Upload GDrive gagal untuk ${remoteFileName} (HTTP ${uploadRes.status}): ${errorText}`);
+      }
+
+      const uploaded = await uploadRes.json();
+      console.log(`[GDrive Backup] Berhasil mencadangkan ${remoteFileName} (ID: ${uploaded.id}) ke Google Drive [${compName}/${deptName}]`);
+      uploadedFiles.push({
+        fileId: uploaded.id,
+        fileName: remoteFileName,
+        folderId: targetFolderId,
+        fileSize: fileBytesToUpload.length,
+        isPasswordProtected,
+      });
     }
 
-    // 6. Upload Multipart ke Google Drive
-    const boundary = `----DCSBoundary${Date.now()}`;
-    const metadata = {
-      name: remoteFileName,
-      description: `ISO 9001 Document | No: ${doc.doc_number || '-'} | Rev: ${doc.revision || '00'} | PT: ${compName} | Dept: ${deptName}${isPasswordProtected ? ' | Password Protected' : ''}`,
-      ...(!existingFileId ? { parents: [targetFolderId] } : {}),
-    };
-
-    const delimiter = `\r\n--${boundary}\r\n`;
-    const closeDelimiter = `\r\n--${boundary}--`;
-
-    const metadataPart = Buffer.from(
-      `${delimiter}Content-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}`
-    );
-
-    const mediaHeader = Buffer.from(
-      `${delimiter}Content-Type: ${mimeType}\r\nContent-Transfer-Encoding: binary\r\n\r\n`
-    );
-
-    const closePart = Buffer.from(closeDelimiter);
-    const multipartBody = Buffer.concat([metadataPart, mediaHeader, Buffer.from(fileBytesToUpload), closePart]);
-
-    const uploadUrl = existingFileId
-      ? `https://www.googleapis.com/upload/drive/v3/files/${existingFileId}?uploadType=multipart&supportsAllDrives=true`
-      : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true';
-
-    const uploadRes = await fetch(uploadUrl, {
-      method: existingFileId ? 'PATCH' : 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': `multipart/related; boundary=${boundary}`,
-        'Content-Length': String(multipartBody.length),
-      },
-      body: multipartBody,
-    });
-
-    if (!uploadRes.ok) {
-      const errorText = await uploadRes.text();
-      throw new Error(`Upload GDrive gagal (HTTP ${uploadRes.status}): ${errorText}`);
-    }
-
-    const uploaded = await uploadRes.json();
-    console.log(`[GDrive Backup] Berhasil mencadangkan ${remoteFileName} (ID: ${uploaded.id}) ke Google Drive [${compName}/${deptName}]`);
-
+    const first = uploadedFiles[0] || {};
     return {
-      success: true,
-      fileId: uploaded.id,
-      fileName: remoteFileName,
+      success: uploadedFiles.length > 0,
+      uploadedCount: uploadedFiles.length,
+      files: uploadedFiles,
+      fileId: first.fileId,
+      fileName: first.fileName,
       folderId: targetFolderId,
-      fileSize: fileBytesToUpload.length,
-      isPasswordProtected,
+      fileSize: first.fileSize,
+      isPasswordProtected: first.isPasswordProtected,
     };
   } catch (err) {
     console.error(`[GDrive Backup Error] Gagal mencadangkan dokumen ${doc.doc_number}:`, err.message);

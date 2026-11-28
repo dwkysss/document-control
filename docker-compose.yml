@@ -51,6 +51,14 @@ services:
       UPLOAD_DIR: /app/public/uploads
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?Set ALLOWED_ORIGINS to the exact HTTPS application origin}
       AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET to a random 32+ character value}
+      GDRIVE_BACKUP_ENABLED: ${GDRIVE_BACKUP_ENABLED:-true}
+      GDRIVE_FOLDER_ID: ${GDRIVE_FOLDER_ID:-}
+      GDRIVE_CLIENT_ID: ${GDRIVE_CLIENT_ID:-}
+      GDRIVE_CLIENT_SECRET: ${GDRIVE_CLIENT_SECRET:-}
+      GDRIVE_REFRESH_TOKEN: ${GDRIVE_REFRESH_TOKEN:-}
+      PDF_BACKUP_PASSWORD: ${PDF_BACKUP_PASSWORD:-DCS2026!}
+      BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY:-}
+      GDRIVE_SERVICE_ACCOUNT_KEY: ${GDRIVE_SERVICE_ACCOUNT_KEY:-/app/credentials/gdrive-service-account.json}
     ports:
       # Bound to loopback 127.0.0.1 only (Zero port collision on public host)
       - "127.0.0.1:${BACKEND_PORT:-5005}:5001"
